@@ -1,0 +1,67 @@
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Instrument+Serif:ital,wght@0,400;1,400&family=Inter:wght@300;400;500;600;700;800&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: "Bricolage Grotesque", sans-serif;
+  --font-serif-accent: "Instrument Serif", serif;
+  --font-mono: "Space Mono", monospace;
+  
+  --color-ink: #141210;
+  --color-cream: #F6F1E6;
+  --color-lime: #C9F31D;
+  --color-forest: #1B3828;
+  --color-stone: #5F5C53;
+  --color-paper: #FFFFFF;
+}
+
+@layer utilities {
+  /* Infinite marquee animation */
+  @keyframes marquee {
+    0% { transform: translateX(0%); }
+    100% { transform: translateX(-50%); }
+  }
+  .animate-marquee {
+    animation: marquee 40s linear infinite;
+  }
+  .animate-marquee-fast {
+    animation: marquee 25s linear infinite;
+  }
+  
+  /* Hard offset shadow custom class */
+  .shadow-hard {
+    box-shadow: 3px 4px 0px 0px #141210;
+  }
+  .shadow-hard-hover {
+    box-shadow: 5px 6px 0px 0px #141210;
+  }
+  .shadow-hard-lg {
+    box-shadow: 6px 8px 0px 0px #141210;
+  }
+  
+  /* Focus rings */
+  .focus-ring {
+    outline: none;
+    box-shadow: 0 0 0 2px #F6F1E6, 0 0 0 4px #141210;
+  }
+}
+
+/* Form fields: clean single border at rest, ring only while focused */
+input.focus-ring,
+select.focus-ring,
+textarea.focus-ring {
+  box-shadow: none;
+}
+input.focus-ring:focus,
+select.focus-ring:focus,
+textarea.focus-ring:focus {
+  box-shadow: 0 0 0 2px #F6F1E6, 0 0 0 4px #141210;
+}
+
+/* Base style resets */
+html, body {
+  background-color: #F6F1E6;
+  color: #141210;
+  font-family: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+

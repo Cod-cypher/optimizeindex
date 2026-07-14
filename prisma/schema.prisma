@@ -1,0 +1,175 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  PROPOSAL_SENT
+  WON
+  LOST
+}
+
+model Lead {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // What the visitor submitted
+  type       String // quote_page | audit_page | modal_quote | modal_audit
+  name       String?
+  email      String
+  phone      String?
+  company    String?
+  website    String
+  competitor String?
+  goal       String? // revenue | profit | conversions | cac | roi
+  service    String? // gmb | seo | aeo | geo | paid-search | ...
+  budget     String?
+  comments   String?
+
+  // Marketing attribution — mirrors what we sell: channel-level ROI tracking
+  utmSource     String?
+  utmMedium     String?
+  utmCampaign   String?
+  utmTerm       String?
+  utmContent    String?
+  referrer      String?
+  landingPage   String? // first page of the session
+  submittedFrom String? // page the form was submitted on
+  gaClientId    String? // GA4 client id for cross-referencing analytics
+
+  // Journey linkage — join to Visitor/Session/PageView/Event for the full
+  // pre-conversion story (pages viewed, time on site, sessions to convert)
+  visitorId String?
+  sessionId String?
+
+  // Technical context
+  userAgent String?
+  ipAddress String?
+
+  // Delivery + sales pipeline for business analysis
+  emailForwarded Boolean    @default(false)
+  status         LeadStatus @default(NEW)
+  followUpNotes  String?
+
+  @@index([email])
+  @@index([createdAt])
+  @@index([status])
+  @@index([type])
+  @@index([utmSource, utmMedium, utmCampaign])
+  @@index([visitorId])
+  @@index([sessionId])
+}
+
+// One row per unique browser (anonymous id persisted in localStorage).
+// First-touch attribution lives here; answers "which channel creates
+// visitors that eventually convert, even weeks later?"
+model Visitor {
+  id          String   @id // client-generated
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+
+  firstReferrer    String?
+  firstLandingPage String?
+  firstUtmSource   String?
+  firstUtmMedium   String?
+  firstUtmCampaign String?
+
+  deviceType String? // mobile | tablet | desktop
+  browser    String?
+  os         String?
+  language   String?
+  timezone   String?
+  country    String?
+
+  sessionCount Int       @default(1)
+  convertedAt  DateTime? // set on first lead submission
+  leadEmail    String? // ties anonymous history to the identified lead
+
+  @@index([firstSeenAt])
+  @@index([convertedAt])
+  @@index([firstUtmSource, firstUtmMedium, firstUtmCampaign])
+}
+
+// One row per visit (30-minute inactivity window). Duration is
+// lastActivityAt - startedAt; bounce = pageViewCount 1 and no events.
+model Session {
+  id             String   @id // client-generated
+  visitorId      String
+  startedAt      DateTime @default(now())
+  lastActivityAt DateTime @default(now())
+
+  entryPage String?
+  exitPage  String?
+  referrer  String?
+
+  utmSource   String?
+  utmMedium   String?
+  utmCampaign String?
+  utmTerm     String?
+  utmContent  String?
+
+  deviceType   String?
+  browser      String?
+  os           String?
+  screenWidth  Int?
+  screenHeight Int?
+  language     String?
+  timezone     String?
+  country      String?
+  ipAddress    String?
+  userAgent    String?
+
+  pageViewCount Int     @default(0)
+  eventCount    Int     @default(0)
+  isConverted   Boolean @default(false) // a lead was submitted this session
+
+  @@index([visitorId])
+  @@index([startedAt])
+  @@index([isConverted])
+  @@index([utmSource, utmMedium, utmCampaign])
+}
+
+// One row per page seen, with engagement quality (time + scroll depth).
+model PageView {
+  id        String   @id // client-generated so duration/scroll update the same row
+  sessionId String
+  visitorId String
+  path      String
+  title     String?
+  startedAt DateTime @default(now())
+
+  durationMs   Int? // filled in when the visitor leaves the page
+  maxScrollPct Int? // deepest scroll reached, 0-100
+
+  @@index([sessionId])
+  @@index([visitorId])
+  @@index([path])
+  @@index([startedAt])
+}
+
+// Every meaningful interaction: CTA clicks (by element id), goal-pill
+// selections, phone/email taps, form starts, form submissions, outbound
+// clicks. `name` is the event type, `label` the specific target.
+model Event {
+  id        String   @id @default(cuid())
+  sessionId String
+  visitorId String
+  createdAt DateTime @default(now())
+
+  name     String // click | phone_click | email_click | outbound_click | form_start | form_submit | form_error | goal_selected | session_start
+  label    String? // element id, href, goal id, form name...
+  path     String? // page where it happened
+  metadata Json? // free-form extras (link text, href, etc.)
+
+  @@index([sessionId])
+  @@index([visitorId])
+  @@index([name, createdAt])
+  @@index([createdAt])
+}
