@@ -47,14 +47,15 @@ npm run build
 
 ## 3. Run under PM2
 
-Port 3001 is set in `ecosystem.config.cjs`. If something already listens on
-3001 (`ss -ltnp | grep 3001`), change the port there AND in the nginx conf.
+Port 3002 is set in `ecosystem.config.cjs` (3001 is taken by sujoodmats on
+this server). If 3002 is also taken (`ss -ltnp | grep 3002`), change the port
+there AND in the nginx conf.
 
 ```bash
 pm2 start ecosystem.config.cjs
 pm2 save
 pm2 startup   # prints a command — run it once so PM2 survives reboots
-curl -s http://127.0.0.1:3001/api/health   # expect {"status":"ok","db":"up",...}
+curl -s http://127.0.0.1:3002/api/health   # expect {"status":"ok","db":"up",...}
 ```
 
 ## 4. nginx site
