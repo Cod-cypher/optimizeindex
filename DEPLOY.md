@@ -1,32 +1,34 @@
 # Deploying OptimizeIndex to the Ubuntu server
 
 Target: Hetzner box at 167.233.120.70 (nginx + PM2 + Postgres already on it).
+App lives in `/opt/optimizeindex` (next to sujoodmats).
 Domain assumed: optimizeindex.com — swap it everywhere if different.
 
 ## 0. One-time prerequisites
 
 - DNS: `A` records for `optimizeindex.com` and `www.optimizeindex.com` → 167.233.120.70
-- Node 20+ on the server (`node -v`), PM2 (`npm i -g pm2` if missing), `unzip` (`apt install unzip`)
+- Node 20+ on the server (`node -v`), PM2 (`npm i -g pm2` if missing)
 
-## 1. Upload the code (from your Windows machine)
+## 1. Get the code (on the server)
 
-The repo ships as `optimizeindex-deploy.zip` (no node_modules/dist/.env). From
-the project folder in PowerShell:
-
-```powershell
-scp .\optimizeindex-deploy.zip root@167.233.120.70:/root/
-```
-
-## 2. Install on the server
+First time:
 
 ```bash
-mkdir -p /var/www/optimizeindex
-unzip -o /root/optimizeindex-deploy.zip -d /var/www/optimizeindex
-cd /var/www/optimizeindex
+cd /opt
+git clone -b <your-branch> <your-repo-url> optimizeindex
+cd optimizeindex
+```
+
+Updates later: `cd /opt/optimizeindex && git pull`
+
+## 2. Install and configure
+
+```bash
+cd /opt/optimizeindex
 npm ci || npm install
 ```
 
-Create `/var/www/optimizeindex/.env` — the DB is on this same machine, so use
+Create `/opt/optimizeindex/.env` — the DB is on this same machine, so use
 localhost (faster, and lets you firewall port 5432 later):
 
 ```bash
@@ -58,7 +60,7 @@ curl -s http://127.0.0.1:3001/api/health   # expect {"status":"ok","db":"up",...
 ## 4. nginx site
 
 ```bash
-cp deploy/nginx-optimizeindex.conf /etc/nginx/sites-available/optimizeindex.conf
+cp /opt/optimizeindex/deploy/nginx-optimizeindex.conf /etc/nginx/sites-available/optimizeindex.conf
 ln -s /etc/nginx/sites-available/optimizeindex.conf /etc/nginx/sites-enabled/
 nginx -t && systemctl reload nginx
 ```
@@ -93,12 +95,9 @@ Choose the redirect option when asked. Certbot auto-renews via systemd timer
 
 ## Updating the site later
 
-From Windows: rebuild the zip (ask Claude or re-run the Compress-Archive
-command), `scp` it up, then on the server:
-
 ```bash
-cd /var/www/optimizeindex
-unzip -o /root/optimizeindex-deploy.zip -d /var/www/optimizeindex
+cd /opt/optimizeindex
+git pull
 npm ci || npm install
 npx prisma generate && npx prisma migrate deploy
 npm run build
