@@ -26,6 +26,11 @@ import {
   AlertCircle,
   Clock,
   Briefcase,
+  Mail,
+  User,
+  Building2,
+  Phone,
+  Target,
   Menu,
   X
 } from 'lucide-react';
@@ -158,7 +163,7 @@ export default function App() {
       });
       setQuoteIsSuccess(true);
     } catch {
-      setQuoteError('Something went wrong sending your request. Please try again, or call us at 817 409 8408.');
+      setQuoteError('Something went wrong sending your request. Please try again, or call us at 202 810 7042 .');
     } finally {
       setQuoteIsSubmitting(false);
     }
@@ -185,7 +190,7 @@ export default function App() {
       });
       setAuditIsSuccess(true);
     } catch {
-      setAuditError('Something went wrong sending your request. Please try again, or call us at 817 409 8408.');
+      setAuditError('Something went wrong sending your request. Please try again, or call us at 202 810 7042 .');
     } finally {
       setAuditIsSubmitting(false);
     }
@@ -341,14 +346,15 @@ export default function App() {
           </a>
 
           {/* Desktop Navigation links */}
-          <nav className="hidden md:flex items-center gap-8 font-mono text-xs font-bold uppercase tracking-wider text-ink">
+          <nav className="hidden md:flex items-center gap-7 font-mono text-xs font-bold uppercase tracking-wider">
             <a 
               href="/services"
               onClick={(e) => {
                 e.preventDefault();
                 navigateTo('services');
               }}
-              className={`hover:text-stone transition-colors focus-ring px-2 py-1 rounded cursor-pointer text-left font-bold ${currentView === 'services' ? 'text-lime-700 underline underline-offset-4 decoration-2' : ''}`} 
+              className="nav-link focus-ring rounded-sm cursor-pointer text-left font-bold"
+              aria-current={currentView === 'services' ? 'page' : undefined}
               id="nav-link-services"
             >
               SERVICES
@@ -359,7 +365,8 @@ export default function App() {
                 e.preventDefault();
                 navigateTo('case-studies');
               }}
-              className={`hover:text-stone transition-colors focus-ring px-2 py-1 rounded cursor-pointer text-left font-bold ${currentView === 'case-studies' ? 'text-lime-700 underline underline-offset-4 decoration-2' : ''}`} 
+              className="nav-link focus-ring rounded-sm cursor-pointer text-left font-bold"
+              aria-current={currentView === 'case-studies' ? 'page' : undefined}
               id="nav-link-cases"
             >
               CASE STUDIES
@@ -370,7 +377,7 @@ export default function App() {
                 e.preventDefault();
                 navigateTo('home', '#process');
               }}
-              className="hover:text-stone transition-colors focus-ring px-2 py-1 rounded cursor-pointer text-left font-bold" 
+              className="nav-link focus-ring rounded-sm cursor-pointer text-left font-bold"
               id="nav-link-process"
             >
               PROCESS
@@ -381,7 +388,7 @@ export default function App() {
                 e.preventDefault();
                 navigateTo('home', '#testimonials');
               }}
-              className="hover:text-stone transition-colors focus-ring px-2 py-1 rounded cursor-pointer text-left font-bold" 
+              className="nav-link focus-ring rounded-sm cursor-pointer text-left font-bold"
               id="nav-link-testimonials"
             >
               TESTIMONIALS
@@ -396,11 +403,11 @@ export default function App() {
                 e.preventDefault();
                 navigateTo('quote');
               }}
-              className="hidden lg:inline-flex items-center gap-1.5 px-4 py-2 border-1.5 border-ink text-ink font-mono text-[11px] font-bold uppercase rounded-full hover:bg-ink hover:text-cream transition-colors duration-150 cursor-pointer focus-ring font-bold"
+              className="group hidden lg:inline-flex items-center gap-1.5 px-4 py-2 border-1.5 border-ink/25 text-ink font-mono text-[11px] font-bold uppercase rounded-full hover:border-ink hover:bg-ink hover:text-cream transition-colors duration-150 cursor-pointer focus-ring"
               id="nav-quote-btn"
             >
               <span>Get Free Quote</span>
-              <span className="font-mono text-xs">→</span>
+              <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
             </a>
             <a
               href="/audit"
@@ -408,15 +415,16 @@ export default function App() {
                 e.preventDefault();
                 navigateTo('audit');
               }}
-              className={`px-4 py-2 text-[11px] font-mono font-bold uppercase rounded-full border border-ink transition-all duration-200 cursor-pointer focus-ring flex items-center gap-1 ${
+              className={`group hidden sm:flex px-4 py-2 text-[11px] font-mono font-bold uppercase rounded-full border-1.5 border-ink transition-all duration-200 cursor-pointer focus-ring items-center gap-1.5 ${
                 currentView === 'audit'
                   ? 'bg-lime text-ink shadow-hard'
-                  : 'bg-ink text-cream hover:bg-lime hover:text-ink hover:shadow-hard'
+                  : 'bg-ink text-cream hover:bg-lime hover:text-ink hover:shadow-hard hover:-translate-y-0.5'
               }`}
+              aria-current={currentView === 'audit' ? 'page' : undefined}
               id="nav-audit-btn"
             >
               <span>Free Audit</span>
-              <span className="text-lime font-mono group-hover:text-ink">→</span>
+              <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
             </a>
 
             {/* Mobile Menu Toggle Button */}
@@ -442,14 +450,19 @@ export default function App() {
             transition={{ duration: 0.15 }}
             className="md:hidden fixed top-18 left-0 right-0 z-30 bg-cream border-b-2 border-ink shadow-hard-lg px-6 py-8 select-none"
           >
-            <nav className="flex flex-col gap-6 font-mono text-sm font-bold uppercase tracking-wider text-ink text-center">
+            <nav className="flex flex-col gap-1 font-mono text-sm font-bold uppercase tracking-wider text-ink">
               <a 
                 href="/services"
                 onClick={(e) => {
                   e.preventDefault();
                   navigateTo('services');
                 }}
-                className={`hover:text-stone transition-colors py-2 border-b border-ink/5 ${currentView === 'services' ? 'text-lime-700 underline' : ''}`}
+                className={`flex items-center gap-3 py-3 px-3 -mx-3 rounded-xl transition-colors ${
+                  currentView === 'services'
+                    ? 'bg-ink text-lime'
+                    : 'text-ink/70 hover:text-ink hover:bg-ink/5'
+                }`}
+                aria-current={currentView === 'services' ? 'page' : undefined}
                 id="mobile-nav-services"
               >
                 SERVICES
@@ -460,7 +473,12 @@ export default function App() {
                   e.preventDefault();
                   navigateTo('case-studies');
                 }}
-                className={`hover:text-stone transition-colors py-2 border-b border-ink/5 ${currentView === 'case-studies' ? 'text-lime-700 underline' : ''}`}
+                className={`flex items-center gap-3 py-3 px-3 -mx-3 rounded-xl transition-colors ${
+                  currentView === 'case-studies'
+                    ? 'bg-ink text-lime'
+                    : 'text-ink/70 hover:text-ink hover:bg-ink/5'
+                }`}
+                aria-current={currentView === 'case-studies' ? 'page' : undefined}
                 id="mobile-nav-cases"
               >
                 CASE STUDIES
@@ -471,7 +489,7 @@ export default function App() {
                   e.preventDefault();
                   navigateTo('home', '#process');
                 }}
-                className="hover:text-stone transition-colors py-2 border-b border-ink/5"
+                className="flex items-center gap-3 py-3 px-3 -mx-3 rounded-xl text-ink/70 hover:text-ink hover:bg-ink/5 transition-colors"
                 id="mobile-nav-process"
               >
                 PROCESS
@@ -482,21 +500,21 @@ export default function App() {
                   e.preventDefault();
                   navigateTo('home', '#testimonials');
                 }}
-                className="hover:text-stone transition-colors py-2 border-b border-ink/5"
+                className="flex items-center gap-3 py-3 px-3 -mx-3 rounded-xl text-ink/70 hover:text-ink hover:bg-ink/5 transition-colors"
                 id="mobile-nav-testimonials"
               >
                 TESTIMONIALS
               </a>
 
               {/* Mobile CTAs */}
-              <div className="flex flex-col sm:flex-row gap-4 pt-4">
+              <div className="flex flex-col gap-3 pt-5 mt-3 border-t border-ink/10">
                 <a
                   href="/quote"
                   onClick={(e) => {
                     e.preventDefault();
                     navigateTo('quote');
                   }}
-                  className="flex-1 py-3 px-5 border-2 border-ink text-ink font-mono text-xs font-bold uppercase rounded-full hover:bg-ink hover:text-cream transition-all shadow-hard text-center"
+                  className="py-3.5 px-5 border-1.5 border-ink text-ink font-mono text-xs font-bold uppercase rounded-full hover:bg-ink hover:text-cream transition-all text-center"
                   id="mobile-nav-quote"
                 >
                   Get Free Quote →
@@ -507,7 +525,7 @@ export default function App() {
                     e.preventDefault();
                     navigateTo('audit');
                   }}
-                  className="flex-1 py-3 px-5 bg-lime text-ink font-mono text-xs font-bold uppercase rounded-full border-2 border-ink hover:bg-lime/90 transition-all shadow-hard text-center"
+                  className="py-3.5 px-5 bg-lime text-ink font-mono text-xs font-bold uppercase rounded-full border-1.5 border-ink hover:bg-lime/90 transition-all shadow-hard text-center"
                   id="mobile-nav-audit"
                 >
                   Free Audit →
@@ -1356,262 +1374,315 @@ export default function App() {
             );
           })()
         ) : currentView === 'audit' ? (
-          <section className="py-20 bg-forest text-cream border-b-1.5 border-ink min-h-[90vh] relative overflow-hidden">
+          <section className="bg-forest text-cream border-b-1.5 border-ink relative overflow-hidden flex items-center py-8 lg:py-6 lg:min-h-[calc(100dvh-4.5rem)]">
             {/* Subtle grid background */}
             <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(to_right,#fff_1px,transparent_1px),linear-gradient(to_bottom,#fff_1px,transparent_1px)] bg-[size:24px_24px]" />
-            
-            <div className="max-w-7xl mx-auto px-6 md:px-12 relative z-10">
-              {/* Back to Home Button */}
-              <div className="mb-12">
-                <a
-                  href="/"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    navigateTo('home');
-                  }}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-paper text-ink border-2 border-ink font-mono text-xs font-bold uppercase rounded-full hover:bg-cream transition-all cursor-pointer focus-ring shadow-hard hover:shadow-hard-hover"
-                  id="audit-page-back-btn"
-                >
-                  <span>← Back to Homepage</span>
-                </a>
-              </div>
 
-              {/* Title Header */}
-              <div className="text-center max-w-3xl mx-auto mb-16">
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-lime text-ink border border-ink shadow-hard rounded-full mb-4 -rotate-1">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span className="font-mono text-[10px] font-bold">100% FREE NO-CONTRACT AUDIT</span>
-                </div>
-                <h1 className="font-display font-black text-4xl md:text-5xl lg:text-6xl text-cream tracking-tight leading-[1.1] mt-2">
-                  Claim your free <span className="font-serif-accent italic text-lime bg-ink px-2.5 py-0.5 rounded-sm shadow-hard inline-block -rotate-1">15-Point</span> Performance Audit
-                </h1>
-                <p className="font-sans text-cream/70 mt-6 leading-relaxed text-base md:text-lg">
-                  We will scan your search footprint, benchmark competitors, and show you exactly where you are losing revenue. No slides, just raw math.
-                </p>
-              </div>
+            <div className="max-w-7xl mx-auto px-6 md:px-12 relative z-10 w-full">
+              <a
+                href="/"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigateTo('home');
+                }}
+                className="flex w-fit items-center gap-1.5 font-mono text-[11px] font-bold uppercase tracking-wide text-cream/60 hover:text-lime transition-colors mb-5 lg:mb-0 lg:absolute lg:top-5 lg:left-6 xl:left-12 lg:z-20 cursor-pointer focus-ring rounded-sm"
+                id="audit-page-back-btn"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+                <span>Back to homepage</span>
+              </a>
 
-              {/* Success / Loading / Form render based on states */}
-              {auditIsSuccess ? (
-                <div className="max-w-2xl mx-auto text-center bg-paper text-ink border-2 border-ink p-8 md:p-12 rounded-3xl shadow-hard relative">
-                  <div className="w-16 h-16 bg-lime text-ink border-2 border-ink rounded-full flex items-center justify-center mx-auto mb-6 shadow-hard rotate-3">
-                    <Check className="w-8 h-8 stroke-[3]" />
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 xl:gap-14 items-center">
+
+                {/* LEFT: the pitch, kept short so the form clears the fold */}
+                <div className="lg:col-span-5 order-2 lg:order-1">
+
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-lime text-ink border-1.5 border-ink shadow-hard rounded-full mb-4 -rotate-1">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span className="font-mono text-[10px] font-bold">100% FREE NO-CONTRACT AUDIT</span>
                   </div>
-                  <h4 className="font-display font-black text-3xl text-ink mb-3">
-                    Audit Request Received!
-                  </h4>
-                  <p className="font-mono text-xs text-stone uppercase tracking-wide mb-6">
-                    CONFIRMATION FOR <span className="text-ink underline font-bold">{auditWebsite}</span>
+
+                  <h1 className="font-display font-black text-3xl md:text-4xl xl:text-5xl text-cream tracking-tight leading-[1.08]">
+                    Claim your free <span className="font-serif-accent italic text-lime bg-ink px-2.5 py-0.5 rounded-sm shadow-hard inline-block -rotate-1">15-Point</span> Performance Audit
+                  </h1>
+
+                  <p className="font-sans text-cream/70 mt-4 leading-relaxed text-sm xl:text-base">
+                    We scan your search footprint, benchmark competitors, and show you exactly where you are losing revenue. No slides, just raw math.
                   </p>
 
-                  <div className="w-full bg-cream border-1.5 border-ink p-6 rounded-2xl text-left shadow-hard mb-6">
-                    <p className="font-mono text-[10px] text-stone uppercase tracking-widest mb-3 font-bold">
-                      WHAT HAPPENS NEXT:
-                    </p>
-                    <ul className="space-y-3 font-sans text-sm text-ink/80 leading-relaxed">
-                      <li className="flex gap-2.5 items-start">
-                        <Check className="w-4 h-4 text-forest shrink-0 mt-0.5 stroke-[3]" />
-                        <span>A real strategist (not a bot) manually reviews your site, Google Business Profile, and top competitor.</span>
+                  <ul className="mt-6 space-y-2.5 hidden sm:block">
+                    {[
+                      'A real strategist reviews your site — not a bot',
+                      'Benchmarked against the competitor you name',
+                      'In your inbox within 24 hours, no contracts',
+                    ].map((line) => (
+                      <li key={line} className="flex items-start gap-2.5 font-sans text-sm text-cream/80 leading-snug">
+                        <Check className="w-4 h-4 text-lime shrink-0 mt-0.5 stroke-[3]" />
+                        <span>{line}</span>
                       </li>
-                      <li className="flex gap-2.5 items-start">
-                        <Check className="w-4 h-4 text-forest shrink-0 mt-0.5 stroke-[3]" />
-                        <span>We compile your 15-point audit covering local visibility, SEO health, and AI search readiness.</span>
-                      </li>
-                      <li className="flex gap-2.5 items-start">
-                        <Check className="w-4 h-4 text-forest shrink-0 mt-0.5 stroke-[3]" />
-                        <span>You receive it at <strong className="text-ink">{auditEmail}</strong> within 24 hours — no strings attached.</span>
-                      </li>
-                    </ul>
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      setAuditIsSuccess(false);
-                      setAuditWebsite('');
-                      setAuditEmail('');
-                      setAuditCompetitor('');
-                      setAuditPhone('');
-                      setAuditName('');
-                      setAuditCompany('');
-                      setAuditComments('');
-                    }}
-                    className="py-3 px-8 bg-paper text-ink font-mono text-xs border border-ink shadow-hard rounded-full hover:bg-cream text-center font-bold cursor-pointer"
-                  >
-                    Request Another Audit
-                  </button>
+                    ))}
+                  </ul>
                 </div>
-              ) : auditIsSubmitting ? (
-                <div className="max-w-2xl mx-auto bg-paper text-ink border-2 border-ink p-8 md:p-12 rounded-3xl shadow-hard text-center flex flex-col items-center justify-center min-h-[300px]">
-                  <div className="w-16 h-16 border-4 border-ink border-t-lime rounded-full animate-spin mb-6" />
-                  <h4 className="font-display font-black text-2xl text-ink mb-2">
-                    Sending your request...
-                  </h4>
-                  <p className="font-sans text-sm text-stone">This only takes a second.</p>
-                </div>
-              ) : (
-                <div className="max-w-3xl mx-auto bg-paper text-ink border-2 border-ink p-6 md:p-10 rounded-3xl shadow-hard">
-                  <form onSubmit={handleAuditSubmit} className="space-y-6">
-                    
-                    {/* Goal Selection */}
-                    <div>
-                      <label className="block font-mono text-xs font-bold uppercase tracking-wider text-stone mb-2">
-                        1. YOUR PRIMARY GROWTH OBJECTIVE:
-                      </label>
-                      <div className="flex flex-wrap gap-2">
-                        {GOALS.map((g) => (
-                          <button
-                            key={g.id}
-                            type="button"
-                            onClick={() => setAuditGoal(g.id)}
-                            className={`px-4 py-2 text-[10px] font-bold rounded-full border transition-all flex items-center gap-1.5 font-mono uppercase cursor-pointer ${
-                              auditGoal === g.id
-                                ? 'bg-ink border-ink text-lime'
-                                : 'bg-cream/40 border-ink/20 text-ink hover:border-ink/60'
-                            }`}
-                          >
-                            <span>{g.label}</span>
-                            {auditGoal === g.id && <Check className="w-3 h-3 shrink-0 text-lime" />}
-                          </button>
-                        ))}
+
+                {/* RIGHT: the form, vertically centred against the pitch */}
+                <div className="lg:col-span-7 w-full order-1 lg:order-2">
+                  {auditIsSuccess ? (
+                    <div className="bg-paper text-ink border-2 border-ink p-6 md:p-8 rounded-3xl shadow-hard-lg text-center">
+                      <div className="w-14 h-14 bg-lime text-ink border-1.5 border-ink rounded-full flex items-center justify-center mx-auto mb-5 shadow-hard rotate-3">
+                        <Check className="w-7 h-7 stroke-[3]" />
                       </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Website */}
-                      <div>
-                        <label htmlFor="audit-website" className="block font-mono text-xs font-bold uppercase tracking-wider text-stone mb-1.5">
-                          YOUR WEBSITE *
-                        </label>
-                        <input
-                          type="url"
-                          id="audit-website"
-                          required
-                          placeholder="https://yourcompany.com"
-                          value={auditWebsite}
-                          onChange={e => setAuditWebsite(e.target.value)}
-                          className="w-full px-4 py-2.5 border-1.5 border-ink bg-cream/20 text-ink font-mono text-sm rounded-xl focus-ring"
-                        />
-                      </div>
-
-                      {/* Email */}
-                      <div>
-                        <label htmlFor="audit-email" className="block font-mono text-xs font-bold uppercase tracking-wider text-stone mb-1.5">
-                          WORK EMAIL *
-                        </label>
-                        <input
-                          type="email"
-                          id="audit-email"
-                          required
-                          placeholder="name@company.com"
-                          value={auditEmail}
-                          onChange={e => setAuditEmail(e.target.value)}
-                          className="w-full px-4 py-2.5 border-1.5 border-ink bg-cream/20 text-ink font-mono text-sm rounded-xl focus-ring"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Name */}
-                      <div>
-                        <label htmlFor="audit-name" className="block font-mono text-xs font-bold uppercase tracking-wider text-stone mb-1.5">
-                          YOUR NAME
-                        </label>
-                        <input
-                          type="text"
-                          id="audit-name"
-                          placeholder="Sarah Jenkins"
-                          value={auditName}
-                          onChange={e => setAuditName(e.target.value)}
-                          className="w-full px-4 py-2.5 border-1.5 border-ink bg-cream/20 text-ink font-mono text-sm rounded-xl focus-ring"
-                        />
-                      </div>
-
-                      {/* Company */}
-                      <div>
-                        <label htmlFor="audit-company" className="block font-mono text-xs font-bold uppercase tracking-wider text-stone mb-1.5">
-                          COMPANY NAME
-                        </label>
-                        <input
-                          type="text"
-                          id="audit-company"
-                          placeholder="VeloSaaS"
-                          value={auditCompany}
-                          onChange={e => setAuditCompany(e.target.value)}
-                          className="w-full px-4 py-2.5 border-1.5 border-ink bg-cream/20 text-ink font-mono text-sm rounded-xl focus-ring"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Competitor */}
-                      <div>
-                        <label htmlFor="audit-competitor" className="block font-mono text-xs font-bold uppercase tracking-wider text-stone mb-1.5">
-                          TOP COMPETITOR URL
-                        </label>
-                        <input
-                          type="url"
-                          id="audit-competitor"
-                          placeholder="https://competitor.com"
-                          value={auditCompetitor}
-                          onChange={e => setAuditCompetitor(e.target.value)}
-                          className="w-full px-4 py-2.5 border-1.5 border-ink bg-cream/20 text-ink font-mono text-sm rounded-xl focus-ring"
-                        />
-                      </div>
-
-                      {/* Phone */}
-                      <div>
-                        <label htmlFor="audit-phone" className="block font-mono text-xs font-bold uppercase tracking-wider text-stone mb-1.5">
-                          PHONE (FOR TEXT ALERTS)
-                        </label>
-                        <input
-                          type="tel"
-                          id="audit-phone"
-                          placeholder="+1 (555) 019-2834"
-                          value={auditPhone}
-                          onChange={e => setAuditPhone(e.target.value)}
-                          className="w-full px-4 py-2.5 border-1.5 border-ink bg-cream/20 text-ink font-mono text-sm rounded-xl focus-ring"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Comments */}
-                    <div>
-                      <label htmlFor="audit-comments" className="block font-mono text-xs font-bold uppercase tracking-wider text-stone mb-1.5">
-                        COMMENTS OR QUESTIONS
-                      </label>
-                      <textarea
-                        id="audit-comments"
-                        rows={3}
-                        placeholder="Tell us about your target keywords, competitors, or growth goals..."
-                        value={auditComments}
-                        onChange={e => setAuditComments(e.target.value)}
-                        className="w-full px-4 py-2.5 border-1.5 border-ink bg-cream/20 text-ink font-mono text-sm rounded-xl focus-ring resize-none"
-                      />
-                    </div>
-
-                    {/* Submit Button */}
-                    <div className="pt-2 text-center">
-                      {auditError && (
-                        <p className="flex items-center justify-center gap-2 font-mono text-xs text-rose-700 font-bold mb-4">
-                          <AlertCircle className="w-4 h-4 shrink-0" />
-                          {auditError}
-                        </p>
-                      )}
-                      <button
-                        type="submit"
-                        className="w-full sm:w-auto px-12 py-4 bg-lime text-ink font-sans font-extrabold text-base border-2 border-ink shadow-hard hover:shadow-hard-hover hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0 rounded-full transition-all flex items-center justify-center gap-2.5 cursor-pointer mx-auto"
-                      >
-                        <span>Claim My Free 15-Point Audit</span>
-                        <ArrowRight className="w-5 h-5" />
-                      </button>
-                      <p className="font-mono text-[10px] text-stone mt-3 uppercase tracking-wide">
-                        Delivered by a real strategist within 24 hours · No contracts
+                      <h2 className="font-display font-black text-2xl md:text-3xl text-ink mb-2">
+                        Audit request received
+                      </h2>
+                      <p className="font-mono text-[11px] text-stone uppercase tracking-wide mb-6">
+                        FOR <span className="text-ink underline font-bold">{auditWebsite}</span>
                       </p>
+
+                      <div className="w-full bg-cream border-1.5 border-ink p-5 rounded-2xl text-left mb-6">
+                        <p className="form-label mb-3">What happens next</p>
+                        <ul className="space-y-2.5 font-sans text-sm text-ink/80 leading-relaxed">
+                          <li className="flex gap-2.5 items-start">
+                            <Check className="w-4 h-4 text-forest shrink-0 mt-0.5 stroke-[3]" />
+                            <span>A real strategist manually reviews your site, Google Business Profile, and top competitor.</span>
+                          </li>
+                          <li className="flex gap-2.5 items-start">
+                            <Check className="w-4 h-4 text-forest shrink-0 mt-0.5 stroke-[3]" />
+                            <span>We compile your 15-point audit: local visibility, SEO health, and AI search readiness.</span>
+                          </li>
+                          <li className="flex gap-2.5 items-start">
+                            <Check className="w-4 h-4 text-forest shrink-0 mt-0.5 stroke-[3]" />
+                            <span>You receive it at <strong className="text-ink">{auditEmail}</strong> within 24 hours.</span>
+                          </li>
+                        </ul>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          setAuditIsSuccess(false);
+                          setAuditWebsite('');
+                          setAuditEmail('');
+                          setAuditCompetitor('');
+                          setAuditPhone('');
+                          setAuditName('');
+                          setAuditCompany('');
+                          setAuditComments('');
+                        }}
+                        className="py-3 px-8 bg-ink text-cream font-mono text-xs border-1.5 border-ink shadow-hard rounded-full hover:bg-ink/90 font-bold uppercase tracking-wide cursor-pointer focus-ring"
+                      >
+                        Request another audit
+                      </button>
                     </div>
+                  ) : auditIsSubmitting ? (
+                    <div className="bg-paper text-ink border-2 border-ink p-8 rounded-3xl shadow-hard-lg text-center flex flex-col items-center justify-center min-h-[420px]">
+                      <div className="w-14 h-14 border-4 border-ink/15 border-t-ink rounded-full animate-spin mb-6" />
+                      <h2 className="font-display font-black text-xl text-ink mb-1.5">Sending your request...</h2>
+                      <p className="font-sans text-sm text-stone">This only takes a second.</p>
+                    </div>
+                  ) : (
+                    <div className="bg-paper text-ink border-2 border-ink rounded-3xl shadow-hard-lg overflow-hidden">
 
-                  </form>
+                      {/* Card masthead */}
+                      <div className="flex items-center justify-between gap-4 px-5 md:px-7 py-3 bg-cream border-b-1.5 border-ink">
+                        <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-ink">
+                          Audit request
+                        </p>
+                        <p className="hidden sm:flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wide text-stone">
+                          <Clock className="w-3 h-3" />
+                          <span>60 seconds &middot; 2 fields needed</span>
+                        </p>
+                      </div>
+
+                      <form onSubmit={handleAuditSubmit} className="fit-form px-5 md:px-7 py-5 md:py-6 space-y-4">
+
+                        {/* Objective */}
+                        <fieldset>
+                          <legend className="form-label">What are you trying to grow?</legend>
+                          <div className="flex flex-wrap gap-1.5">
+                            {GOALS.map((g) => (
+                              <button
+                                key={g.id}
+                                type="button"
+                                onClick={() => setAuditGoal(g.id)}
+                                aria-pressed={auditGoal === g.id}
+                                className="choice-pill"
+                                id={`audit-goal-${g.id}`}
+                              >
+                                {auditGoal === g.id
+                                  ? <Check className="w-3.5 h-3.5 shrink-0 stroke-[3]" />
+                                  : <Target className="w-3.5 h-3.5 shrink-0 opacity-45" />}
+                                <span>{g.label}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </fieldset>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3.5">
+                          <div>
+                            <label htmlFor="audit-website" className="form-label">Your website</label>
+                            <span className="field-wrap">
+                              <Globe className="field-icon" />
+                              <input
+                                type="url"
+                                id="audit-website"
+                                required
+                                autoComplete="url"
+                                inputMode="url"
+                                placeholder="https://yourcompany.com"
+                                value={auditWebsite}
+                                onChange={e => setAuditWebsite(e.target.value)}
+                                className="field field-mono"
+                              />
+                            </span>
+                          </div>
+
+                          <div>
+                            <label htmlFor="audit-email" className="form-label">Work email</label>
+                            <span className="field-wrap">
+                              <Mail className="field-icon" />
+                              <input
+                                type="email"
+                                id="audit-email"
+                                required
+                                autoComplete="email"
+                                inputMode="email"
+                                placeholder="name@company.com"
+                                value={auditEmail}
+                                onChange={e => setAuditEmail(e.target.value)}
+                                className="field field-mono"
+                              />
+                            </span>
+                          </div>
+
+                          <div>
+                            <label htmlFor="audit-competitor" className="form-label">
+                              Top competitor<span className="opt">optional</span>
+                            </label>
+                            <span className="field-wrap">
+                              <Search className="field-icon" />
+                              <input
+                                type="url"
+                                id="audit-competitor"
+                                inputMode="url"
+                                placeholder="https://competitor.com"
+                                value={auditCompetitor}
+                                onChange={e => setAuditCompetitor(e.target.value)}
+                                className="field field-mono"
+                              />
+                            </span>
+                          </div>
+
+                          <div>
+                            <label htmlFor="audit-name" className="form-label">
+                              Your name<span className="opt">optional</span>
+                            </label>
+                            <span className="field-wrap">
+                              <User className="field-icon" />
+                              <input
+                                type="text"
+                                id="audit-name"
+                                autoComplete="name"
+                                placeholder="Sarah Jenkins"
+                                value={auditName}
+                                onChange={e => setAuditName(e.target.value)}
+                                className="field"
+                              />
+                            </span>
+                          </div>
+
+                          <div>
+                            <label htmlFor="audit-company" className="form-label">
+                              Company<span className="opt">optional</span>
+                            </label>
+                            <span className="field-wrap">
+                              <Building2 className="field-icon" />
+                              <input
+                                type="text"
+                                id="audit-company"
+                                autoComplete="organization"
+                                placeholder="VeloSaaS"
+                                value={auditCompany}
+                                onChange={e => setAuditCompany(e.target.value)}
+                                className="field"
+                              />
+                            </span>
+                          </div>
+
+                          <div>
+                            <label htmlFor="audit-phone" className="form-label">
+                              Phone<span className="opt">optional</span>
+                            </label>
+                            <span className="field-wrap">
+                              <Phone className="field-icon" />
+                              <input
+                                type="tel"
+                                id="audit-phone"
+                                autoComplete="tel"
+                                inputMode="tel"
+                                placeholder="+1 (555) 019-2834"
+                                value={auditPhone}
+                                onChange={e => setAuditPhone(e.target.value)}
+                                className="field field-mono"
+                              />
+                            </span>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label htmlFor="audit-comments" className="form-label">
+                            Anything we should know?<span className="opt">optional</span>
+                          </label>
+                          <textarea
+                            id="audit-comments"
+                            rows={2}
+                            placeholder="Target keywords, markets you want to win, what you have already tried..."
+                            value={auditComments}
+                            onChange={e => setAuditComments(e.target.value)}
+                            className="field"
+                          />
+                        </div>
+
+                        {auditError && (
+                          <p
+                            role="alert"
+                            className="flex items-start gap-2 font-sans text-sm text-[#B4232A] font-semibold p-3 bg-[#B4232A]/10 border-1.5 border-[#B4232A]/30 rounded-xl"
+                          >
+                            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                            <span>{auditError}</span>
+                          </p>
+                        )}
+
+                        <div className="pt-1">
+                          <button
+                            type="submit"
+                            className="group w-full px-6 py-3.5 bg-lime text-ink font-sans font-extrabold text-base border-1.5 border-ink shadow-hard hover:shadow-hard-hover hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0 active:shadow-hard rounded-full transition-all flex items-center justify-center gap-2.5 cursor-pointer focus-ring"
+                            id="audit-submit-btn"
+                          >
+                            <span>Claim my free 15-point audit</span>
+                            <ArrowRight className="w-5 h-5 transition-transform duration-200 group-hover:translate-x-1" />
+                          </button>
+
+                          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 mt-3.5 font-mono text-[10px] uppercase tracking-wide text-stone">
+                            <span className="flex items-center gap-1.5">
+                              <Clock className="w-3 h-3 text-forest" />
+                              Back within 24 hours
+                            </span>
+                            <span className="flex items-center gap-1.5">
+                              <Lock className="w-3 h-3 text-forest" />
+                              Never sold
+                            </span>
+                            <span className="flex items-center gap-1.5">
+                              <Check className="w-3 h-3 text-forest stroke-[3]" />
+                              No contracts
+                            </span>
+                          </div>
+                        </div>
+
+                      </form>
+                    </div>
+                  )}
                 </div>
-              )}
 
+              </div>
             </div>
           </section>
         ) : currentView === 'privacy-policy' ? (
@@ -1663,7 +1734,7 @@ export default function App() {
                 <section className="space-y-3 text-left border-t border-ink/10 pt-8">
                   <h3 className="font-display font-extrabold text-xl text-ink">3. Data Retention & Your Rights</h3>
                   <p className="font-sans text-sm text-stone leading-relaxed">
-                    We keep lead and inquiry records for as long as they are useful for serving you and analyzing our business. You may request a copy of the information we hold about you, or ask us to correct or permanently delete it, at any time — email <a href="mailto:contact@optimizeindex.com" className="underline font-bold text-ink">contact@optimizeindex.com</a> or call 817 409 8408 and we will act on your request promptly.
+                    We keep lead and inquiry records for as long as they are useful for serving you and analyzing our business. You may request a copy of the information we hold about you, or ask us to correct or permanently delete it, at any time — email <a href="mailto:contact@optimizeindex.com" className="underline font-bold text-ink">contact@optimizeindex.com</a> or call 202 810 7042  and we will act on your request promptly.
                   </p>
                 </section>
 
@@ -1759,351 +1830,296 @@ export default function App() {
             </div>
           </section>
         ) : (
-          <section className="py-20 bg-forest text-cream border-b-1.5 border-ink min-h-[90vh] relative overflow-hidden">
+          <section className="bg-forest text-cream border-b-1.5 border-ink relative overflow-hidden flex items-center py-8 lg:py-6 lg:min-h-[calc(100dvh-4.5rem)]">
             {/* Subtle grid background */}
             <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(to_right,#fff_1px,transparent_1px),linear-gradient(to_bottom,#fff_1px,transparent_1px)] bg-[size:24px_24px]" />
-            
-            <div className="max-w-7xl mx-auto px-6 md:px-12 relative z-10">
-              {/* Back to Home Button */}
-              <div className="mb-12">
-                <a
-                  href="/"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    navigateTo('home');
-                  }}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-paper text-ink border-2 border-ink font-mono text-xs font-bold uppercase rounded-full hover:bg-cream transition-all cursor-pointer focus-ring shadow-hard hover:shadow-hard-hover"
-                  id="quote-page-back-btn"
-                >
-                  <span>← Back to Homepage</span>
-                </a>
-              </div>
 
-              {/* Title Header */}
-              <div className="text-center max-w-3xl mx-auto mb-16">
-                <h1 className="font-display font-black text-4xl md:text-5xl lg:text-6xl text-cream tracking-tight leading-[1.1]">
-                  Ready to grow your <span className="font-serif-accent italic text-lime bg-ink px-2.5 py-0.5 rounded-sm shadow-hard inline-block -rotate-1">revenue?</span>
-                </h1>
-                <p className="font-sans text-cream/70 mt-6 leading-relaxed text-base md:text-lg">
-                  Request your custom strategy from the experts behind scaled revenue metrics.
-                </p>
-              </div>
+            <div className="max-w-7xl mx-auto px-6 md:px-12 relative z-10 w-full">
+              <a
+                href="/"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigateTo('home');
+                }}
+                className="flex w-fit items-center gap-1.5 font-mono text-[11px] font-bold uppercase tracking-wide text-cream/60 hover:text-lime transition-colors mb-5 lg:mb-0 lg:absolute lg:top-5 lg:left-6 xl:left-12 lg:z-20 cursor-pointer focus-ring rounded-sm"
+                id="quote-page-back-btn"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+                <span>Back to homepage</span>
+              </a>
 
-              {/* Two Column Layout (Form left, info right) */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start mt-8">
-                
-                {/* LEFT: Form Card */}
-                <div className="lg:col-span-7 w-full">
-                  <div className="relative bg-paper text-ink border-2 border-ink p-6 md:p-10 rounded-2xl shadow-hard max-w-2xl mx-auto">
-                    
-                    {/* Overlapping capability badges */}
-                    <div className="absolute -top-7 left-1/2 -translate-x-1/2 flex items-center -space-x-3 z-20">
-                      <div className="w-14 h-14 rounded-full border-2 border-ink bg-lime shadow-hard flex items-center justify-center" title="SEO">
-                        <Search className="w-6 h-6 text-ink" />
-                      </div>
-                      <div className="w-14 h-14 rounded-full border-2 border-ink bg-ink shadow-hard z-10 scale-105 flex items-center justify-center" title="Growth">
-                        <TrendingUp className="w-6 h-6 text-lime" />
-                      </div>
-                      <div className="w-14 h-14 rounded-full border-2 border-ink bg-forest shadow-hard flex items-center justify-center" title="AI Search">
-                        <Zap className="w-6 h-6 text-lime" />
-                      </div>
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 xl:gap-14 items-center">
+
+                {/* LEFT: the pitch, kept short so the form clears the fold */}
+                <div className="lg:col-span-5 order-2 lg:order-1">
+
+                  <h1 className="font-display font-black text-3xl md:text-4xl xl:text-5xl text-cream tracking-tight leading-[1.08]">
+                    Ready to grow your <span className="font-serif-accent italic text-lime bg-ink px-2.5 py-0.5 rounded-sm shadow-hard inline-block -rotate-1">revenue?</span>
+                  </h1>
+                  <p className="font-sans text-cream/70 mt-4 leading-relaxed text-sm xl:text-base">
+                    Request a custom strategy from the team behind the numbers on this site.
+                  </p>
+
+                  {/* What happens next — compact so the form stays centred */}
+                  <ol className="mt-7 space-y-4 hidden sm:block">
+                    {[
+                      ['Get to know your business', 'We research your business, competitors, and industry, then audit your site.'],
+                      ['Put together your flight plan', 'Your strategist compiles personalized recommendations for driving revenue.'],
+                      ['Prepare for takeoff', 'You get pricing, timelines, and exactly what a partnership looks like.'],
+                    ].map(([title, body], idx) => (
+                      <li key={title} className="flex gap-3.5 items-start">
+                        <span className="w-6 h-6 bg-lime text-ink rounded-full flex items-center justify-center shrink-0 border-1.5 border-ink font-mono text-[10px] font-bold mt-0.5">
+                          {idx + 1}
+                        </span>
+                        <div>
+                          <h2 className="font-display font-extrabold text-base text-cream leading-tight">{title}</h2>
+                          <p className="font-sans text-cream/65 text-xs leading-relaxed mt-0.5">{body}</p>
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+
+                {/* RIGHT: the form, vertically centred against the pitch */}
+                <div className="lg:col-span-7 w-full order-1 lg:order-2">
+                  <div className="bg-paper text-ink border-2 border-ink rounded-3xl shadow-hard-lg overflow-hidden">
+
+                    {/* Card masthead */}
+                    <div className="flex items-center justify-between gap-4 px-5 md:px-7 py-3 bg-cream border-b-1.5 border-ink">
+                      <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-ink">
+                        Free proposal request
+                      </p>
+                      <p className="hidden sm:flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wide text-stone">
+                        <Clock className="w-3 h-3" />
+                        <span>Reply within 24 hours</span>
+                      </p>
                     </div>
 
-                    <div className="pt-6">
-                      {!quoteIsSubmitting && !quoteIsSuccess ? (
-                        <>
-                          <h3 className="font-display font-black text-2xl md:text-3xl text-ink text-center mb-8" id="quote-form-title">
-                            Request a FREE Proposal Now!
-                          </h3>
+                    {!quoteIsSubmitting && !quoteIsSuccess ? (
+                      <form onSubmit={handleQuoteSubmit} className="fit-form px-5 md:px-7 py-5 md:py-6 space-y-4 text-left">
 
-                          <form onSubmit={handleQuoteSubmit} className="space-y-5 text-left">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              {/* First and Last Name */}
-                              <div>
-                                <label htmlFor="quote-name" className="block font-mono text-xs font-bold uppercase tracking-wider text-stone mb-1.5">
-                                  First and Last Name *
-                                </label>
-                                <input
-                                  type="text"
-                                  id="quote-name"
-                                  required
-                                  placeholder="Sarah Jenkins"
-                                  value={quoteName}
-                                  onChange={e => setQuoteName(e.target.value)}
-                                  className="w-full px-3.5 py-2.5 border-1.5 border-ink bg-cream/30 text-ink font-mono text-xs rounded-xl focus-ring"
-                                />
-                              </div>
-
-                              {/* Work Email Address */}
-                              <div>
-                                <label htmlFor="quote-email" className="block font-mono text-xs font-bold uppercase tracking-wider text-stone mb-1.5">
-                                  Work Email Address *
-                                </label>
-                                <input
-                                  type="email"
-                                  id="quote-email"
-                                  required
-                                  placeholder="name@company.com"
-                                  value={quoteEmail}
-                                  onChange={e => setQuoteEmail(e.target.value)}
-                                  className="w-full px-3.5 py-2.5 border-1.5 border-ink bg-cream/30 text-ink font-mono text-xs rounded-xl focus-ring"
-                                />
-                              </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              {/* Website */}
-                              <div>
-                                <label htmlFor="quote-website" className="block font-mono text-xs font-bold uppercase tracking-wider text-stone mb-1.5">
-                                  Website *
-                                </label>
-                                <input
-                                  type="url"
-                                  id="quote-website"
-                                  required
-                                  placeholder="https://yourcompany.com"
-                                  value={quoteWebsite}
-                                  onChange={e => setQuoteWebsite(e.target.value)}
-                                  className="w-full px-3.5 py-2.5 border-1.5 border-ink bg-cream/30 text-ink font-mono text-xs rounded-xl focus-ring"
-                                />
-                              </div>
-
-                              {/* Company */}
-                              <div>
-                                <label htmlFor="quote-company" className="block font-mono text-xs font-bold uppercase tracking-wider text-stone mb-1.5">
-                                  Company *
-                                </label>
-                                <input
-                                  type="text"
-                                  id="quote-company"
-                                  required
-                                  placeholder="VeloSaaS"
-                                  value={quoteCompany}
-                                  onChange={e => setQuoteCompany(e.target.value)}
-                                  className="w-full px-3.5 py-2.5 border-1.5 border-ink bg-cream/30 text-ink font-mono text-xs rounded-xl focus-ring"
-                                />
-                              </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              {/* Phone Number */}
-                              <div>
-                                <label htmlFor="quote-phone" className="block font-mono text-xs font-bold uppercase tracking-wider text-stone mb-1.5">
-                                  Phone Number *
-                                </label>
-                                <input
-                                  type="tel"
-                                  id="quote-phone"
-                                  required
-                                  placeholder="(000) 000-0000"
-                                  value={quotePhone}
-                                  onChange={e => setQuotePhone(e.target.value)}
-                                  className="w-full px-3.5 py-2.5 border-1.5 border-ink bg-cream/30 text-ink font-mono text-xs rounded-xl focus-ring"
-                                />
-                              </div>
-
-                              {/* Project Budget Dropdown */}
-                              <div>
-                                <label htmlFor="quote-budget" className="block font-mono text-xs font-bold uppercase tracking-wider text-stone mb-1.5">
-                                  Project Budget *
-                                </label>
-                                <div className="relative">
-                                  <select
-                                    id="quote-budget"
-                                    required
-                                    value={quoteBudget}
-                                    onChange={e => setQuoteBudget(e.target.value)}
-                                    className="w-full appearance-none px-3.5 py-2.5 pr-10 border-1.5 border-ink bg-cream/30 text-ink font-mono text-xs rounded-xl focus-ring cursor-pointer"
-                                  >
-                                    <option value="< $1,000/month">&lt; $1,000 / month</option>
-                                    <option value="$1,000 - $3,000/month">$1,000 - $3,000 / month</option>
-                                    <option value="$3,000 - $5,000/month">$3,000 - $5,000 / month</option>
-                                    <option value="$5,000+/month">$5,000+ / month</option>
-                                  </select>
-                                  <ChevronDown className="w-4 h-4 text-ink absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Selected Performance Service (full width — titles are long) */}
-                            <div>
-                              <label htmlFor="quote-service" className="block font-mono text-xs font-bold uppercase tracking-wider text-stone mb-1.5">
-                                Target Capability *
-                              </label>
-                              <div className="relative">
-                                <select
-                                  id="quote-service"
-                                  required
-                                  value={quoteService}
-                                  onChange={e => {
-                                    setQuoteService(e.target.value);
-                                    setServiceHighlighted(false);
-                                  }}
-                                  className={`w-full appearance-none px-3.5 py-2.5 pr-10 border-1.5 font-mono text-xs rounded-xl focus-ring cursor-pointer transition-all bg-cream/30 text-ink ${
-                                    serviceHighlighted ? 'border-lime bg-lime/10 font-bold' : 'border-ink'
-                                  }`}
-                                >
-                                  {SERVICES.map(s => (
-                                    <option key={s.id} value={s.id} className="bg-paper text-ink font-mono">
-                                      {s.title}
-                                    </option>
-                                  ))}
-                                </select>
-                                <ChevronDown className="w-4 h-4 text-ink absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                              </div>
-                            </div>
-
-                            {/* Comments or Questions */}
-                            <div>
-                              <label htmlFor="quote-comments" className="block font-mono text-xs font-bold uppercase tracking-wider text-stone mb-1.5">
-                                Comments or Questions
-                              </label>
-                              <textarea
-                                id="quote-comments"
-                                rows={4}
-                                placeholder="Looking to get more leads? Frustrated with your current results? Planning something new? Tell us what's going on."
-                                value={quoteComments}
-                                onChange={e => setQuoteComments(e.target.value)}
-                                className="w-full px-3.5 py-2.5 border-1.5 border-ink bg-cream/30 text-ink font-sans text-xs rounded-xl focus-ring resize-none leading-relaxed"
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3.5">
+                          <div>
+                            <label htmlFor="quote-name" className="form-label">Full name</label>
+                            <span className="field-wrap">
+                              <User className="field-icon" />
+                              <input
+                                type="text"
+                                id="quote-name"
+                                required
+                                autoComplete="name"
+                                placeholder="Sarah Jenkins"
+                                value={quoteName}
+                                onChange={e => setQuoteName(e.target.value)}
+                                className="field"
                               />
-                            </div>
+                            </span>
+                          </div>
 
-                            <div className="pt-2">
-                              {quoteError && (
-                                <p className="flex items-center justify-center gap-2 font-mono text-xs text-rose-700 font-bold mb-4">
-                                  <AlertCircle className="w-4 h-4 shrink-0" />
-                                  {quoteError}
-                                </p>
-                              )}
-                              <button
-                                type="submit"
-                                className="w-full py-4 px-6 bg-lime text-ink font-sans font-bold text-sm border-2 border-ink shadow-hard hover:shadow-hard-hover hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0 rounded-full transition-all flex items-center justify-center gap-2 cursor-pointer focus-ring"
-                                id="quote-page-submit-btn"
+                          <div>
+                            <label htmlFor="quote-company" className="form-label">Company</label>
+                            <span className="field-wrap">
+                              <Building2 className="field-icon" />
+                              <input
+                                type="text"
+                                id="quote-company"
+                                required
+                                autoComplete="organization"
+                                placeholder="VeloSaaS"
+                                value={quoteCompany}
+                                onChange={e => setQuoteCompany(e.target.value)}
+                                className="field"
+                              />
+                            </span>
+                          </div>
+
+                          <div>
+                            <label htmlFor="quote-email" className="form-label">Work email</label>
+                            <span className="field-wrap">
+                              <Mail className="field-icon" />
+                              <input
+                                type="email"
+                                id="quote-email"
+                                required
+                                autoComplete="email"
+                                inputMode="email"
+                                placeholder="name@company.com"
+                                value={quoteEmail}
+                                onChange={e => setQuoteEmail(e.target.value)}
+                                className="field field-mono"
+                              />
+                            </span>
+                          </div>
+
+                          <div>
+                            <label htmlFor="quote-phone" className="form-label">Phone</label>
+                            <span className="field-wrap">
+                              <Phone className="field-icon" />
+                              <input
+                                type="tel"
+                                id="quote-phone"
+                                required
+                                autoComplete="tel"
+                                inputMode="tel"
+                                placeholder="(000) 000-0000"
+                                value={quotePhone}
+                                onChange={e => setQuotePhone(e.target.value)}
+                                className="field field-mono"
+                              />
+                            </span>
+                          </div>
+
+                          <div>
+                            <label htmlFor="quote-website" className="form-label">Website</label>
+                            <span className="field-wrap">
+                              <Globe className="field-icon" />
+                              <input
+                                type="url"
+                                id="quote-website"
+                                required
+                                autoComplete="url"
+                                inputMode="url"
+                                placeholder="https://yourcompany.com"
+                                value={quoteWebsite}
+                                onChange={e => setQuoteWebsite(e.target.value)}
+                                className="field field-mono"
+                              />
+                            </span>
+                          </div>
+
+                          <div>
+                            <label htmlFor="quote-budget" className="form-label">Monthly budget</label>
+                            <span className="field-wrap">
+                              <select
+                                id="quote-budget"
+                                required
+                                value={quoteBudget}
+                                onChange={e => setQuoteBudget(e.target.value)}
+                                className="field field-mono"
                               >
-                                <span className="font-extrabold tracking-wide uppercase">Request A Free Proposal</span>
-                                <ArrowRight className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </form>
-                        </>
-                      ) : quoteIsSubmitting ? (
-                        <div className="py-12 text-center space-y-6">
-                          <div className="relative w-16 h-16 mx-auto">
-                            <div className="absolute inset-0 rounded-full border-4 border-lime/20 border-t-lime animate-spin" />
-                          </div>
-                          <div className="space-y-2">
-                            <h4 className="font-mono text-xs font-bold uppercase tracking-wider text-ink">
-                              Sending your request...
-                            </h4>
-                            <p className="font-mono text-xs text-stone">
-                              This only takes a second.
-                            </p>
+                                <option value="< $1,000/month">&lt; $1,000 / month</option>
+                                <option value="$1,000 - $3,000/month">$1,000 - $3,000 / month</option>
+                                <option value="$3,000 - $5,000/month">$3,000 - $5,000 / month</option>
+                                <option value="$5,000+/month">$5,000+ / month</option>
+                              </select>
+                              <ChevronDown className="field-chevron" />
+                            </span>
                           </div>
                         </div>
-                      ) : (
-                        <div className="py-12 text-center space-y-6">
-                          <div className="w-16 h-16 bg-lime/20 rounded-full flex items-center justify-center mx-auto border-2 border-ink text-ink shadow-hard">
-                            <Check className="w-8 h-8 stroke-[3]" />
-                          </div>
 
-                          <div className="space-y-2">
-                            <h3 className="font-display font-black text-3xl text-ink">
-                              Proposal Request Received!
-                            </h3>
-                            <p className="font-sans text-stone text-sm max-w-sm mx-auto leading-relaxed">
-                              Our strategist has received your details for <span className="font-mono text-xs font-bold text-ink">{quoteWebsite}</span> and will research your business, competitors, and market. Expect your custom proposal within 24 hours.
-                            </p>
-                          </div>
-
-                          <div className="pt-4">
-                            <button
-                              onClick={() => {
-                                setQuoteIsSuccess(false);
-                                setQuoteName('');
-                                setQuoteEmail('');
-                                setQuoteWebsite('');
-                                setQuoteCompany('');
-                                setQuotePhone('');
-                                setQuoteBudget('< $1,000/month');
-                                setQuoteComments('');
+                        <div>
+                          <label htmlFor="quote-service" className="form-label">Target capability</label>
+                          <span className="field-wrap">
+                            <select
+                              id="quote-service"
+                              required
+                              value={quoteService}
+                              onChange={e => {
+                                setQuoteService(e.target.value);
+                                setServiceHighlighted(false);
                               }}
-                              className="px-6 py-2 bg-ink text-cream font-mono text-xs font-bold uppercase rounded-full hover:bg-lime hover:text-ink hover:shadow-hard transition-all shadow-hard"
-                              id="reset-quote-form-btn"
+                              className={`field ${serviceHighlighted ? 'border-lime! bg-lime/10! font-semibold' : ''}`}
                             >
-                              Request Another Proposal
-                            </button>
+                              {SERVICES.map(s => (
+                                <option key={s.id} value={s.id}>
+                                  {s.title}
+                                </option>
+                              ))}
+                            </select>
+                            <ChevronDown className="field-chevron" />
+                          </span>
+                        </div>
+
+                        <div>
+                          <label htmlFor="quote-comments" className="form-label">
+                            What is going on right now?<span className="opt">optional</span>
+                          </label>
+                          <textarea
+                            id="quote-comments"
+                            rows={2}
+                            placeholder="Need more leads? Frustrated with current results? Launching something new?"
+                            value={quoteComments}
+                            onChange={e => setQuoteComments(e.target.value)}
+                            className="field"
+                          />
+                        </div>
+
+                        {quoteError && (
+                          <p
+                            role="alert"
+                            className="flex items-start gap-2 font-sans text-sm text-[#B4232A] font-semibold p-3 bg-[#B4232A]/10 border-1.5 border-[#B4232A]/30 rounded-xl"
+                          >
+                            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                            <span>{quoteError}</span>
+                          </p>
+                        )}
+
+                        <div className="pt-1">
+                          <button
+                            type="submit"
+                            className="group w-full py-3.5 px-6 bg-lime text-ink font-sans font-extrabold text-base border-1.5 border-ink shadow-hard hover:shadow-hard-hover hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0 active:shadow-hard rounded-full transition-all flex items-center justify-center gap-2.5 cursor-pointer focus-ring"
+                            id="quote-page-submit-btn"
+                          >
+                            <span>Request a free proposal</span>
+                            <ArrowRight className="w-5 h-5 transition-transform duration-200 group-hover:translate-x-1" />
+                          </button>
+
+                          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 mt-3.5 font-mono text-[10px] uppercase tracking-wide text-stone">
+                            <span className="flex items-center gap-1.5">
+                              <Lock className="w-3 h-3 text-forest" />
+                              Your details stay private
+                            </span>
+                            <span className="flex items-center gap-1.5">
+                              <Check className="w-3 h-3 text-forest stroke-[3]" />
+                              No obligation
+                            </span>
                           </div>
                         </div>
-                      )}
-                    </div>
+                      </form>
+                    ) : quoteIsSubmitting ? (
+                      <div className="py-20 text-center flex flex-col items-center justify-center min-h-[420px]">
+                        <div className="w-14 h-14 border-4 border-ink/15 border-t-ink rounded-full animate-spin mb-6" />
+                        <h2 className="font-display font-black text-xl text-ink mb-1.5">Sending your request...</h2>
+                        <p className="font-sans text-sm text-stone">This only takes a second.</p>
+                      </div>
+                    ) : (
+                      <div className="px-6 md:px-8 py-10 text-center flex flex-col items-center justify-center min-h-[420px]">
+                        <div className="w-14 h-14 bg-lime text-ink rounded-full flex items-center justify-center border-1.5 border-ink shadow-hard rotate-3 mb-5">
+                          <Check className="w-7 h-7 stroke-[3]" />
+                        </div>
+
+                        <h2 className="font-display font-black text-2xl md:text-3xl text-ink mb-2">
+                          Proposal request received
+                        </h2>
+                        <p className="font-sans text-stone text-sm max-w-md mx-auto leading-relaxed mb-7">
+                          Our strategist has your details for{' '}
+                          <span className="font-mono text-xs font-bold text-ink">{quoteWebsite}</span> and will research
+                          your business, competitors, and market. Expect your custom proposal within 24 hours.
+                        </p>
+
+                        <button
+                          onClick={() => {
+                            setQuoteIsSuccess(false);
+                            setQuoteName('');
+                            setQuoteEmail('');
+                            setQuoteWebsite('');
+                            setQuoteCompany('');
+                            setQuotePhone('');
+                            setQuoteBudget('< $1,000/month');
+                            setQuoteComments('');
+                          }}
+                          className="px-8 py-3 bg-ink text-cream font-mono text-xs font-bold uppercase tracking-wide rounded-full border-1.5 border-ink hover:bg-lime hover:text-ink transition-all shadow-hard cursor-pointer focus-ring"
+                          id="reset-quote-form-btn"
+                        >
+                          Request another proposal
+                        </button>
+                      </div>
+                    )}
 
                   </div>
-                </div>
-
-                {/* RIGHT: Steps & Testimonial Column */}
-                <div className="lg:col-span-5 text-left space-y-8 lg:pl-4">
-                  
-                  {/* Title Header */}
-                  <div className="space-y-2">
-                    <h3 className="font-display font-black text-2xl md:text-3xl text-cream tracking-tight">
-                      Here’s what will happen next:
-                    </h3>
-                  </div>
-
-                  {/* Checklist steps */}
-                  <div className="space-y-6">
-                    {/* Step 1 */}
-                    <div className="flex gap-4 items-start group">
-                      <div className="w-7 h-7 bg-lime text-ink rounded-full flex items-center justify-center shrink-0 border border-ink shadow-hard-xs">
-                        <Check className="w-4 h-4 stroke-[3]" />
-                      </div>
-                      <div className="space-y-1">
-                        <h4 className="font-display font-extrabold text-lg text-cream leading-tight">
-                          Get to know your business
-                        </h4>
-                        <p className="font-sans text-cream/70 text-xs md:text-sm leading-relaxed">
-                          From our first conversation, we begin researching your business, competitors, and industry. We’ll audit your site to craft a fully customized proposal.
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Step 2 */}
-                    <div className="flex gap-4 items-start group">
-                      <div className="w-7 h-7 bg-lime text-ink rounded-full flex items-center justify-center shrink-0 border border-ink shadow-hard-xs">
-                        <Check className="w-4 h-4 stroke-[3]" />
-                      </div>
-                      <div className="space-y-1">
-                        <h4 className="font-display font-extrabold text-lg text-cream leading-tight">
-                          Put together your flight plan
-                        </h4>
-                        <p className="font-sans text-cream/70 text-xs md:text-sm leading-relaxed">
-                          Based on their research, your strategist will compile personalized recommendations for how your business can drive more revenue.
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Step 3 */}
-                    <div className="flex gap-4 items-start group">
-                      <div className="w-7 h-7 bg-lime text-ink rounded-full flex items-center justify-center shrink-0 border border-ink shadow-hard-xs">
-                        <Check className="w-4 h-4 stroke-[3]" />
-                      </div>
-                      <div className="space-y-1">
-                        <h4 className="font-display font-extrabold text-lg text-cream leading-tight">
-                          Prepare for takeoff
-                        </h4>
-                        <p className="font-sans text-cream/70 text-xs md:text-sm leading-relaxed">
-                          Your flight plan will include pricing, timelines, a detailed view of what a partnership with OptimizeIndex will look like, and how we’ll help your business grow.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-             
-
                 </div>
 
               </div>
-
             </div>
           </section>
         )}
@@ -2121,7 +2137,7 @@ export default function App() {
 
             <div className="flex justify-center pt-2">
               <a
-                href="tel:8174098408"
+                href="tel:2028107042"
                 className="inline-flex items-center gap-4 bg-lime hover:bg-lime/90 text-ink border-2 border-ink py-4 px-8 md:px-12 rounded-2xl shadow-hard hover:shadow-hard-hover hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0 transition-all duration-150 group"
                 id="phone-cta-button"
               >
@@ -2139,7 +2155,7 @@ export default function App() {
                     SPEAK WITH A STRATEGIST:
                   </span>
                   <span className="block text-2xl md:text-3xl font-black tracking-tight text-ink leading-none mt-1 font-mono">
-                    817 409 8408
+                    202 810 7042
                   </span>
                 </div>
               </a>

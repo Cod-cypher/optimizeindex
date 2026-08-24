@@ -6,7 +6,7 @@
   --font-display: "Bricolage Grotesque", sans-serif;
   --font-serif-accent: "Instrument Serif", serif;
   --font-mono: "Space Mono", monospace;
-  
+
   --color-ink: #141210;
   --color-cream: #F6F1E6;
   --color-lime: #C9F31D;
@@ -27,7 +27,14 @@
   .animate-marquee-fast {
     animation: marquee 25s linear infinite;
   }
-  
+
+  /* 1.5px borders — used throughout the site. Tailwind has no built-in
+     `border-1.5`, so these must be declared by hand or they emit nothing. */
+  .border-1\.5   { border-width: 1.5px; }
+  .border-b-1\.5 { border-bottom-width: 1.5px; }
+  .border-t-1\.5 { border-top-width: 1.5px; }
+  .border-y-1\.5 { border-top-width: 1.5px; border-bottom-width: 1.5px; }
+
   /* Hard offset shadow custom class */
   .shadow-hard {
     box-shadow: 3px 4px 0px 0px #141210;
@@ -38,24 +45,231 @@
   .shadow-hard-lg {
     box-shadow: 6px 8px 0px 0px #141210;
   }
-  
-  /* Focus rings */
+
+  /* Focus ring — only while focused. Without the :focus-visible guard this
+     paints a permanent double ring around every link and button. */
   .focus-ring {
     outline: none;
+  }
+  .focus-ring:focus-visible {
     box-shadow: 0 0 0 2px #F6F1E6, 0 0 0 4px #141210;
   }
 }
 
-/* Form fields: clean single border at rest, ring only while focused */
-input.focus-ring,
-select.focus-ring,
-textarea.focus-ring {
-  box-shadow: none;
-}
-input.focus-ring:focus,
-select.focus-ring:focus,
-textarea.focus-ring:focus {
-  box-shadow: 0 0 0 2px #F6F1E6, 0 0 0 4px #141210;
+/* ---------------------------------------------------------------------------
+   FORM SYSTEM
+   Shared field styling for the audit page, quote page and lead modal so all
+   three read as one product. Quiet at rest, unmistakably brutalist on focus.
+--------------------------------------------------------------------------- */
+@layer components {
+  .form-label {
+    display: block;
+    font-family: "Space Mono", monospace;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: #45423B;
+    margin-bottom: 0.3rem;
+  }
+  .form-label .opt {
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 400;
+    color: #8A867C;
+    margin-left: 0.35rem;
+  }
+
+  /* A <legend> interrupts its fieldset's top border, which reads as a stray
+     rule next to the section title. Floating it keeps the divider unbroken. */
+  fieldset > legend {
+    float: left;
+    width: 100%;
+  }
+  /* ...and whatever follows the legend must clear it, or it wraps around
+     the float and collapses (the goal-pill row did exactly that). */
+  fieldset > legend + * {
+    clear: both;
+  }
+  fieldset::after {
+    content: "";
+    display: table;
+    clear: both;
+  }
+
+  .field-wrap {
+    position: relative;
+    display: block;
+  }
+  /* Leading icon sits inside the field; .field gets extra left padding. */
+  .field-wrap > .field-icon {
+    position: absolute;
+    left: 0.85rem;
+    top: 0.85rem;
+    width: 1rem;
+    height: 1rem;
+    color: #8A867C;
+    pointer-events: none;
+    transition: color 0.15s ease;
+  }
+  .field-wrap:focus-within > .field-icon {
+    color: #141210;
+  }
+  /* Trailing chevron for selects */
+  .field-wrap > .field-chevron {
+    position: absolute;
+    right: 0.9rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 1rem;
+    height: 1rem;
+    color: #141210;
+    pointer-events: none;
+  }
+
+  .field {
+    width: 100%;
+    display: block;
+    border: 1.5px solid rgba(20, 18, 16, 0.2);
+    border-radius: 0.75rem;
+    background-color: #FBF8F1;
+    color: #141210;
+    font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+    /* 16px on small screens stops iOS Safari zooming in on focus. */
+    font-size: 1rem;
+    line-height: 1.35;
+    padding: 0.6rem 0.9rem;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+  }
+  .field-wrap > .field-icon ~ .field,
+  .field.has-icon {
+    padding-left: 2.35rem;
+  }
+  .field::placeholder {
+    color: #A9A498;
+    font-weight: 400;
+  }
+  .field:hover:not(:focus) {
+    border-color: rgba(20, 18, 16, 0.45);
+    background-color: #FFFFFF;
+  }
+  .field:focus,
+  .field:focus-visible {
+    outline: none;
+    border-color: #141210;
+    background-color: #FFFFFF;
+    box-shadow: 0 0 0 3px rgba(201, 243, 29, 0.75);
+  }
+  /* Values that are inherently machine-ish read better in mono. */
+  .field-mono {
+    font-family: "Space Mono", monospace;
+    font-size: 0.9375rem;
+    letter-spacing: -0.01em;
+  }
+  select.field {
+    appearance: none;
+    padding-right: 2.5rem;
+    cursor: pointer;
+  }
+  textarea.field {
+    resize: none;
+    line-height: 1.55;
+    padding-top: 0.8rem;
+  }
+  .field:user-invalid {
+    border-color: #B4232A;
+  }
+  .field:user-invalid:focus {
+    box-shadow: 0 0 0 3px rgba(180, 35, 42, 0.25);
+  }
+
+  @media (min-width: 640px) {
+    .field { font-size: 0.9375rem; }
+    .field-mono { font-size: 0.875rem; }
+  }
+
+  /* Numbered step header inside a form */
+  .step-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 999px;
+    background: #141210;
+    color: #C9F31D;
+    font-family: "Space Mono", monospace;
+    font-size: 0.625rem;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  /* Selectable pill (goal / objective choosers) */
+  .choice-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.45rem 0.8rem;
+    border: 1.5px solid rgba(20, 18, 16, 0.2);
+    border-radius: 999px;
+    background-color: #FBF8F1;
+    color: #141210;
+    font-family: "Space Mono", monospace;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: transform 0.12s ease, border-color 0.15s ease,
+                background-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+  }
+  .choice-pill:hover {
+    border-color: #141210;
+    background-color: #FFFFFF;
+  }
+  .choice-pill:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(201, 243, 29, 0.75);
+  }
+  .choice-pill[aria-pressed="true"] {
+    background-color: #141210;
+    border-color: #141210;
+    color: #C9F31D;
+    box-shadow: 3px 4px 0px 0px rgba(20, 18, 16, 0.35);
+  }
+
+  /* Nav link with a lime underline that swipes in */
+  .nav-link {
+    position: relative;
+    padding: 0.35rem 0.15rem;
+    color: rgba(20, 18, 16, 0.62);
+    transition: color 0.15s ease;
+  }
+  .nav-link::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -0.1rem;
+    height: 3px;
+    background-color: #C9F31D;
+    border-radius: 2px;
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .nav-link:hover {
+    color: #141210;
+  }
+  .nav-link:hover::after {
+    transform: scaleX(1);
+  }
+  .nav-link[aria-current="page"] {
+    color: #141210;
+  }
+  .nav-link[aria-current="page"]::after {
+    transform: scaleX(1);
+  }
 }
 
 /* Base style resets */
@@ -65,3 +279,48 @@ html, body {
   font-family: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
 
+/* ---------------------------------------------------------------------------
+   SHORT-VIEWPORT DENSITY
+   On laptops with little vertical room (1280x720 and friends) the audit and
+   quote cards would spill below the fold. Tighten the form rhythm rather than
+   let the user scroll to reach the submit button.
+--------------------------------------------------------------------------- */
+@layer components {
+  @media (min-width: 1024px) and (max-height: 820px) {
+    .field {
+      padding: 0.45rem 0.85rem;
+      font-size: 0.875rem;
+      border-radius: 0.625rem;
+    }
+    .field-mono { font-size: 0.8125rem; }
+    .field-wrap > .field-icon { top: 0.7rem; width: 0.9rem; height: 0.9rem; }
+    .form-label { font-size: 0.625rem; margin-bottom: 0.2rem; }
+    .choice-pill { padding: 0.35rem 0.7rem; font-size: 0.625rem; }
+    .step-chip { width: 1.25rem; height: 1.25rem; }
+  }
+
+  /* Shorter desktop windows (<=800px tall): compress further so the audit,
+     quote and modal forms all clear the fold. */
+  @media (min-width: 1024px) and (max-height: 800px) {
+    .field {
+      padding: 0.35rem 0.8rem;
+      font-size: 0.8125rem;
+    }
+    .field-mono { font-size: 0.75rem; }
+    .field-wrap > .field-icon { top: 0.6rem; }
+    .form-label { margin-bottom: 0.1rem; }
+    .choice-pill { padding: 0.28rem 0.6rem; }
+    form.fit-form { padding-top: 0.9rem; padding-bottom: 0.9rem; }
+    form.fit-form > :not(:last-child) { margin-block-end: 0.6rem; }
+    form.fit-form .grid { row-gap: 0.5rem; }
+  }
+
+  /* Genuinely cramped windows (<=730px tall): last squeeze so the modal and
+     the audit card still clear the fold rather than forcing a scroll. */
+  @media (min-width: 1024px) and (max-height: 730px) {
+    .field { padding: 0.28rem 0.75rem; }
+    .modal-note { display: none; }
+    form.fit-form { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+    form.fit-form > :not(:last-child) { margin-block-end: 0.5rem; }
+  }
+}
