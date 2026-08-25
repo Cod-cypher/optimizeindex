@@ -13,7 +13,8 @@
     "lint": "tsc --noEmit",
     "fonts": "tsx scripts/fetch-fonts.ts",
     "verify": "tsx scripts/verify-seo.ts",
-    "images": "tsx scripts/optimize-images.ts"
+    "images": "tsx scripts/optimize-images.ts",
+    "shots": "node scripts/shoot-audit.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
@@ -46,6 +47,7 @@
     "vite": "^6.2.3"
   },
   "optionalDependencies": {
-    "sharp": "^0.35.3"
+    "sharp": "^0.35.3",
+    "puppeteer-core": "^25.8.0"
   }
 }

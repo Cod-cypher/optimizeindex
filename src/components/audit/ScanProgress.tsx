@@ -18,11 +18,11 @@ import { Check, Loader2 } from 'lucide-react';
 export type ScanStage = 'fetching' | 'analyzing' | 'speed';
 
 const STEPS: { id: string; label: string; stage: ScanStage }[] = [
-  { id: 'fetch', label: 'Fetching your homepage', stage: 'fetching' },
-  { id: 'technical', label: 'Checking crawlability, HTTPS, sitemap & indexing', stage: 'analyzing' },
-  { id: 'content', label: 'Reading titles, headings & on-page content', stage: 'analyzing' },
-  { id: 'geo', label: 'Testing AI search readiness & structured data', stage: 'analyzing' },
-  { id: 'speed', label: 'Measuring Core Web Vitals with Google', stage: 'speed' },
+  { id: 'fetch', label: 'Opening your website', stage: 'fetching' },
+  { id: 'technical', label: 'Checking Google can find you', stage: 'analyzing' },
+  { id: 'content', label: 'Reading what your pages say', stage: 'analyzing' },
+  { id: 'geo', label: 'Checking if AI assistants can read you', stage: 'analyzing' },
+  { id: 'speed', label: 'Timing how fast your site loads', stage: 'speed' },
 ];
 
 const ORDER: ScanStage[] = ['fetching', 'analyzing', 'speed'];
@@ -40,8 +40,8 @@ export default function ScanProgress({
     <div className="w-full max-w-xl mx-auto text-center py-4">
       <div className="inline-flex items-center gap-2 px-3 py-1 bg-paper border-1.5 border-ink rounded-full shadow-hard -rotate-1 mb-5">
         <Loader2 className="w-3 h-3 text-ink animate-spin" aria-hidden="true" />
-        <span className="font-mono text-[10px] font-bold text-ink uppercase tracking-wider">
-          Scanning {domain}
+        <span className="font-sans text-[13px] font-bold text-ink">
+          Checking {domain}
         </span>
       </div>
 
@@ -80,7 +80,7 @@ export default function ScanProgress({
                 )}
               </span>
               <span
-                className={`font-sans text-[13px] leading-snug ${
+                className={`font-sans text-[15px] leading-snug ${
                   done || active ? 'text-ink font-medium' : 'text-stone'
                 }`}
               >
@@ -91,9 +91,9 @@ export default function ScanProgress({
         })}
       </ul>
 
-      <p className="font-mono text-[10px] uppercase tracking-widest text-stone mt-5">
+      <p className="font-sans text-[13px] text-stone mt-5">
         {stage === 'speed'
-          ? "Google's speed test takes up to 30 seconds"
+          ? "Google's speed test can take up to 30 seconds"
           : 'Usually takes a few seconds'}
       </p>
     </div>

@@ -42,16 +42,30 @@ interface FontFace {
   url: string;
 }
 
+/**
+ * Google's CSS puts the subset name in a comment immediately BEFORE each
+ * block:
+ *
+ *     \/* latin-ext *\/
+ *     @font-face { ... }
+ *     \/* latin *\/
+ *     @font-face { ... }
+ *
+ * Pair the comment with the block that follows it in a single match. An
+ * earlier version split on '@font-face' and scanned each chunk for a comment —
+ * but a chunk holds its own declarations followed by the NEXT face's comment,
+ * so every face inherited the following face's subset name. The latin-ext file
+ * was then written out as '...-latin.woff2', and because the real latin face
+ * produced the same filename it was skipped as a duplicate. The result was a
+ * font with no basic ASCII in it: every mono label on the site silently fell
+ * back to the system monospace, which is what made capital letters look like
+ * they came from a different typeface.
+ */
 function parseFaces(css: string): FontFace[] {
   const faces: FontFace[] = [];
-  // Google annotates each block with a /* subset */ comment above it.
-  const blocks = css.split('@font-face');
-  let currentSubset = 'latin';
+  const blockRe = /\/\*\s*([\w-]+)\s*\*\/\s*@font-face\s*\{([^}]*)\}/g;
 
-  for (const block of blocks) {
-    const subsetMatch = block.match(/\/\*\s*([a-z-]+)\s*\*\//i);
-    if (subsetMatch) currentSubset = subsetMatch[1];
-
+  for (const [, subset, block] of css.matchAll(blockRe)) {
     const family = block.match(/font-family:\s*'([^']+)'/)?.[1];
     const url = block.match(/url\((https:\/\/[^)]+\.woff2)\)/)?.[1];
     if (!family || !url) continue;
@@ -60,7 +74,7 @@ function parseFaces(css: string): FontFace[] {
       family,
       style: block.match(/font-style:\s*([^;]+);/)?.[1].trim() ?? 'normal',
       weight: block.match(/font-weight:\s*([^;]+);/)?.[1].trim() ?? '400',
-      subset: currentSubset,
+      subset,
       unicodeRange: block.match(/unicode-range:\s*([^;]+);/)?.[1].trim() ?? '',
       url,
     });
@@ -84,6 +98,19 @@ async function main() {
 
   const faces = parseFaces(css).filter((f) => KEEP_SUBSETS.includes(f.subset));
   if (faces.length === 0) throw new Error('No font faces parsed — the CSS format may have changed.');
+
+  // Guard against the off-by-one described above ever coming back: every face
+  // we keep must actually cover basic ASCII. A subset that starts at U+0100 is
+  // latin-ext wearing the wrong label, and would leave the site with no A-Z.
+  for (const f of faces) {
+    if (f.unicodeRange && !/U\+0000-00FF/i.test(f.unicodeRange)) {
+      throw new Error(
+        `${f.family} ${f.weight} ${f.style} was labelled "${f.subset}" but its ` +
+          `unicode-range does not include basic latin (U+0000-00FF). ` +
+          `The subset-to-block pairing is wrong — see parseFaces.`,
+      );
+    }
+  }
 
   const rules: string[] = [];
   const seen = new Set<string>();

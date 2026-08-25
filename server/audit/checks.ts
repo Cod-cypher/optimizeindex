@@ -201,29 +201,29 @@ const CHECKS: CheckDef[] = [
   {
     id: "https",
     category: "technical",
-    label: "Secure connection (HTTPS)",
+    label: "Secure padlock on your site",
     weight: 3,
     run: (ctx) => {
       if (ctx.servedOverHttps) {
         return {
           status: "pass",
           detail: `Served over HTTPS at ${ctx.finalUrl.origin}.`,
-          why: "Chrome flags non-HTTPS pages as 'Not secure', and Google uses HTTPS as a ranking signal.",
-          fix: "No action needed.",
+          why: "Customers trust the padlock. Without it, Chrome puts a warning next to your name.",
+          fix: "Nothing to do here.",
         };
       }
       return {
         status: "fail",
         detail: "The site answered over plain HTTP — no valid HTTPS response.",
-        why: "Visitors see a 'Not secure' warning in the address bar, and it suppresses rankings.",
-        fix: "Install a TLS certificate (Let's Encrypt is free) and redirect all HTTP traffic to HTTPS.",
+        why: "Customers see a 'Not secure' warning before they see your phone number. Most leave.",
+        fix: "Get an SSL certificate installed. They are free, and most hosts do it in a couple of clicks.",
       };
     },
   },
   {
     id: "https-redirect",
     category: "technical",
-    label: "HTTP redirects to HTTPS",
+    label: "Old insecure links still work",
     weight: 2,
     run: (ctx) => {
       if (ctx.httpUpgradesToHttps === null) {
@@ -231,96 +231,96 @@ const CHECKS: CheckDef[] = [
           status: "unknown",
           detail: "Couldn't complete the HTTP-to-HTTPS check.",
           why: "Serving both protocols splits your ranking signals between two versions of every page.",
-          fix: "Confirm http:// forces a 301 to https://.",
+          fix: "Check that the insecure version of your address forwards to the secure one.",
         };
       }
       if (ctx.httpUpgradesToHttps) {
         return {
           status: "pass",
           detail: "http:// redirects to the HTTPS version.",
-          why: "Keeps every link and ranking signal pointing at one canonical protocol.",
-          fix: "No action needed.",
+          why: "Everyone lands on the same secure version of your site.",
+          fix: "Nothing to do here.",
         };
       }
       return {
         status: "fail",
         detail: "http:// serves content instead of redirecting to HTTPS.",
-        why: "Google can index both versions, splitting your authority across duplicate URLs.",
-        fix: "Add a server-level 301 from http:// to https:// for every path.",
+        why: "Google sees two copies of your site and splits the credit, so neither ranks as well.",
+        fix: "Have your host forward every insecure link to the secure version automatically.",
       };
     },
   },
   {
     id: "www-consolidation",
     category: "technical",
-    label: "www / non-www consolidated",
+    label: "One web address, not two",
     weight: 1,
     run: (ctx) => {
       if (ctx.wwwConsolidated === null) {
         return {
           status: "unknown",
           detail: "Couldn't complete the www / non-www check.",
-          why: "Two reachable hostnames means two copies of your site competing with each other.",
-          fix: "Pick one hostname and 301 the other to it.",
+          why: "Two web addresses means Google splits the credit instead of giving it all to one.",
+          fix: "Pick one address as the main one and have the other forward to it.",
         };
       }
       return ctx.wwwConsolidated
         ? {
             status: "pass",
             detail: `Both www and non-www resolve to ${ctx.finalUrl.hostname}.`,
-            why: "One hostname means one set of ranking signals instead of two competing ones.",
-            fix: "No action needed.",
+            why: "All your credit with Google goes to one address.",
+            fix: "Nothing to do here.",
           }
         : {
             status: "warn",
             detail: "www and non-www both serve the site without redirecting to one another.",
-            why: "Google may treat them as two sites, halving the authority each one earns.",
-            fix: "Choose a primary hostname and 301 the other to it.",
+            why: "Google may treat these as two different sites and give each one half the credit.",
+            fix: "Pick one address as the main one and have the other forward to it.",
           };
     },
   },
   {
     id: "robots-txt",
     category: "technical",
-    label: "robots.txt",
+    label: "Google is allowed in",
     weight: 2,
     run: (ctx) => {
       if (!ctx.robots.found) {
         return {
           status: "warn",
           detail: "No robots.txt found at /robots.txt.",
-          why: "Without it you can't steer crawl budget away from pages that shouldn't be indexed.",
-          fix: "Add a robots.txt that allows your public pages and points to your sitemap.",
+          why: "This file tells Google which pages to look at. Without it, Google is guessing.",
+          fix: "Add this small file so Google knows which pages to read and where your page list is.",
         };
       }
       if (ctx.robots.blocksRoot) {
         return {
           status: "fail",
           detail: "robots.txt blocks Googlebot from crawling the site root.",
-          why: "This single line can remove your entire site from Google.",
-          fix: "Remove the 'Disallow: /' rule from the Googlebot or wildcard group immediately.",
+          why: "One line in this file is telling Google to ignore your entire site.",
+          fix: "Remove the line blocking Google. This is urgent — it is hiding your whole site.",
         };
       }
       return {
         status: "pass",
         detail: `robots.txt found and Googlebot is allowed to crawl the site.`,
-        why: "Crawlers can reach your pages.",
-        fix: "No action needed.",
+        why: "Google is able to read your pages.",
+        fix: "Nothing to do here.",
       };
     },
   },
   {
     id: "sitemap",
     category: "technical",
-    label: "XML sitemap",
+    label: "Google has a list of your pages",
     weight: 2,
     run: (ctx) => {
       if (!ctx.sitemap.found) {
         return {
           status: "fail",
           detail: "No XML sitemap found at /sitemap.xml or referenced in robots.txt.",
-          why: "Google has to discover every page by following links — new and deep pages get indexed slowly or not at all.",
-          fix: "Generate an XML sitemap, reference it from robots.txt, and submit it in Search Console.",
+          why: "Without this list, new pages can take weeks to show up in Google, or never appear at all.",
+          fix: "Have a page list generated automatically and submit it to Google Search Console.",
         };
       }
       const count = ctx.sitemap.urlCount;
@@ -330,15 +330,15 @@ const CHECKS: CheckDef[] = [
           count != null
             ? `Sitemap found at ${ctx.sitemap.url} listing ${count} URL${count === 1 ? "" : "s"}.`
             : `Sitemap found at ${ctx.sitemap.url}.`,
-        why: "Gives Google a direct list of every page you want indexed.",
-        fix: "No action needed.",
+        why: "Google gets a direct list of every page you want found.",
+        fix: "Nothing to do here.",
       };
     },
   },
   {
     id: "indexable",
     category: "technical",
-    label: "Page is indexable",
+    label: "Your page can appear in results",
     weight: 3,
     run: (ctx) => {
       const metaRobots = ctx.$('meta[name="robots"], meta[name="googlebot"]')
@@ -351,8 +351,8 @@ const CHECKS: CheckDef[] = [
         return {
           status: "fail",
           detail: `A noindex directive is present: "${(metaRobots || header).trim()}".`,
-          why: "This tells Google to drop the page from search results entirely — no ranking is possible.",
-          fix: "Remove the noindex directive from the meta robots tag or X-Robots-Tag header.",
+          why: "This tells Google to hide the page completely. It cannot rank for anything.",
+          fix: "Remove the setting that is telling Google to hide this page.",
         };
       }
       return {
@@ -360,15 +360,15 @@ const CHECKS: CheckDef[] = [
         detail: metaRobots
           ? `Robots directive is "${metaRobots.trim()}" — indexing allowed.`
           : "No noindex directive found.",
-        why: "The page is eligible to appear in search results.",
-        fix: "No action needed.",
+        why: "The page is allowed to show up in search results.",
+        fix: "Nothing to do here.",
       };
     },
   },
   {
     id: "canonical",
     category: "technical",
-    label: "Canonical URL",
+    label: "No duplicate versions of your page",
     weight: 2,
     run: (ctx) => {
       const href = ctx.$('link[rel="canonical"]').first().attr("href");
@@ -376,8 +376,8 @@ const CHECKS: CheckDef[] = [
         return {
           status: "warn",
           detail: "No canonical tag on the homepage.",
-          why: "Without one, tracking parameters and trailing-slash variants can each be indexed as a separate page.",
-          fix: "Add <link rel=\"canonical\"> pointing at the preferred URL of every page.",
+          why: "Without this, small differences in a link can look like separate pages to Google.",
+          fix: "Set a preferred address for each page so Google knows which version counts.",
         };
       }
       let resolved: string;
@@ -387,8 +387,8 @@ const CHECKS: CheckDef[] = [
         return {
           status: "fail",
           detail: `Canonical tag contains an invalid URL: "${href}".`,
-          why: "A malformed canonical is ignored, or worse, points Google at a page that doesn't exist.",
-          fix: "Use an absolute, valid URL in the canonical tag.",
+          why: "This tag is broken, and may be pointing Google at a page that does not exist.",
+          fix: "Fix the broken preferred-address tag so it points at a real page.",
         };
       }
       const same =
@@ -397,21 +397,21 @@ const CHECKS: CheckDef[] = [
         ? {
             status: "pass",
             detail: `Canonical is self-referential: ${resolved}`,
-            why: "Consolidates ranking signals onto one definitive URL.",
-            fix: "No action needed.",
+            why: "All the credit for this page goes to one address.",
+            fix: "Nothing to do here.",
           }
         : {
             status: "warn",
             detail: `Canonical points elsewhere: ${resolved}`,
-            why: "Google will credit that other URL instead of this one — intentional for duplicates, damaging otherwise.",
-            fix: "Confirm this is deliberate; if not, point the canonical at this page.",
+            why: "Google will give the credit to a different page instead of this one.",
+            fix: "Check this is intentional. If not, point it back at this page.",
           };
     },
   },
   {
     id: "lang",
     category: "technical",
-    label: "Language declared",
+    label: "Language is set",
     weight: 1,
     run: (ctx) => {
       const lang = ctx.$("html").attr("lang");
@@ -419,21 +419,21 @@ const CHECKS: CheckDef[] = [
         ? {
             status: "pass",
             detail: `<html lang="${lang}"> is set.`,
-            why: "Tells search engines and screen readers what language to expect.",
-            fix: "No action needed.",
+            why: "Tells Google and screen readers what language your site is in.",
+            fix: "Nothing to do here.",
           }
         : {
             status: "warn",
             detail: "The <html> tag has no lang attribute.",
-            why: "Weakens geo-targeting and makes the page harder for screen readers to voice correctly.",
-            fix: 'Add lang="en" (or the correct language) to the <html> tag.',
+            why: "Helps Google serve your site to the right people, and helps screen readers read it aloud.",
+            fix: 'Have your developer set the page language.',
           };
     },
   },
   {
     id: "viewport",
     category: "technical",
-    label: "Mobile viewport",
+    label: "Built for phones",
     weight: 2,
     run: (ctx) => {
       const vp = ctx.$('meta[name="viewport"]').first().attr("content");
@@ -441,14 +441,14 @@ const CHECKS: CheckDef[] = [
         ? {
             status: "pass",
             detail: `Viewport is set: "${vp}".`,
-            why: "Required for the mobile layout Google actually ranks you on.",
-            fix: "No action needed.",
+            why: "Google ranks the phone version of your site first, and most of your customers are on a phone.",
+            fix: "Nothing to do here.",
           }
         : {
             status: "fail",
             detail: "No viewport meta tag found.",
-            why: "Mobile browsers render a zoomed-out desktop layout, and Google indexes the mobile version first.",
-            fix: 'Add <meta name="viewport" content="width=device-width, initial-scale=1">.',
+            why: "On a phone your site loads zoomed out and unreadable. That is the version Google judges you on.",
+            fix: 'Have your developer add the setting that makes the site fit a phone screen.',
           };
     },
   },
@@ -457,7 +457,7 @@ const CHECKS: CheckDef[] = [
   {
     id: "title",
     category: "content",
-    label: "Title tag",
+    label: "The headline Google shows",
     weight: 4,
     run: (ctx) => {
       const title = (ctx.$("head title").first().text() || "").trim();
@@ -465,8 +465,8 @@ const CHECKS: CheckDef[] = [
         return {
           status: "fail",
           detail: "The page has no title tag.",
-          why: "The title is the clickable headline in Google — without one you're invisible in the results.",
-          fix: "Write a 30-60 character title with your primary keyword and brand.",
+          why: "This is the blue clickable line customers see in Google. Right now there is nothing there.",
+          fix: "Write a short headline with what you do and where, plus your business name.",
         };
       }
       const len = title.length;
@@ -474,30 +474,30 @@ const CHECKS: CheckDef[] = [
         return {
           status: "warn",
           detail: `Title is ${len} characters: "${title}"`,
-          why: "Short titles waste the most valuable text real estate you own in search results.",
-          fix: "Expand to 30-60 characters — lead with what you do, then the location or brand.",
+          why: "You get a fixed amount of space in Google's results and you are only using part of it.",
+          fix: "Make it longer. Lead with what you do and the town you serve, then your name.",
         };
       }
       if (len > 60) {
         return {
           status: "warn",
           detail: `Title is ${len} characters: "${title}"`,
-          why: "Google truncates past roughly 60 characters, so the end of your title never gets seen.",
-          fix: "Trim to 60 characters or fewer, keeping the important words first.",
+          why: "Google cuts your headline off partway, so customers never read the end of it.",
+          fix: "Shorten it, and put the most important words first.",
         };
       }
       return {
         status: "pass",
         detail: `Title is ${len} characters: "${title}"`,
-        why: "Well-sized titles display in full and earn more clicks.",
-        fix: "No action needed.",
+        why: "Your headline shows in full, so more people click it.",
+        fix: "Nothing to do here.",
       };
     },
   },
   {
     id: "meta-description",
     category: "content",
-    label: "Meta description",
+    label: "The description under your headline",
     weight: 3,
     run: (ctx) => {
       const desc = (ctx.$('meta[name="description"]').first().attr("content") || "").trim();
@@ -505,8 +505,8 @@ const CHECKS: CheckDef[] = [
         return {
           status: "fail",
           detail: "No meta description on the homepage.",
-          why: "Google writes its own snippet from whatever text it finds — usually not your sales pitch.",
-          fix: "Write a 70-160 character description that states the offer and gives a reason to click.",
+          why: "Google will write this line for you from whatever text it finds. It is rarely your best pitch.",
+          fix: "Write a sentence or two saying what you do and why someone should call you.",
         };
       }
       const len = desc.length;
@@ -517,21 +517,21 @@ const CHECKS: CheckDef[] = [
           why: len < 70
             ? "A thin description leaves the search snippet doing less selling than it could."
             : "Google truncates past about 160 characters, cutting off your call to action.",
-          fix: "Rewrite to 70-160 characters with a clear benefit and a reason to click.",
+          fix: "Rewrite it to a sentence or two with a clear reason to call you.",
         };
       }
       return {
         status: "pass",
         detail: `Meta description is ${len} characters.`,
-        why: "A well-sized description improves click-through from the results page.",
-        fix: "No action needed.",
+        why: "This is your sales line in Google's results, and it fits.",
+        fix: "Nothing to do here.",
       };
     },
   },
   {
     id: "h1",
     category: "content",
-    label: "H1 heading",
+    label: "A clear main heading",
     weight: 3,
     run: (ctx) => {
       const h1s = ctx.$("h1");
@@ -540,8 +540,8 @@ const CHECKS: CheckDef[] = [
         return {
           status: "fail",
           detail: "No H1 heading on the page.",
-          why: "The H1 is the strongest on-page signal of what a page is about.",
-          fix: "Add exactly one H1 that states the page's main topic in plain language.",
+          why: "This is the biggest heading on the page. It is how Google decides what you do.",
+          fix: "Add one clear main heading saying what you do and where.",
         };
       }
       const first = h1s.first().text().replace(/\s+/g, " ").trim();
@@ -549,22 +549,22 @@ const CHECKS: CheckDef[] = [
         return {
           status: "warn",
           detail: `Found ${count} H1 headings. The first is "${first.slice(0, 80)}${first.length > 80 ? "…" : ""}".`,
-          why: "Multiple H1s dilute the topical signal instead of concentrating it.",
-          fix: "Keep one H1 and demote the rest to H2.",
+          why: "Several competing main headings leave Google unsure what the page is about.",
+          fix: "Keep one main heading and make the others smaller sub-headings.",
         };
       }
       return {
         status: "pass",
         detail: `One H1: "${first.slice(0, 80)}${first.length > 80 ? "…" : ""}"`,
-        why: "A single clear H1 concentrates the page's topical relevance.",
-        fix: "No action needed.",
+        why: "One clear main heading tells Google exactly what you do.",
+        fix: "Nothing to do here.",
       };
     },
   },
   {
     id: "heading-structure",
     category: "content",
-    label: "Heading structure",
+    label: "Sections a customer can scan",
     weight: 2,
     run: (ctx) => {
       const h2 = ctx.$("h2").length;
@@ -573,22 +573,22 @@ const CHECKS: CheckDef[] = [
         return {
           status: "warn",
           detail: `No H2 headings found (${h3} H3${h3 === 1 ? "" : "s"}).`,
-          why: "Flat pages are harder for Google to parse into sections and rarely win featured snippets.",
-          fix: "Break the page into sections with descriptive H2s covering the questions buyers ask.",
+          why: "Section headings let customers skim, and let Google pull answers straight from your page.",
+          fix: "Break the page into sections with headings that answer what customers ask you on the phone.",
         };
       }
       return {
         status: "pass",
         detail: `${h2} H2 heading${h2 === 1 ? "" : "s"} and ${h3} H3${h3 === 1 ? "" : "s"}.`,
-        why: "Clear section headings help Google pull answers from your page.",
-        fix: "No action needed.",
+        why: "Customers can skim it, and Google can pull answers from it.",
+        fix: "Nothing to do here.",
       };
     },
   },
   {
     id: "content-depth",
     category: "content",
-    label: "Content depth",
+    label: "Enough written on the page",
     weight: 3,
     run: (ctx) => {
       const words = wordCount(ctx);
@@ -596,30 +596,30 @@ const CHECKS: CheckDef[] = [
         return {
           status: "fail",
           detail: `Roughly ${words} words of text on the homepage.`,
-          why: "There isn't enough on the page for Google to understand what you sell or who you serve.",
-          fix: "Expand to at least 300-500 words covering your services, proof, and location.",
+          why: "There is not enough here for Google to work out what you do or who you serve.",
+          fix: "Add a few paragraphs covering your services, your areas, and why people hire you.",
         };
       }
       if (words < 300) {
         return {
           status: "warn",
           detail: `Roughly ${words} words of text on the homepage.`,
-          why: "Thin pages struggle to rank for anything beyond your brand name.",
-          fix: "Add sections answering the questions buyers ask before they contact you.",
+          why: "With this little text you will struggle to rank for anything except your own business name.",
+          fix: "Add sections answering the questions customers ask before they book.",
         };
       }
       return {
         status: "pass",
         detail: `Roughly ${words} words of text on the homepage.`,
-        why: "Enough substance for Google to match the page to real queries.",
-        fix: "No action needed.",
+        why: "Enough on the page for Google to match you to what customers actually search for.",
+        fix: "Nothing to do here.",
       };
     },
   },
   {
     id: "image-alt",
     category: "content",
-    label: "Image alt text",
+    label: "Photos are described",
     weight: 2,
     run: (ctx) => {
       const imgs = ctx.$("img");
@@ -629,7 +629,7 @@ const CHECKS: CheckDef[] = [
           status: "unknown",
           detail: "No <img> elements found on the page.",
           why: "Alt text is how image search and screen readers understand your visuals.",
-          fix: "Nothing to fix here.",
+          fix: "Nothing to do here.",
         };
       }
       // alt="" is the correct way to mark a decorative image, so it counts as
@@ -656,23 +656,23 @@ const CHECKS: CheckDef[] = [
             decorative > 0
               ? `All ${total} images are handled — ${described} described, ${decorative} marked decorative.`
               : `All ${total} image${total === 1 ? "" : "s"} have alt text.`,
-          why: "Alt text feeds image search and keeps the page accessible.",
-          fix: "No action needed.",
+          why: "Google can tell what your photos show, so they can appear in image search.",
+          fix: "Nothing to do here.",
         };
       }
       const pct = Math.round((missing / total) * 100);
       return {
         status: pct > 50 ? "fail" : "warn",
         detail: `${missing} of ${total} images have no alt attribute at all (${pct}%)${decorative > 0 ? `; ${decorative} are correctly marked decorative` : ""}.`,
-        why: "Those images are invisible to image search and to screen-reader users.",
-        fix: 'Describe what each image shows, or set alt="" if it is purely decorative.',
+        why: "Google cannot tell what is in these photos, so they never show up in image search.",
+        fix: 'Add a short description to each photo, like "new boiler installed in a Leeds kitchen".',
       };
     },
   },
   {
     id: "internal-links",
     category: "content",
-    label: "Internal linking",
+    label: "Links to your other pages",
     weight: 2,
     run: (ctx) => {
       let internal = 0;
@@ -692,22 +692,22 @@ const CHECKS: CheckDef[] = [
         return {
           status: internal === 0 ? "fail" : "warn",
           detail: `${internal} internal link${internal === 1 ? "" : "s"} and ${external} external on the homepage.`,
-          why: "Your homepage carries the most authority; without internal links it can't pass any of it to the pages that convert.",
-          fix: "Link from the homepage to your key service and location pages with descriptive anchor text.",
+          why: "Your homepage is your strongest page. Links from it are how your service pages get found.",
+          fix: "Link from your homepage to each service and each area you cover.",
         };
       }
       return {
         status: "pass",
         detail: `${internal} internal links and ${external} external links.`,
-        why: "Spreads homepage authority to the pages you want ranking.",
-        fix: "No action needed.",
+        why: "Your strongest page is helping your other pages rank.",
+        fix: "Nothing to do here.",
       };
     },
   },
   {
     id: "social-tags",
     category: "content",
-    label: "Social share preview",
+    label: "How your link looks when shared",
     weight: 1,
     run: (ctx) => {
       const get = (sel: string) => (ctx.$(sel).first().attr("content") || "").trim();
@@ -725,15 +725,15 @@ const CHECKS: CheckDef[] = [
         return {
           status: "pass",
           detail: "og:title, og:description, og:image and twitter:card are all set.",
-          why: "Shared links render as a proper card instead of a bare URL.",
-          fix: "No action needed.",
+          why: "Shared links show a proper preview with a picture.",
+          fix: "Nothing to do here.",
         };
       }
       return {
         status: missing.length >= 3 ? "fail" : "warn",
         detail: `Missing ${missing.join(", ")}. Present: ${present.length ? present.join(", ") : "none"}.`,
-        why: "Links shared on LinkedIn, Facebook or Slack show as plain text and get markedly fewer clicks.",
-        fix: "Add the missing Open Graph tags plus a 1200x630 og:image.",
+        why: "Shared on Facebook, your site shows as a bare link with no picture. Those get far fewer clicks.",
+        fix: "Have your developer add a share picture and title so links look right when posted.",
       };
     },
   },
@@ -742,7 +742,7 @@ const CHECKS: CheckDef[] = [
   {
     id: "server-rendered",
     category: "geo",
-    label: "Content visible without JavaScript",
+    label: "AI assistants can read your site",
     weight: 4,
     run: (ctx) => {
       const words = wordCount(ctx);
@@ -751,30 +751,30 @@ const CHECKS: CheckDef[] = [
         return {
           status: "fail",
           detail: `Only ~${words} words are present in the raw HTML, with ${scripts} script tags — the content is rendered by JavaScript.`,
-          why: "ChatGPT, Perplexity and Claude don't run JavaScript. To them your site is a blank page.",
-          fix: "Server-render or pre-render your pages so the content ships in the initial HTML.",
+          why: "ChatGPT and similar assistants cannot run the code your site needs to display. To them it is blank.",
+          fix: "Have your site send finished pages instead of building them in the browser.",
         };
       }
       if (words < 300 && scripts >= 2) {
         return {
           status: "warn",
           detail: `Only ~${words} words are present in the raw HTML before JavaScript runs.`,
-          why: "AI assistants and some crawlers only see this much — the rest of your pitch never reaches them.",
-          fix: "Move key content into the server-rendered HTML rather than loading it client-side.",
+          why: "AI assistants only see this much of your page. The rest never reaches them.",
+          fix: "Have your main content sent with the page instead of loaded afterwards.",
         };
       }
       return {
         status: "pass",
         detail: `~${words} words are present in the raw HTML without JavaScript.`,
-        why: "AI assistants and crawlers can read your content directly.",
-        fix: "No action needed.",
+        why: "AI assistants can read your page directly.",
+        fix: "Nothing to do here.",
       };
     },
   },
   {
     id: "schema-org",
     category: "geo",
-    label: "Structured data (Schema.org)",
+    label: "Your details in a format Google reads",
     weight: 3,
     run: (ctx) => {
       const types = schemaTypes(ctx);
@@ -782,22 +782,22 @@ const CHECKS: CheckDef[] = [
         return {
           status: "fail",
           detail: "No Schema.org JSON-LD found on the page.",
-          why: "Structured data is how Google and AI assistants read your business as facts rather than prose.",
-          fix: "Add JSON-LD describing your organisation, services and contact details.",
+          why: "This is how Google reads your hours, phone number and services as facts instead of guessing.",
+          fix: "Add the hidden details block with your name, phone, hours and services.",
         };
       }
       return {
         status: "pass",
         detail: `Structured data found: ${[...types].slice(0, 6).join(", ")}${types.size > 6 ? `, +${types.size - 6} more` : ""}.`,
-        why: "Gives search engines and AI assistants machine-readable facts about you.",
-        fix: "No action needed.",
+        why: "Google and AI assistants can read your business details as facts.",
+        fix: "Nothing to do here.",
       };
     },
   },
   {
     id: "entity-schema",
     category: "geo",
-    label: "Business entity markup",
+    label: "Google knows you are a business",
     weight: 3,
     run: (ctx) => {
       const types = schemaTypes(ctx);
@@ -814,22 +814,22 @@ const CHECKS: CheckDef[] = [
         return {
           status: "pass",
           detail: `${entity} markup is present.`,
-          why: "Establishes your business as a recognised entity that AI assistants can cite by name.",
-          fix: "No action needed.",
+          why: "Google recognises you as a real business it can name and recommend.",
+          fix: "Nothing to do here.",
         };
       }
       return {
         status: "fail",
         detail: "No Organization or LocalBusiness markup found.",
-        why: "Without entity markup, AI assistants can't confidently name, locate or recommend your business.",
-        fix: "Add Organization or LocalBusiness JSON-LD with your name, address, phone and sameAs profile links.",
+        why: "Without this, an AI assistant cannot confidently name you, place you, or recommend you to someone nearby.",
+        fix: "Add a business details block with your name, address, phone and social profiles.",
       };
     },
   },
   {
     id: "answer-schema",
     category: "geo",
-    label: "Answer-ready markup",
+    label: "Set up to answer customer questions",
     weight: 2,
     run: (ctx) => {
       const types = schemaTypes(ctx);
@@ -838,30 +838,30 @@ const CHECKS: CheckDef[] = [
         return {
           status: "pass",
           detail: `${found} markup is present.`,
-          why: "Content marked up this way is what AI assistants quote when answering questions.",
-          fix: "No action needed.",
+          why: "This is the kind of content AI assistants quote when someone asks a question.",
+          fix: "Nothing to do here.",
         };
       }
       return {
         status: "warn",
         detail: "No FAQ, HowTo, Article or Product markup found.",
-        why: "AI assistants pull answers from structured Q&A far more readily than from prose.",
-        fix: "Add FAQPage markup covering the questions your buyers actually ask.",
+        why: "Answering common customer questions on the page is what gets you quoted in AI answers.",
+        fix: "Add a questions-and-answers section covering what customers actually ask.",
       };
     },
   },
   {
     id: "ai-crawlers",
     category: "geo",
-    label: "AI crawler access",
+    label: "AI assistants are allowed in",
     weight: 3,
     run: (ctx) => {
       if (!ctx.robots.found) {
         return {
           status: "pass",
           detail: "No robots.txt, so AI crawlers are allowed by default.",
-          why: "GPTBot, ClaudeBot and PerplexityBot can read your site.",
-          fix: "No action needed.",
+          why: "ChatGPT, Claude and Perplexity can read your site.",
+          fix: "Nothing to do here.",
         };
       }
       const blocked = Object.entries(ctx.robots.aiBots)
@@ -871,14 +871,14 @@ const CHECKS: CheckDef[] = [
         return {
           status: "pass",
           detail: `robots.txt allows ${AI_CRAWLERS.join(", ")}.`,
-          why: "Your content is eligible to be cited in AI search answers.",
-          fix: "No action needed.",
+          why: "You can be recommended in AI answers.",
+          fix: "Nothing to do here.",
         };
       }
       return {
         status: "fail",
         detail: `robots.txt blocks ${blocked.join(", ")}.`,
-        why: "Those assistants can't read your site, so they will never recommend you — they'll recommend a competitor.",
+        why: "These assistants cannot read your site, so they will never suggest you. They will suggest a competitor.",
         fix: `Remove the disallow rules for ${blocked.join(", ")} in robots.txt, unless blocking them is deliberate.`,
       };
     },
@@ -886,27 +886,27 @@ const CHECKS: CheckDef[] = [
   {
     id: "llms-txt",
     category: "geo",
-    label: "llms.txt",
+    label: "A summary written for AI",
     weight: 1,
     run: (ctx) =>
       ctx.llmsTxt
         ? {
             status: "pass",
             detail: "/llms.txt is published.",
-            why: "Gives AI assistants a curated summary of your site instead of making them guess.",
-            fix: "No action needed.",
+            why: "Tells AI assistants what you do in your own words instead of leaving them to guess.",
+            fix: "Nothing to do here.",
           }
         : {
             status: "warn",
             detail: "No /llms.txt file found.",
-            why: "An emerging standard for telling AI assistants what your business does and which pages matter.",
-            fix: "Publish an llms.txt at your domain root summarising your offering and key URLs.",
+            why: "A new, simple file that tells AI assistants what your business does and which pages matter.",
+            fix: "Publish a short summary file describing your business for AI assistants.",
           },
   },
   {
     id: "author-signals",
     category: "geo",
-    label: "Trust and contact signals",
+    label: "Easy to contact and trust",
     weight: 2,
     run: (ctx) => {
       const types = schemaTypes(ctx);
@@ -922,8 +922,8 @@ const CHECKS: CheckDef[] = [
         return {
           status: "pass",
           detail: `Found: ${signals.join(", ")}.`,
-          why: "Contactability and policy pages are direct inputs to Google's trust assessment.",
-          fix: "No action needed.",
+          why: "Being easy to contact is something Google measures when deciding whether to trust you.",
+          fix: "Nothing to do here.",
         };
       }
       return {
@@ -931,8 +931,8 @@ const CHECKS: CheckDef[] = [
         detail: signals.length
           ? `Only found: ${signals.join(", ")}.`
           : "No phone link, email link, address markup or policy pages found.",
-        why: "Thin trust signals hold you back in competitive results and make AI assistants less willing to recommend you.",
-        fix: "Add a clickable phone number, a real address, and link your privacy and terms pages in the footer.",
+        why: "Customers cannot easily reach you, and Google has little reason to treat you as an established business.",
+        fix: "Add a tap-to-call phone number, your address, and your policy links in the footer.",
       };
     },
   },
@@ -942,22 +942,31 @@ const CHECKS: CheckDef[] = [
    Scoring
 ------------------------------------------------------------------------- */
 
+/**
+ * Category names are written for the people who read them: owners of trades and
+ * service businesses, not marketers. "Technical Foundations" and "GEO
+ * Readiness" are industry words that tell a roofer nothing about whether
+ * customers can find him.
+ *
+ * These are labels only — the checks, weights and thresholds behind them are
+ * unchanged.
+ */
 const CATEGORY_META: Record<CategoryId, { label: string; blurb: string }> = {
   technical: {
-    label: "Technical Foundations",
-    blurb: "Can Google reach, crawl and index the site at all?",
+    label: "Can Google find you",
+    blurb: "Whether Google can reach your site and list it at all.",
   },
   content: {
-    label: "On-Page & Content",
-    blurb: "Does each page tell Google what it's for and earn the click?",
+    label: "What your pages say",
+    blurb: "Whether your pages tell Google what you do and who you do it for.",
   },
   performance: {
-    label: "Speed & Core Web Vitals",
-    blurb: "Real-world loading experience, measured by Google.",
+    label: "How fast your site loads",
+    blurb: "How long a customer waits before your page shows up.",
   },
   geo: {
-    label: "AI Search & GEO Readiness",
-    blurb: "Can ChatGPT, Perplexity and Google's AI answers cite you?",
+    label: "Showing up in AI answers",
+    blurb: "Whether ChatGPT and Google's AI answers can recommend you.",
   },
 };
 

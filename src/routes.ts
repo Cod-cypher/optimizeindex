@@ -173,9 +173,9 @@ const caseStudyRoutes: RouteMeta[] = CASE_STUDIES.map((study) => ({
 export const ROUTES: RouteMeta[] = [
   {
     path: '/',
-    title: 'OptimizeIndex | Revenue-First SEO & AI Search Agency',
+    title: 'Get Found on Google | OptimizeIndex SEO Agency',
     description:
-      'We turn search into revenue. SEO, Google Business Profile and AI search optimization for local and B2B businesses. Free instant audit, no contracts.',
+      'We get local and trade businesses found on Google, Google Maps and AI assistants. Free instant website check, no contracts and no jargon.',
     priority: 1.0,
   },
   {

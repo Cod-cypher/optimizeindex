@@ -50,7 +50,7 @@ export default function AuditLeadForm({ result, selectedGoal, onGoalSelect }: Au
       });
       setIsSuccess(true);
     } catch {
-      setError('Something went wrong sending that. Please try again, or call us at 202 810 7042.');
+      setError("That didn't send. Please try again, or just call us on 202 810 7042.");
     } finally {
       setIsSubmitting(false);
     }
@@ -66,16 +66,16 @@ export default function AuditLeadForm({ result, selectedGoal, onGoalSelect }: Au
           <Check className="w-6 h-6 text-ink stroke-[3]" aria-hidden="true" />
         </span>
         <h3 className="font-display font-extrabold text-xl text-cream leading-tight">
-          Got it — check your inbox.
+          Got it. Check your inbox.
         </h3>
         <p className="font-sans text-sm text-cream/75 leading-relaxed mt-2 max-w-md mx-auto">
-          We're putting together your prioritised fix plan for{' '}
+          We're putting together your fix list for{' '}
           <span className="font-mono text-lime">{result.domain}</span>, including the{' '}
-          {fixCount} item{fixCount === 1 ? '' : 's'} above ranked by revenue impact. A real person
-          reviews every one — expect it within 24 hours.
+          {fixCount} item{fixCount === 1 ? '' : 's'} above in the order that will win you the most work. A real
+          person goes through every one — expect it within 24 hours.
         </p>
-        <p className="font-mono text-[10px] uppercase tracking-widest text-cream/60 mt-4">
-          No contracts · 15-day money back guarantee
+        <p className="font-sans text-[13px] text-cream/75 mt-4">
+          No contracts. 15-day money-back guarantee.
         </p>
       </div>
     );
@@ -84,29 +84,29 @@ export default function AuditLeadForm({ result, selectedGoal, onGoalSelect }: Au
   return (
     <div className="bg-ink border-1.5 border-ink shadow-hard-lg rounded-2xl p-6 md:p-8">
       <div className="max-w-2xl">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-lime text-ink font-mono text-[10px] font-bold border-1.5 border-ink rounded-full mb-3 -rotate-1">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-lime text-ink font-sans text-[13px] font-bold border-1.5 border-ink rounded-full mb-3 -rotate-1">
           <Sparkles className="w-3 h-3" aria-hidden="true" />
-          <span>FREE · NO OBLIGATION</span>
+          <span>Free, no obligation</span>
         </div>
 
         <h3 className="font-display font-extrabold text-2xl md:text-3xl text-cream leading-tight tracking-tight">
           Want the{' '}
           <span className="font-serif-accent italic text-lime bg-cream/10 px-2 py-0.5 rounded-sm">
-            fix plan
+            fix list
           </span>{' '}
-          for these {fixCount} issue{fixCount === 1 ? '' : 's'}?
+          for these {fixCount} thing{fixCount === 1 ? '' : 's'}?
         </h3>
         <p className="font-sans text-sm text-cream/75 leading-relaxed mt-2">
-          Everything above is yours already. Tell us where you're headed and we'll send back the
-          same list ranked by revenue impact — what to fix first, what it's worth, and what it takes.
-          Reviewed by a human, not generated.
+          Everything above is yours to keep. Tell us what you're after and we'll send the same list back
+          in order of what will win you the most work — what to fix first, and what it takes. A real
+          person goes through it, it isn't auto-generated.
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-5">
         <fieldset>
-          <legend className="font-mono text-[10px] font-bold uppercase tracking-widest text-cream/60 mb-2.5">
-            What's your #1 growth goal right now?
+          <legend className="font-sans text-[15px] font-bold text-cream mb-3">
+            What would help your business most right now?
           </legend>
           <div className="flex flex-wrap gap-2">
             {GOALS.map((g) => {
@@ -118,7 +118,7 @@ export default function AuditLeadForm({ result, selectedGoal, onGoalSelect }: Au
                   onClick={() => onGoalSelect(g.id)}
                   aria-pressed={isSelected}
                   id={`audit-goal-${g.id}`}
-                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border-1.5 font-mono text-[11px] font-bold uppercase tracking-wide transition-all cursor-pointer focus-ring ${
+                  className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-full border-1.5 font-sans text-[14px] font-bold transition-all cursor-pointer focus-ring ${
                     isSelected
                       ? 'bg-lime border-lime text-ink'
                       : 'bg-transparent border-cream/25 text-cream/75 hover:border-cream/60 hover:text-cream'
@@ -138,7 +138,7 @@ export default function AuditLeadForm({ result, selectedGoal, onGoalSelect }: Au
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label htmlFor="audit-lead-email" className="form-label text-cream/60">
+            <label htmlFor="audit-lead-email" className="form-label text-cream">
               Work email
             </label>
             <span className="field-wrap">
@@ -156,8 +156,8 @@ export default function AuditLeadForm({ result, selectedGoal, onGoalSelect }: Au
             </span>
           </div>
           <div>
-            <label htmlFor="audit-lead-name" className="form-label text-cream/60">
-              Name <span className="opt">optional</span>
+            <label htmlFor="audit-lead-name" className="form-label text-cream">
+              Name <span className="opt text-cream/60">optional</span>
             </label>
             <span className="field-wrap">
               <User className="field-icon" aria-hidden="true" />
@@ -194,13 +194,13 @@ export default function AuditLeadForm({ result, selectedGoal, onGoalSelect }: Au
               </>
             ) : (
               <>
-                <span>Send me the fix plan</span>
+                <span>Send me the fix list</span>
                 <ArrowRight className="w-4 h-4" aria-hidden="true" />
               </>
             )}
           </button>
-          <p className="font-mono text-[10px] uppercase tracking-widest text-cream/60">
-            We only need your email · No sales calls unless you ask
+          <p className="font-sans text-[13px] text-cream/75">
+            We only need your email. No sales calls unless you ask for one.
           </p>
         </div>
       </form>

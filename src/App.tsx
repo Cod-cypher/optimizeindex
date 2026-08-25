@@ -221,6 +221,9 @@ export default function App() {
   // True once the hero audit tool takes over — the hero drops its second
   // column and the results run full width.
   const [auditActive, setAuditActive] = useState(false);
+  // Bumping this remounts HeroAudit, dropping the report and returning to the
+  // search box — what people expect from clicking the logo.
+  const [auditResetKey, setAuditResetKey] = useState(0);
 
   // Lead Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -341,6 +344,7 @@ export default function App() {
             href="/" 
             onClick={(e) => { 
               e.preventDefault(); 
+              setAuditResetKey((k) => k + 1);
               navigateTo('home'); 
             }} 
             className="flex items-center group p-1"
@@ -548,7 +552,14 @@ export default function App() {
             {/* HERO SECTION — leads with the instant audit tool. Once a scan
                 starts, the brand collage steps aside and the results take the
                 full width. */}
-        <section id="home" className="relative pt-8 pb-16 md:py-20 overflow-hidden px-6 md:px-12 max-w-7xl mx-auto">
+        <section
+          id="home"
+          className={`relative overflow-hidden px-6 md:px-12 max-w-7xl mx-auto ${
+            // The report supplies its own header rail, so the hero's full
+            // padding just left a dead band above it.
+            auditActive ? 'pt-5 pb-14 md:pt-7 md:pb-16' : 'pt-8 pb-16 md:py-20'
+          }`}
+        >
 
           {/* Ambient Grid Layout */}
           <div className={auditActive ? 'block' : 'grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center'}>
@@ -560,8 +571,8 @@ export default function App() {
               {!auditActive && (
                 <div className="inline-flex items-center gap-2 px-3 py-1 bg-paper border-1.5 border-ink rounded-full shadow-hard -rotate-1">
                   <span className="w-2 h-2 rounded-full bg-lime border border-ink animate-pulse" />
-                  <span className="font-mono text-[10px] font-bold text-ink uppercase tracking-wider">
-                    MODERN SEO & GEO PERFORMANCE AGENCY
+                  <span className="font-sans text-[13px] font-bold text-ink">
+                    SEO for local & trade businesses
                   </span>
                 </div>
               )}
@@ -576,24 +587,25 @@ export default function App() {
                     : 'font-display font-extrabold text-4xl md:text-5xl lg:text-6xl text-ink leading-[1.05] tracking-tight'
                 }
               >
-                See exactly where your site stands in{' '}
+                Get your business{' '}
                 <span className="font-serif-accent italic text-lime bg-ink px-3 py-1 rounded-sm shadow-hard inline-block rotate-1">
-                  search
-                </span>
-                .
+                  found
+                </span>{' '}
+                on Google.
               </h1>
 
               {/* Subcopy */}
               {!auditActive && (
-                <p className="font-sans text-base md:text-lg text-stone max-w-xl leading-relaxed">
-                  Enter your website and we'll run the same technical, content, speed and AI-search
-                  checks we start every client engagement with — free, in seconds, with no signup.
-                  Then we'll show you what's costing you revenue.
+                <p className="font-sans text-lg md:text-xl text-stone max-w-xl leading-relaxed">
+                  Type in your website below and we'll check it the same way we check every new
+                  customer's — free, in about 20 seconds, no signup. You'll see in plain English
+                  what's stopping people finding you, and what to do about it.
                 </p>
               )}
 
               {/* The tool itself */}
               <HeroAudit
+                key={auditResetKey}
                 selectedGoal={selectedGoal}
                 onGoalSelect={handleGoalSelect}
                 onActiveChange={setAuditActive}
@@ -602,8 +614,8 @@ export default function App() {
 
               {/* Risk reversal line */}
               {!auditActive && (
-                <p className="font-mono text-[10px] text-stone tracking-wide">
-                  NO CONTRACTS · 15-DAY MONEY BACK GUARANTEE · RESPONSE IN 24 HOURS
+                <p className="font-sans text-[14px] text-stone">
+                  No contracts · 15-day money-back guarantee · We reply within 24 hours
                 </p>
               )}
 
