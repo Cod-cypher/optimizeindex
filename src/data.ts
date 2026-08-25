@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Goal, Service, CaseStudy, ProcessStep, Testimonial } from './types';
+import { Goal, Service, CaseStudy, ProcessStep, Testimonial, Faq } from './types';
 
 export const GOALS: Goal[] = [
   {
@@ -508,4 +508,73 @@ export const TICKER_ITEMS = [
   { stat: "SEARCH & MAP CLICKS · SUJOOD MATS", value: "+185%" },
   { stat: "ACQUISITION COST · ECOCLEAN SERVICES", value: "-45%" },
   { stat: "MAP PACK RANKINGS · ECOCLEAN SERVICES", value: "TOP 3" }
+];
+
+/**
+ * FAQs for the audit and quote pages.
+ *
+ * These exist for two reasons: the conversion pages were thin enough that
+ * Google had almost nothing to match against a query, and FAQ content is what
+ * AI assistants quote when answering a question about a service.
+ *
+ * Every answer restates a commitment already made elsewhere on this site —
+ * the 15-point audit, the 24-hour response, no contracts, the 15-day
+ * guarantee, and the four categories the audit tool actually measures.
+ * Nothing here introduces a new claim, and pricing is deliberately absent
+ * because it depends on scope.
+ */
+export const AUDIT_FAQS: Faq[] = [
+  {
+    question: "What does the free audit actually check?",
+    answer:
+      "Four areas. Technical foundations — whether Google can crawl, index and reach your pages at all. On-page content — titles, headings, structure and whether each page tells search engines what it is for. Speed and Core Web Vitals, measured with Google PageSpeed Insights. And AI search readiness — whether ChatGPT, Perplexity and Google's AI answers can actually read and cite your site.",
+  },
+  {
+    question: "How long does it take to get the audit back?",
+    answer:
+      "You get an instant score the moment you enter your website on our homepage. The written audit — every finding ranked by revenue impact, with the fix for each — comes back within 24 hours, reviewed by a person rather than generated.",
+  },
+  {
+    question: "Is it genuinely free, and do I have to hire you afterwards?",
+    answer:
+      "Yes, and no. There is no card, no contract and no obligation. Plenty of people take the audit, fix the issues themselves and never speak to us again. That is a fine outcome.",
+  },
+  {
+    question: "Why does AI search readiness matter for my business?",
+    answer:
+      "Assistants like ChatGPT and Claude do not run JavaScript, and a growing share of buying research now starts there rather than in a search box. If your content only appears after JavaScript executes, those assistants see a blank page and recommend a competitor instead. It is one of the most common problems we find, and one of the most fixable.",
+  },
+  {
+    question: "What information do you need from me?",
+    answer:
+      "Your website address and an email to send the report to. Telling us your primary growth goal helps us rank the findings by what actually matters to you, but it is optional.",
+  },
+];
+
+export const QUOTE_FAQS: Faq[] = [
+  {
+    question: "What do I get back?",
+    answer:
+      "A written proposal covering scope, timeline and the projected impact on your pipeline — which channels we would work on, in what order, and what you should expect to see at 30, 60 and 90 days. It is built around the goal you tell us about, not a template.",
+  },
+  {
+    question: "How much does it cost?",
+    answer:
+      "It depends entirely on scope, competition in your market and how much groundwork already exists. That is why we quote per engagement instead of publishing a price list. The proposal spells out exactly what is included before you commit to anything.",
+  },
+  {
+    question: "Do I have to sign a long contract?",
+    answer:
+      "No. We do not use lock-in contracts. If the work is not producing, you should be free to leave, and tying clients down tends to protect agencies that are not delivering.",
+  },
+  {
+    question: "What if it does not work?",
+    answer:
+      "We back every engagement with a 15-day money-back guarantee. Search work compounds over months rather than days, so the guarantee covers whether we are the right fit — not whether rankings moved inside two weeks, which nobody can honestly promise.",
+  },
+  {
+    question: "How quickly will I hear back?",
+    answer:
+      "Within 24 hours. If you would rather talk it through first, call 202 810 7042 and skip the form entirely.",
+  },
 ];

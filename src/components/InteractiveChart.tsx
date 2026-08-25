@@ -67,7 +67,7 @@ export default function InteractiveChart() {
       <div className="flex items-center justify-between border-b border-cream/10 pb-4 mb-2">
         <div className="flex items-center gap-2">
           <div className="w-2.5 h-2.5 rounded-full bg-lime animate-ping" />
-          <p className="font-mono text-[10px] text-cream/70 tracking-widest uppercase">
+          <p className="font-mono text-[10px] text-cream/75 tracking-widest uppercase">
             LIVE FORECAST: TARGET DOMAIN
           </p>
         </div>
@@ -87,14 +87,14 @@ export default function InteractiveChart() {
               : `$184,000`
             }
           </span>
-          <span className="font-mono text-xs text-cream/70">
+          <span className="font-mono text-xs text-cream/75">
             {activePoint !== null 
               ? `(${dataPoints[activePoint].organic} of total)`
               : `(76% of total pipeline)`
             }
           </span>
         </div>
-        <p className="text-[10px] font-mono text-cream/40 mt-1">
+        <p className="text-[10px] font-mono text-cream/60 mt-1">
           {activePoint !== null 
             ? `Milestone: ${dataPoints[activePoint].label} - ${dataPoints[activePoint].month}`
             : 'Interactive forecast — Hover nodes to inspect milestones'
@@ -228,7 +228,7 @@ export default function InteractiveChart() {
       </div>
 
       {/* Attribution footer */}
-      <div className="flex items-center justify-between border-t border-cream/10 pt-3 mt-2 text-[9px] font-mono text-cream/40">
+      <div className="flex items-center justify-between border-t border-cream/10 pt-3 mt-2 text-[9px] font-mono text-cream/60">
         <span className="flex items-center gap-1">
           <MousePointerClick className="w-3 h-3 text-lime" />
           HOVER GRAPH NODES

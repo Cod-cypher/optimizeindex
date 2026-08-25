@@ -48,3 +48,8 @@ export interface Testimonial {
   company: string;
   avatarUrl: string;
 }
+
+export interface Faq {
+  question: string;
+  answer: string;
+}

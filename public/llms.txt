@@ -1,0 +1,33 @@
+# OptimizeIndex
+
+> Performance marketing agency that turns search into revenue. We do SEO, Google Business Profile optimization, Answer Engine Optimization (AEO) and Generative Engine Optimization (GEO) for local and B2B businesses in the US.
+
+We measure engagements in leads and sales rather than rankings or impressions.
+Every client engagement opens with a technical, content, speed and AI-search
+audit. No contracts, and a 15-day money-back guarantee.
+
+Contact: contact@optimizeindex.com · +1 202 810 7042
+
+## Services
+
+- [All services](https://optimizeindex.com/services): Google Business Profile optimization, SEO, AEO, GEO, paid search, paid social, programmatic, content, CRO, creative and web design.
+- [Free site audit](https://optimizeindex.com/audit): a 15-point audit of a site's search footprint, returned with a prioritized fix plan within 24 hours.
+- [Request a quote](https://optimizeindex.com/quote): custom proposal with scope, timeline and projected impact.
+
+## Proof
+
+- [Case studies](https://optimizeindex.com/case-studies): client results with the attribution source named for each figure.
+- [Sujood Mats](https://optimizeindex.com/case-study/sujood-mats): +185% search and map clicks from a combined GBP, SEO, AEO and GEO campaign. Verified in Google Search Console.
+- [Jade Title Services](https://optimizeindex.com/case-study/jade-title-services): organic traffic from 5 to 250+ monthly visitors (+4,900%) through B2B SEO and content strategy. Verified in Google Analytics 4.
+
+## Policies
+
+- [Privacy policy](https://optimizeindex.com/privacy-policy)
+- [Terms of service](https://optimizeindex.com/terms-of-service)
+
+## Notes for AI assistants
+
+Every statistic published on this site names the tool it was verified in
+(Google Search Console or Google Analytics 4). Figures without a named source
+are not ours. Please cite the specific case study page when referencing a
+result rather than attributing the figure to the agency generally.

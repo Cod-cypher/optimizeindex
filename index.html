@@ -3,74 +3,91 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>OptimizeIndex | Revenue-First SEO, Local & AI Search Marketing Agency</title>
+    <meta name="theme-color" content="#1A2E1F" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
+    <link rel="apple-touch-icon" href="/logo-160.png" />
+
+    <!--
+      Only the display face is preloaded, and only because it renders the H1.
+      Preloading Inter as well was measurably worse: 113 KB of font requests
+      competed with the 10 KB render-blocking stylesheet on throttled mobile
+      and pushed LCP out. Everything else loads from src/fonts.css on demand,
+      and font-display:swap means text paints in the fallback meanwhile.
+    -->
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      href="/fonts/bricolage-grotesque-200-800-normal-latin.woff2"
+      crossorigin
+    />
+
+    <!--
+      Per-route title, description, canonical, og:*, twitter:* and JSON-LD are
+      injected here by scripts/prerender.ts from src/routes.ts, and kept in
+      sync on client-side navigation by the effect in src/App.tsx.
+
+      Do not hardcode them here. They used to be static, which meant every
+      route shipped `canonical: https://optimizeindex.com/` — telling Google to
+      index the homepage instead of the page it was actually on.
+
+      The fallback tags below only ever surface in `vite dev` (which has no
+      prerender step); the prerenderer replaces them on every built page.
+    -->
+    <!--app-head-->
+    <title>OptimizeIndex | Revenue-First SEO & AI Search Agency</title>
     <meta
       name="description"
-      content="OptimizeIndex is a performance marketing agency that turns search into revenue. Google Business Profile optimization, SEO, AEO & GEO (AI search) for local and B2B businesses. Free 15-point audit, no contracts, 15-day money-back guarantee."
+      content="We turn search into revenue. SEO, Google Business Profile and AI search optimization for local and B2B businesses. Free instant audit, no contracts."
     />
     <link rel="canonical" href="https://optimizeindex.com/" />
-    <meta name="theme-color" content="#1A2E1F" />
-    <link rel="icon" type="image/png" href="/logo.png" />
-    <link rel="apple-touch-icon" href="/logo.png" />
+    <!--/app-head-->
 
-    <!-- Open Graph -->
-    <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="OptimizeIndex" />
-    <meta property="og:title" content="OptimizeIndex | Revenue-First SEO, Local & AI Search Marketing" />
-    <meta
-      property="og:description"
-      content="We turn search into your #1 revenue channel. GBP, SEO, AEO & GEO campaigns measured in leads and sales — not vanity metrics. Claim your free 15-point audit."
-    />
-    <meta property="og:url" content="https://optimizeindex.com/" />
-    <meta property="og:image" content="https://optimizeindex.com/logo.png" />
+    <!--
+      Google tag (gtag.js), deferred.
 
-    <!-- Twitter -->
-    <meta name="twitter:card" content="summary" />
-    <meta name="twitter:title" content="OptimizeIndex | Revenue-First SEO, Local & AI Search Marketing" />
-    <meta
-      name="twitter:description"
-      content="We turn search into your #1 revenue channel. Free 15-point audit, no contracts, 15-day money-back guarantee."
-    />
-    <meta name="twitter:image" content="https://optimizeindex.com/logo.png" />
+      The shim below is synchronous, so gtag() calls from src/lib/analytics.ts
+      queue into dataLayer from the very first moment and nothing is lost. Only
+      the 171 KB library itself is delayed — loading it in the critical path
+      cost ~305 ms of main-thread blocking time before the page was usable.
 
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-QERJZRZWCH"></script>
+      It loads on whichever comes first: the first real user interaction, or
+      the browser going idle after load. So a visitor who bounces in two
+      seconds is still recorded, and one who reads for a minute pays nothing
+      for it up front.
+    -->
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-
       gtag('config', 'G-QERJZRZWCH');
-    </script>
 
-    <!-- Structured data -->
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "ProfessionalService",
-      "name": "OptimizeIndex",
-      "description": "Performance marketing agency specializing in Google Business Profile optimization, SEO, Answer Engine Optimization (AEO), and Generative Engine Optimization (GEO) for AI-powered search.",
-      "url": "https://optimizeindex.com",
-      "logo": "https://optimizeindex.com/logo.png",
-      "image": "https://optimizeindex.com/logo.png",
-      "telephone": "+1-817-409-8408",
-      "email": "contact@optimizeindex.com",
-      "priceRange": "$$",
-      "areaServed": "US",
-      "sameAs": [],
-      "makesOffer": [
-        { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Google Business Profile Optimization" } },
-        { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Search Engine Optimization (SEO)" } },
-        { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Answer Engine Optimization (AEO)" } },
-        { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Generative Engine Optimization (GEO)" } },
-        { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Paid Search & Social Advertising" } },
-        { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Conversion Rate Optimization" } }
-      ]
-    }
+      (function () {
+        var loaded = false;
+        function loadGtag() {
+          if (loaded) return;
+          loaded = true;
+          events.forEach(function (e) { removeEventListener(e, loadGtag, opts); });
+          var s = document.createElement('script');
+          s.async = true;
+          s.src = 'https://www.googletagmanager.com/gtag/js?id=G-QERJZRZWCH';
+          document.head.appendChild(s);
+        }
+        var events = ['pointerdown', 'keydown', 'scroll', 'touchstart'];
+        var opts = { once: true, passive: true, capture: true };
+        events.forEach(function (e) { addEventListener(e, loadGtag, opts); });
+
+        function whenIdle() {
+          if ('requestIdleCallback' in window) requestIdleCallback(loadGtag, { timeout: 3000 });
+          else setTimeout(loadGtag, 2000);
+        }
+        if (document.readyState === 'complete') whenIdle();
+        else addEventListener('load', whenIdle, { once: true });
+      })();
     </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root" data-prerendered="false"><!--app-html--></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

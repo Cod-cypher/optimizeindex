@@ -35,7 +35,9 @@ import {
   X
 } from 'lucide-react';
 
-import { GOALS, SERVICES, CASE_STUDIES, PROCESS_STEPS, TESTIMONIALS } from './data';
+import { GOALS, SERVICES, CASE_STUDIES, PROCESS_STEPS, TESTIMONIALS, AUDIT_FAQS, QUOTE_FAQS } from './data';
+import { ROUTES, getRouteMeta, canonicalFor } from './routes';
+import { buildHeadTags } from './lib/head';
 import { GoalId, CaseStudy } from './types';
 import { submitLead } from './lib/leads';
 import { trackPageView } from './lib/analytics';
@@ -43,10 +45,22 @@ import { trackPageViewStart } from './lib/tracker';
 
 // Subcomponents
 import LeadModal from './components/LeadModal';
+import FaqSection from './components/FaqSection';
+import HeroAudit from './components/audit/HeroAudit';
 import InteractiveChart from './components/InteractiveChart';
 import Starburst from './components/Starburst';
 import Marquee from './components/Marquee';
 import Logo from './components/Logo';
+
+// Every path that resolves to a real page. Aliases are 301'd server-side
+// (see REDIRECTS in routes.ts) but are listed here so a client-side visit to
+// one during a session doesn't flash the not-found view.
+const KNOWN_PATHS = new Set<string>([
+  ...ROUTES.map((r) => r.path),
+  '/free-audit',
+  '/free-quote',
+  '/terms-of-conversion',
+]);
 
 export default function App() {
   // Navigation active state and mobile menu toggle
@@ -59,11 +73,16 @@ export default function App() {
 
   // Compute currentView dynamically based on location.pathname
   const path = location.pathname;
-  let currentView: 'home' | 'services' | 'quote' | 'case-studies' | 'audit' | 'privacy-policy' | 'terms-of-conversion' | 'case-study-detail' = 'home';
+  let currentView: 'home' | 'services' | 'quote' | 'case-studies' | 'audit' | 'privacy-policy' | 'terms-of-conversion' | 'case-study-detail' | 'not-found' = 'home';
   let caseStudyId: string | null = null;
   if (path.startsWith('/case-study/')) {
     currentView = 'case-study-detail';
     caseStudyId = path.replace('/case-study/', '');
+  } else if (path !== '/' && !KNOWN_PATHS.has(path.replace(/\/+$/, '') || '/')) {
+    // Anything we don't recognise gets a real not-found view. It used to fall
+    // through to the homepage at HTTP 200, which is a soft 404 — Google treats
+    // those as thin duplicates of the homepage.
+    currentView = 'not-found';
   } else if (path === '/services') {
     currentView = 'services';
   } else if (path === '/case-studies') {
@@ -198,7 +217,10 @@ export default function App() {
 
   // Goals-picker states
   const [selectedGoal, setSelectedGoal] = useState<GoalId>('revenue');
-  const activeGoal = GOALS.find(g => g.id === selectedGoal) || GOALS[0];
+
+  // True once the hero audit tool takes over — the hero drops its second
+  // column and the results run full width.
+  const [auditActive, setAuditActive] = useState(false);
 
   // Lead Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -226,36 +248,18 @@ export default function App() {
 
   // Initialize currentView based on URL params on location changes
   useEffect(() => {
-    // 1. Set dynamic titles
-    switch (currentView) {
-      case 'home':
-        document.title = "OptimizeIndex | Revenue-First SEO & GEO Performance Agency";
-        break;
-      case 'services':
-        document.title = "Our Services | OptimizeIndex Growth Engine";
-        break;
-      case 'case-studies':
-        document.title = "Case Studies | OptimizeIndex Performance Portfolio";
-        break;
-      case 'case-study-detail': {
-        const study = CASE_STUDIES.find(cs => cs.id === caseStudyId);
-        document.title = study ? `${study.client} Case Study | OptimizeIndex` : "Case Study | OptimizeIndex";
-        break;
-      }
-      case 'audit':
-        document.title = "Claim Your Free 15-Point Performance Audit | OptimizeIndex";
-        break;
-      case 'quote':
-        document.title = "Get a Free Revenue Growth Quote | OptimizeIndex";
-        break;
-      case 'privacy-policy':
-        document.title = "Privacy Policy | OptimizeIndex";
-        break;
-      case 'terms-of-conversion':
-        document.title = "Terms of Service | OptimizeIndex";
-        break;
-      default:
-        document.title = "OptimizeIndex Performance Agency";
+    // 1. Sync every head tag — title, description, canonical, og:*, twitter:*
+    // and JSON-LD — from the same source the prerenderer used, so a client-side
+    // navigation leaves the head exactly as a fresh load of that URL would.
+    const meta = getRouteMeta(location.pathname);
+    for (const tag of buildHeadTags(meta)) {
+      const existing = document.head.querySelector(tag.selector);
+      const template = document.createElement('template');
+      template.innerHTML = tag.html;
+      const next = template.content.firstElementChild;
+      if (!next) continue;
+      if (existing) existing.replaceWith(next);
+      else document.head.appendChild(next);
     }
 
     // 2. Parse query parameters
@@ -342,7 +346,7 @@ export default function App() {
             className="flex items-center group p-1"
             id="nav-logo"
           >
-            <Logo size={32} variant="light" />
+            <Logo size={32} variant="light" priority />
           </a>
 
           {/* Desktop Navigation links */}
@@ -541,116 +545,82 @@ export default function App() {
 
         {currentView === 'home' ? (
           <>
-            {/* HERO SECTION */}
+            {/* HERO SECTION — leads with the instant audit tool. Once a scan
+                starts, the brand collage steps aside and the results take the
+                full width. */}
         <section id="home" className="relative pt-8 pb-16 md:py-20 overflow-hidden px-6 md:px-12 max-w-7xl mx-auto">
-          
-          {/* Ambient Grid Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
-            
-            {/* Copy Column (58%) */}
-            <div className="lg:col-span-7 flex flex-col items-start text-left space-y-6">
-              
-              {/* Dynamic Badge Eyebrow */}
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-paper border-1.5 border-ink rounded-full shadow-hard -rotate-1">
-                <span className="w-2 h-2 rounded-full bg-lime border border-ink animate-pulse" />
-                <span className="font-mono text-[10px] font-bold text-ink uppercase tracking-wider">
-                  MODERN SEO & GEO PERFORMANCE AGENCY
-                </span>
-              </div>
 
-              {/* H1 Display with exact italic accent style */}
-              <h1 className="font-display font-extrabold text-4xl md:text-5xl lg:text-6xl text-ink leading-[1.05] tracking-tight">
-                We turn search into your #1 <span className="font-serif-accent italic text-lime bg-ink px-3 py-1 rounded-sm shadow-hard inline-block rotate-1">revenue</span> channel.
+          {/* Ambient Grid Layout */}
+          <div className={auditActive ? 'block' : 'grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center'}>
+
+            {/* Copy Column (58%) */}
+            <div className={auditActive ? 'w-full' : 'lg:col-span-7 flex flex-col items-start text-left space-y-6'}>
+
+              {/* Dynamic Badge Eyebrow */}
+              {!auditActive && (
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-paper border-1.5 border-ink rounded-full shadow-hard -rotate-1">
+                  <span className="w-2 h-2 rounded-full bg-lime border border-ink animate-pulse" />
+                  <span className="font-mono text-[10px] font-bold text-ink uppercase tracking-wider">
+                    MODERN SEO & GEO PERFORMANCE AGENCY
+                  </span>
+                </div>
+              )}
+
+              {/* H1 Display with exact italic accent style. Kept in the document
+                  even while the audit is running so the page never loses its
+                  single H1 — it just stops taking up the screen. */}
+              <h1
+                className={
+                  auditActive
+                    ? 'sr-only'
+                    : 'font-display font-extrabold text-4xl md:text-5xl lg:text-6xl text-ink leading-[1.05] tracking-tight'
+                }
+              >
+                See exactly where your site stands in{' '}
+                <span className="font-serif-accent italic text-lime bg-ink px-3 py-1 rounded-sm shadow-hard inline-block rotate-1">
+                  search
+                </span>
+                .
               </h1>
 
               {/* Subcopy */}
-              <p className="font-sans text-base md:text-lg text-stone max-w-xl leading-relaxed">
-                More traffic is nice. More revenue is the point. We get your business found on Google, Google Maps, and AI assistants like ChatGPT — right at the moment customers are ready to buy.
-              </p>
-
-              {/* Interactive self-segmentation picker (GOAL PILLS) */}
-              <div className="w-full space-y-3 pt-2">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-stone">
-                    What's your #1 growth goal right now?
-                  </span>
-                </div>
-                
-                {/* Wrapped rows of buttons */}
-                <div className="flex flex-wrap gap-2 max-w-2xl">
-                  {GOALS.map((goal) => {
-                    const isSelected = selectedGoal === goal.id;
-                    return (
-                      <button
-                        key={goal.id}
-                        onClick={() => handleGoalSelect(goal.id)}
-                        className={`px-4 py-2.5 text-xs font-mono font-bold rounded-full transition-all duration-150 border cursor-pointer focus-ring flex items-center gap-2 ${
-                          isSelected
-                            ? 'bg-ink border-ink text-lime shadow-hard translate-y-[-1px]'
-                            : 'bg-transparent border-ink/20 text-ink hover:border-ink/50'
-                        }`}
-                        id={`goal-pill-${goal.id}`}
-                      >
-                        {isSelected && <Check className="w-3.5 h-3.5 text-lime" />}
-                        <span>{goal.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-                <p className="font-mono text-[11px] text-stone italic max-w-lg mt-1">
-                  💡 {activeGoal.description}
+              {!auditActive && (
+                <p className="font-sans text-base md:text-lg text-stone max-w-xl leading-relaxed">
+                  Enter your website and we'll run the same technical, content, speed and AI-search
+                  checks we start every client engagement with — free, in seconds, with no signup.
+                  Then we'll show you what's costing you revenue.
                 </p>
-              </div>
+              )}
 
-              {/* CTA block with risk reversal */}
-              <div className="w-full pt-4 space-y-3">
-                <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-                  <a
-                    href={`/audit?goal=${selectedGoal}`}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      navigate(`/audit?goal=${selectedGoal}`);
-                    }}
-                    className="w-full sm:w-auto px-8 py-4 bg-lime text-ink font-sans font-extrabold text-sm border-2 border-ink shadow-hard hover:shadow-hard-hover hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0 rounded-full transition-all flex items-center justify-center gap-2 cursor-pointer focus-ring text-center block"
-                    id="hero-primary-cta"
-                  >
-                    <span>{activeGoal.ctaText.replace(/Quote/gi, 'Audit')}</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </a>
-                  <a
-                    href={`/quote?goal=${selectedGoal}`}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      navigate(`/quote?goal=${selectedGoal}`);
-                    }}
-                    className="w-full sm:w-auto px-8 py-4 bg-paper text-ink font-sans font-extrabold text-sm border-2 border-ink shadow-hard hover:shadow-hard-hover hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0 rounded-full transition-all flex items-center justify-center gap-2 cursor-pointer focus-ring text-center block"
-                    id="hero-secondary-cta"
-                  >
-                    <span>Get Free Quote</span>
-                  </a>
-                </div>
+              {/* The tool itself */}
+              <HeroAudit
+                selectedGoal={selectedGoal}
+                onGoalSelect={handleGoalSelect}
+                onActiveChange={setAuditActive}
+                onRequestQuote={() => navigate(`/quote?goal=${selectedGoal}`)}
+              />
 
-                {/* Risk reversal line */}
+              {/* Risk reversal line */}
+              {!auditActive && (
                 <p className="font-mono text-[10px] text-stone tracking-wide">
                   NO CONTRACTS · 15-DAY MONEY BACK GUARANTEE · RESPONSE IN 24 HOURS
                 </p>
-              </div>
-
-
+              )}
 
             </div>
 
-            {/* Collage Column (42%) */}
+            {/* Collage Column (42%) — the idle-state visual */}
+            {!auditActive && (
             <div className="lg:col-span-5 relative w-full h-[450px] flex items-center justify-center lg:justify-end">
-              
+
               {/* Starburst Sticker (overlaps top-left) */}
-              <Starburst 
-                text="FREE AUDIT" 
-                className="absolute left-4 top-2 z-20 scale-90 md:scale-100 rotate-[-8deg] cursor-pointer" 
+              <Starburst
+                text="FREE AUDIT"
+                className="absolute left-4 top-2 z-20 scale-90 md:scale-100 rotate-[-8deg] cursor-pointer"
                 size={96}
                 rotationSpeed={30}
                 onClick={() => {
-                  navigate(`/audit?goal=${selectedGoal}`);
+                  document.getElementById('hero-audit-input')?.focus();
                 }}
               />
 
@@ -663,17 +633,18 @@ export default function App() {
               <div className="absolute right-[-10px] top-[15px] bg-paper border-1.5 border-ink px-4 py-2.5 rounded-xl shadow-hard z-20 rotate-[6deg] max-w-[190px] text-left select-none pointer-events-none">
                 <p className="font-mono text-[9px] text-stone uppercase">CLIENT RESULT</p>
                 <p className="font-display font-black text-sm text-ink">+4,900% ORGANIC TRAFFIC</p>
-                <p className="font-mono text-[8px] text-forest/70 mt-1">✓ JADE TITLE SERVICES · GA4</p>
+                <p className="font-mono text-[8px] text-forest mt-1">✓ JADE TITLE SERVICES · GA4</p>
               </div>
 
               {/* Overlapping Ink Card (bottom-left, anchors right) */}
               <div className="absolute left-[20px] bottom-[15px] bg-ink border-1.5 border-ink px-4 py-3 rounded-xl shadow-hard z-20 rotate-[-4deg] max-w-[210px] text-left select-none pointer-events-none">
-                <p className="font-mono text-[9px] text-lime/80 uppercase">CLIENT RESULT</p>
+                <p className="font-mono text-[9px] text-lime uppercase">CLIENT RESULT</p>
                 <p className="font-display font-black text-sm text-lime leading-tight">+280% LOCAL LEADS</p>
-                <p className="font-mono text-[8px] text-cream/50 mt-1">EcoClean Services · GBP verified</p>
+                <p className="font-mono text-[8px] text-cream/60 mt-1">EcoClean Services · GBP verified</p>
               </div>
 
             </div>
+            )}
 
           </div>
         </section>
@@ -686,7 +657,7 @@ export default function App() {
 
 
         {/* SERVICES SECTION */}
-        <section id="services" className="py-20 px-6 md:px-12 max-w-7xl mx-auto border-b-1.5 border-ink">
+        <section id="services" className="defer-paint py-20 px-6 md:px-12 max-w-7xl mx-auto border-b-1.5 border-ink">
           
           {/* Header block */}
           <div className="mb-16 text-left max-w-2xl">
@@ -791,7 +762,7 @@ export default function App() {
               <h2 className="font-display font-extrabold text-4xl lg:text-5xl text-cream tracking-tight mt-3">
                 Zero vanity traffic. Pure bottom-line <span className="font-serif-accent italic text-lime bg-ink px-2.5 py-0.5 rounded-sm shadow-hard inline-block rotate-1">growth</span>.
               </h2>
-              <p className="font-sans text-cream/70 mt-4 leading-relaxed">
+              <p className="font-sans text-cream/75 mt-4 leading-relaxed">
                 We measure performance in leads, sales, and Search Console data — not rank-tracker screenshots. Here's what we've built for real clients.
               </p>
             </div>
@@ -805,7 +776,7 @@ export default function App() {
                 >
                   <div className="space-y-4 text-left">
                     <div className="flex items-center justify-between border-b border-cream/10 pb-4">
-                      <span className="font-mono text-xs font-black tracking-widest text-cream/50">
+                      <span className="font-mono text-xs font-black tracking-widest text-cream/60">
                         {study.client}
                       </span>
                       <span className="px-2 py-0.5 bg-forest text-lime border border-lime/20 font-mono text-[9px] font-bold uppercase rounded">
@@ -815,7 +786,7 @@ export default function App() {
 
                     {/* Giant Lime Stat */}
                     <div className="py-2">
-                      <p className="font-mono text-[10px] text-cream/40 uppercase">ATTRIBUTED RESULT</p>
+                      <p className="font-mono text-[10px] text-cream/60 uppercase">ATTRIBUTED RESULT</p>
                       <p className="font-display font-black text-4xl md:text-5xl text-lime tracking-tight mt-1">
                         {study.stat}
                       </p>
@@ -830,7 +801,7 @@ export default function App() {
                   </div>
 
                   <div className="pt-5 border-t border-cream/10 mt-6 space-y-4">
-                    <span className="block text-[10px] font-mono text-cream/40 uppercase tracking-wide">
+                    <span className="block text-[10px] font-mono text-cream/60 uppercase tracking-wide">
                       {study.dataOrigin.toUpperCase()}
                     </span>
                     <div className="flex items-center gap-3">
@@ -900,7 +871,7 @@ export default function App() {
         </section>
 
         {/* PROCESS ("How we engineer growth") */}
-        <section id="process" className="py-20 px-6 md:px-12 max-w-7xl mx-auto border-b-1.5 border-ink">
+        <section id="process" className="defer-paint py-20 px-6 md:px-12 max-w-7xl mx-auto border-b-1.5 border-ink">
           
           {/* Header */}
           <div className="mb-16 text-left max-w-2xl">
@@ -964,7 +935,7 @@ export default function App() {
         </section>
 
         {/* TESTIMONIALS SECTION */}
-        <section id="testimonials" className="py-20 bg-cream px-6 md:px-12 border-b-1.5 border-ink overflow-hidden">
+        <section id="testimonials" className="defer-paint py-20 bg-cream px-6 md:px-12 border-b-1.5 border-ink overflow-hidden">
           <div className="max-w-4xl mx-auto text-center space-y-8 relative">
             
             <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-paper border border-ink text-stone font-mono text-xs rounded-full shadow-hard">
@@ -1021,7 +992,7 @@ export default function App() {
                   <button
                     key={idx}
                     onClick={() => setActiveTestimonial(idx)}
-                    className={`w-2 h-2 rounded-full border border-ink transition-colors cursor-pointer ${
+                    className={`w-2 h-2 box-content border-[8px] border-transparent bg-clip-content rounded-full outline outline-1 outline-ink -outline-offset-[8px] transition-colors cursor-pointer ${
                       activeTestimonial === idx ? 'bg-lime' : 'bg-stone/20'
                     }`}
                     aria-label={`Go to testimonial ${idx + 1}`}
@@ -1091,9 +1062,9 @@ export default function App() {
 
                     {/* Content */}
                     <div className="space-y-4 text-left">
-                      <h3 className="font-display font-extrabold text-2xl text-ink tracking-tight">
+                      <h2 className="font-display font-extrabold text-2xl text-ink tracking-tight">
                         {serv.title}
-                      </h3>
+                      </h2>
                       <p className="font-sans text-stone text-xs md:text-sm leading-relaxed">
                         {serv.description}
                       </p>
@@ -1152,7 +1123,7 @@ export default function App() {
                 <h1 className="font-display font-black text-4xl md:text-5xl lg:text-6xl text-cream tracking-tight mt-4 leading-[1.1]">
                   Our Full <span className="font-serif-accent italic text-lime bg-ink px-2.5 py-0.5 rounded-sm shadow-hard inline-block -rotate-1">Portfolio</span> of Organic Proof
                 </h1>
-                <p className="font-sans text-cream/70 mt-6 leading-relaxed text-base md:text-lg">
+                <p className="font-sans text-cream/75 mt-6 leading-relaxed text-base md:text-lg">
                   The complete archive of campaigns we've executed for e-commerce, local service, and B2B companies. Every number is verified in the client's own analytics — no fluff.
                 </p>
               </div>
@@ -1165,13 +1136,13 @@ export default function App() {
                     className="bg-ink border-1.5 border-cream/20 p-6 md:p-8 rounded-2xl flex flex-col justify-between relative shadow-hard group hover:border-lime/40 transition-all duration-200"
                   >
                     {/* Badge showing if it was featured on the homepage */}
-                    <div className="absolute top-4 right-4 font-mono text-[9px] text-cream/30">
+                    <div className="absolute top-4 right-4 font-mono text-[9px] text-cream/60">
                       {idx < 3 ? 'FEATURED' : 'FULL STUDY'}
                     </div>
 
                     <div className="space-y-4 text-left">
                       <div className="flex items-center justify-between border-b border-cream/10 pb-4">
-                        <span className="font-mono text-xs font-black tracking-widest text-cream/50">
+                        <span className="font-mono text-xs font-black tracking-widest text-cream/60">
                           {study.client}
                         </span>
                         <span className="px-2 py-0.5 bg-forest text-lime border border-lime/20 font-mono text-[9px] font-bold uppercase rounded">
@@ -1181,7 +1152,7 @@ export default function App() {
 
                       {/* Giant Lime Stat */}
                       <div className="py-2">
-                        <p className="font-mono text-[10px] text-cream/40 uppercase">ATTRIBUTED RESULT</p>
+                        <p className="font-mono text-[10px] text-cream/60 uppercase">ATTRIBUTED RESULT</p>
                         <p className="font-display font-black text-4xl md:text-5xl text-lime tracking-tight mt-1 group-hover:scale-105 transition-transform origin-left duration-200">
                           {study.stat}
                         </p>
@@ -1196,7 +1167,7 @@ export default function App() {
                     </div>
 
                     <div className="pt-5 border-t border-cream/10 mt-6 space-y-4">
-                      <span className="block text-[10px] font-mono text-cream/40 uppercase tracking-wide">
+                      <span className="block text-[10px] font-mono text-cream/60 uppercase tracking-wide">
                         {study.dataOrigin.toUpperCase()}
                       </span>
                       <div className="flex items-center gap-3">
@@ -1257,6 +1228,35 @@ export default function App() {
                   </a>
                 </div>
               </div>
+
+              {/* How the numbers are produced. Every figure on this site names
+                  the tool it came from, so the method that produces them is
+                  worth stating plainly rather than leaving implied. */}
+              <div className="mt-20 pt-12 border-t border-cream/20 max-w-3xl">
+                <h2 className="font-display font-extrabold text-2xl md:text-3xl text-cream tracking-tight leading-tight">
+                  How we measure these results
+                </h2>
+                <div className="mt-5 space-y-4 font-sans text-sm md:text-base text-cream/75 leading-relaxed">
+                  <p>
+                    Every figure above is pulled from the client's own Google Analytics 4 property
+                    or Google Search Console account, and each case study names which one. We do
+                    not report on rankings alone, because a ranking that does not produce a call,
+                    a form fill or a sale is not a result — it is a screenshot.
+                  </p>
+                  <p>
+                    Percentage changes compare a defined post-engagement window against the
+                    equivalent window before work started, on the same property, so seasonality
+                    and traffic mix are held as steady as the data allows. Where a number comes
+                    from a single channel rather than site-wide, the case study says so.
+                  </p>
+                  <p>
+                    Results vary by market, competition and starting position. These are outcomes
+                    we produced for specific businesses under specific conditions, not projections
+                    for yours — which is exactly why every engagement starts with an audit of
+                    where you actually stand rather than a promise.
+                  </p>
+                </div>
+              </div>
             </div>
           </section>
         ) : currentView === 'case-study-detail' ? (
@@ -1266,8 +1266,8 @@ export default function App() {
               return (
                 <section className="py-20 bg-forest text-cream border-b-1.5 border-ink min-h-[90vh] flex items-center justify-center relative overflow-hidden">
                   <div className="max-w-md mx-auto px-6 text-center">
-                    <h2 className="font-display font-black text-3xl text-lime mb-4">Case Study Not Found</h2>
-                    <p className="font-sans text-cream/70 mb-8">The case study you are looking for does not exist or has been relocated.</p>
+                    <h1 className="font-display font-black text-3xl text-lime mb-4">Case Study Not Found</h1>
+                    <p className="font-sans text-cream/75 mb-8">The case study you are looking for does not exist or has been relocated.</p>
                     <a
                       href="/case-studies"
                       onClick={(e) => {
@@ -1318,11 +1318,11 @@ export default function App() {
                   <div className="bg-ink border border-cream/15 p-6 md:p-8 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12 shadow-hard text-left">
                     <div className="text-left">
                       <span className="font-mono text-[10px] text-lime uppercase font-black tracking-widest">Attributed Performance Result</span>
-                      <h4 className="font-display font-black text-4xl md:text-5xl text-lime tracking-tight mt-1">{currentCaseStudy.stat}</h4>
-                      <span className="font-mono text-xs text-cream/70 uppercase">{currentCaseStudy.metric}</span>
+                      <p className="font-display font-black text-4xl md:text-5xl text-lime tracking-tight mt-1">{currentCaseStudy.stat}</p>
+                      <span className="font-mono text-xs text-cream/75 uppercase">{currentCaseStudy.metric}</span>
                     </div>
                     <div className="text-left md:text-right">
-                      <span className="font-mono text-[10px] text-cream/40 uppercase block">Data Integrity Log</span>
+                      <span className="font-mono text-[10px] text-cream/60 uppercase block">Data Integrity Log</span>
                       <span className="font-mono text-xs text-cream/80 uppercase font-bold block mt-1">{currentCaseStudy.dataOrigin}</span>
                       <a
                         href={`/audit?goal=${currentCaseStudy.goal}`}
@@ -1374,6 +1374,7 @@ export default function App() {
             );
           })()
         ) : currentView === 'audit' ? (
+          <>
           <section className="bg-forest text-cream border-b-1.5 border-ink relative overflow-hidden flex items-center py-8 lg:py-6 lg:min-h-[calc(100dvh-4.5rem)]">
             {/* Subtle grid background */}
             <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(to_right,#fff_1px,transparent_1px),linear-gradient(to_bottom,#fff_1px,transparent_1px)] bg-[size:24px_24px]" />
@@ -1406,7 +1407,7 @@ export default function App() {
                     Claim your free <span className="font-serif-accent italic text-lime bg-ink px-2.5 py-0.5 rounded-sm shadow-hard inline-block -rotate-1">15-Point</span> Performance Audit
                   </h1>
 
-                  <p className="font-sans text-cream/70 mt-4 leading-relaxed text-sm xl:text-base">
+                  <p className="font-sans text-cream/75 mt-4 leading-relaxed text-sm xl:text-base">
                     We scan your search footprint, benchmark competitors, and show you exactly where you are losing revenue. No slides, just raw math.
                   </p>
 
@@ -1685,6 +1686,8 @@ export default function App() {
               </div>
             </div>
           </section>
+          <FaqSection id="audit-faq" heading="What to expect from your free audit" faqs={AUDIT_FAQS} tone="light" />
+          </>
         ) : currentView === 'privacy-policy' ? (
           <section className="py-20 bg-forest text-cream border-b-1.5 border-ink min-h-[90vh] relative overflow-hidden">
             {/* Subtle grid background */}
@@ -1711,35 +1714,35 @@ export default function App() {
                 <h1 className="font-display font-black text-4xl md:text-5xl lg:text-6xl text-cream tracking-tight leading-[1.1] mt-2">
                   Privacy Policy
                 </h1>
-                <p className="font-sans text-cream/70 mt-6 leading-relaxed text-base md:text-lg">
+                <p className="font-sans text-cream/75 mt-6 leading-relaxed text-base md:text-lg">
                   How we protect your performance analytics, competitive search intelligence, and organic datasets.
                 </p>
               </div>
 
               <div className="space-y-8 bg-paper text-ink border-2 border-ink p-8 md:p-12 rounded-3xl shadow-hard">
                 <section className="space-y-3 text-left">
-                  <h3 className="font-display font-extrabold text-xl text-ink">1. What We Collect</h3>
+                  <h2 className="font-display font-extrabold text-xl text-ink">1. What We Collect</h2>
                   <p className="font-sans text-sm text-stone leading-relaxed">
                     When you submit a form on this site, we collect the information you provide — your name, email address, phone number, company, website, growth goals, budget range, and any comments. To measure our own marketing (the same discipline we sell), we also record how you found us: the referring site, campaign parameters (UTM tags), the page you landed on, the page you submitted from, and technical details such as your browser type and IP address.
                   </p>
                 </section>
 
                 <section className="space-y-3 text-left border-t border-ink/10 pt-8">
-                  <h3 className="font-display font-extrabold text-xl text-ink">2. Analytics & Service Providers</h3>
+                  <h2 className="font-display font-extrabold text-xl text-ink">2. Analytics & Service Providers</h2>
                   <p className="font-sans text-sm text-stone leading-relaxed">
                     We use Google Analytics 4 to understand site traffic; it sets cookies and processes usage data under Google's privacy policy. Form submissions are delivered to our team through a trusted third-party email delivery service and stored in our own secured database. We use your information solely to respond to your inquiry, prepare your audit or proposal, and analyze our marketing performance. We never sell, rent, or trade your information to anyone.
                   </p>
                 </section>
 
                 <section className="space-y-3 text-left border-t border-ink/10 pt-8">
-                  <h3 className="font-display font-extrabold text-xl text-ink">3. Data Retention & Your Rights</h3>
+                  <h2 className="font-display font-extrabold text-xl text-ink">3. Data Retention & Your Rights</h2>
                   <p className="font-sans text-sm text-stone leading-relaxed">
                     We keep lead and inquiry records for as long as they are useful for serving you and analyzing our business. You may request a copy of the information we hold about you, or ask us to correct or permanently delete it, at any time — email <a href="mailto:contact@optimizeindex.com" className="underline font-bold text-ink">contact@optimizeindex.com</a> or call 202 810 7042  and we will act on your request promptly.
                   </p>
                 </section>
 
                 <section className="space-y-3 text-left border-t border-ink/10 pt-8">
-                  <h3 className="font-display font-extrabold text-xl text-ink">4. Client Confidentiality</h3>
+                  <h2 className="font-display font-extrabold text-xl text-ink">4. Client Confidentiality</h2>
                   <p className="font-sans text-sm text-stone leading-relaxed">
                     For active clients: your keyword strategies, competitive research, analytics access, and campaign data are treated as confidential. We never share or repurpose the strategies we build for your business with any competing brand.
                   </p>
@@ -1755,6 +1758,63 @@ export default function App() {
                   </button>
                 </div>
               </div>
+            </div>
+          </section>
+        ) : currentView === 'not-found' ? (
+          <section className="bg-forest text-cream border-b-1.5 border-ink relative overflow-hidden flex items-center py-20 lg:min-h-[calc(100dvh-4.5rem)]">
+            <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(to_right,#fff_1px,transparent_1px),linear-gradient(to_bottom,#fff_1px,transparent_1px)] bg-[size:24px_24px]" />
+
+            <div className="max-w-3xl mx-auto px-6 md:px-12 relative z-10 w-full text-center">
+              <p className="font-mono text-[11px] font-bold uppercase tracking-widest text-lime mb-4">
+                Error 404
+              </p>
+              <h1 className="font-display font-black text-4xl md:text-5xl lg:text-6xl text-cream tracking-tight leading-[1.05]">
+                That page isn't{' '}
+                <span className="font-serif-accent italic text-lime bg-ink px-3 py-1 rounded-sm shadow-hard inline-block rotate-1">
+                  indexed
+                </span>
+                .
+              </h1>
+              <p className="font-sans text-cream/75 mt-5 leading-relaxed text-base max-w-xl mx-auto">
+                The URL you followed doesn't exist on this site. Run a free search audit from the
+                homepage, or pick up one of the pages below.
+              </p>
+
+              <div className="flex flex-col sm:flex-row gap-3 justify-center mt-8">
+                <a
+                  href="/"
+                  onClick={(e) => { e.preventDefault(); navigateTo('home'); }}
+                  className="px-7 py-3.5 bg-lime text-ink font-sans font-extrabold text-sm border-2 border-ink shadow-hard hover:shadow-hard-hover hover:-translate-x-0.5 hover:-translate-y-0.5 rounded-full transition-all inline-flex items-center justify-center gap-2 cursor-pointer focus-ring"
+                  id="notfound-home-cta"
+                >
+                  <span>Run a free audit</span>
+                  <ArrowRight className="w-4 h-4" aria-hidden="true" />
+                </a>
+                <a
+                  href="/services"
+                  onClick={(e) => { e.preventDefault(); navigateTo('services'); }}
+                  className="px-7 py-3.5 bg-transparent text-cream font-sans font-extrabold text-sm border-2 border-cream/60 hover:border-cream hover:bg-cream/10 rounded-full transition-all inline-flex items-center justify-center gap-2 cursor-pointer focus-ring"
+                  id="notfound-services-cta"
+                >
+                  <span>Browse services</span>
+                </a>
+              </div>
+
+              <nav aria-label="Site pages" className="mt-10 pt-8 border-t border-cream/20">
+                <ul className="flex flex-wrap justify-center gap-x-6 gap-y-2 font-mono text-[11px] uppercase tracking-wide text-cream/75">
+                  {ROUTES.map((r) => (
+                    <li key={r.path}>
+                      <a
+                        href={r.path}
+                        onClick={(e) => { e.preventDefault(); navigate(r.path); }}
+                        className="hover:text-lime transition-colors focus-ring rounded-sm"
+                      >
+                        {r.title.split('|')[0].trim()}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
             </div>
           </section>
         ) : currentView === 'terms-of-conversion' ? (
@@ -1783,35 +1843,35 @@ export default function App() {
                 <h1 className="font-display font-black text-4xl md:text-5xl lg:text-6xl text-cream tracking-tight leading-[1.1] mt-2">
                   Terms of Service
                 </h1>
-                <p className="font-sans text-cream/70 mt-6 leading-relaxed text-base md:text-lg">
+                <p className="font-sans text-cream/75 mt-6 leading-relaxed text-base md:text-lg">
                   Understanding our performance benchmarks, strategy deliverables, and the 15-day money back guarantee.
                 </p>
               </div>
 
               <div className="space-y-8 bg-paper text-ink border-2 border-ink p-8 md:p-12 rounded-3xl shadow-hard">
                 <section className="space-y-3 text-left">
-                  <h3 className="font-display font-extrabold text-xl text-ink">1. Performance & Growth Baseline</h3>
+                  <h2 className="font-display font-extrabold text-xl text-ink">1. Performance & Growth Baseline</h2>
                   <p className="font-sans text-sm text-stone leading-relaxed">
                     Organic search gains, indexing updates, and traffic metrics are calculated relative to the domain diagnostics outlined in your initial 15-Point Performance Audit. All metrics are mapped directly to business transactions rather than superficial rank trackers.
                   </p>
                 </section>
 
                 <section className="space-y-3 text-left border-t border-ink/10 pt-8">
-                  <h3 className="font-display font-extrabold text-xl text-ink text-forest">2. 15-Day Money Back Guarantee</h3>
+                  <h2 className="font-display font-extrabold text-xl text-forest">2. 15-Day Money Back Guarantee</h2>
                   <p className="font-sans text-sm text-stone leading-relaxed">
                     We stand fully behind the precision and performance of our strategic campaigns. If you are not completely satisfied with our custom search architecture, keyword clusters, indexation structures, or initial content recommendations within the first <strong>fifteen (15) calendar days</strong> of our partnership launch, we will refund 100% of your initial service fee, no questions asked.
                   </p>
                 </section>
 
                 <section className="space-y-3 text-left border-t border-ink/10 pt-8">
-                  <h3 className="font-display font-extrabold text-xl text-ink">3. Implementation Coordination</h3>
+                  <h2 className="font-display font-extrabold text-xl text-ink">3. Implementation Coordination</h2>
                   <p className="font-sans text-sm text-stone leading-relaxed">
                     Search algorithms and generative engine index schemas mutate dynamically. For optimal compound revenue results, our partners agree to provide prompt coordinate access or cooperate in executing technical improvements, server-side metadata injections, and content modifications suggested by our engineers.
                   </p>
                 </section>
 
                 <section className="space-y-3 text-left border-t border-ink/10 pt-8">
-                  <h3 className="font-display font-extrabold text-xl text-ink">4. Deliverable Ownership</h3>
+                  <h2 className="font-display font-extrabold text-xl text-ink">4. Deliverable Ownership</h2>
                   <p className="font-sans text-sm text-stone leading-relaxed">
                     The competitive intelligence assets, indexing scripts, and target keywords we deliver are proprietary strategic items. While you retain full ownership of recommendations once paid, reselling or utilizing our custom strategy templates for unrelated web properties without permission is prohibited.
                   </p>
@@ -1830,6 +1890,7 @@ export default function App() {
             </div>
           </section>
         ) : (
+          <>
           <section className="bg-forest text-cream border-b-1.5 border-ink relative overflow-hidden flex items-center py-8 lg:py-6 lg:min-h-[calc(100dvh-4.5rem)]">
             {/* Subtle grid background */}
             <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(to_right,#fff_1px,transparent_1px),linear-gradient(to_bottom,#fff_1px,transparent_1px)] bg-[size:24px_24px]" />
@@ -1856,7 +1917,7 @@ export default function App() {
                   <h1 className="font-display font-black text-3xl md:text-4xl xl:text-5xl text-cream tracking-tight leading-[1.08]">
                     Ready to grow your <span className="font-serif-accent italic text-lime bg-ink px-2.5 py-0.5 rounded-sm shadow-hard inline-block -rotate-1">revenue?</span>
                   </h1>
-                  <p className="font-sans text-cream/70 mt-4 leading-relaxed text-sm xl:text-base">
+                  <p className="font-sans text-cream/75 mt-4 leading-relaxed text-sm xl:text-base">
                     Request a custom strategy from the team behind the numbers on this site.
                   </p>
 
@@ -2122,10 +2183,12 @@ export default function App() {
               </div>
             </div>
           </section>
+          <FaqSection id="quote-faq" heading="Questions before you ask for a quote" faqs={QUOTE_FAQS} tone="light" />
+          </>
         )}
 
         {/* SPEAK WITH AN EXPERT / PHONE SECTION */}
-        <section className="py-20 bg-forest text-cream border-b-1.5 border-ink px-6 md:px-12 relative overflow-hidden">
+        <section className="defer-paint py-20 bg-forest text-cream border-b-1.5 border-ink px-6 md:px-12 relative overflow-hidden">
           {/* Grid background pattern */}
           <div className="absolute inset-0 opacity-5 pointer-events-none bg-[linear-gradient(to_right,#F6F1E6_1px,transparent_1px),linear-gradient(to_bottom,#F6F1E6_1px,transparent_1px)] bg-[size:24px_24px]" />
           
@@ -2137,7 +2200,7 @@ export default function App() {
 
             <div className="flex justify-center pt-2">
               <a
-                href="tel:2028107042"
+                href="tel:+12028107042"
                 className="inline-flex items-center gap-4 bg-lime hover:bg-lime/90 text-ink border-2 border-ink py-4 px-8 md:px-12 rounded-2xl shadow-hard hover:shadow-hard-hover hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0 transition-all duration-150 group"
                 id="phone-cta-button"
               >
@@ -2180,7 +2243,7 @@ export default function App() {
               Ready to make search your #1 <span className="font-serif-accent italic text-lime bg-forest px-3 py-1 rounded-sm shadow-hard inline-block rotate-1">revenue</span> channel?
             </h2>
 
-            <p className="font-sans text-cream/70 max-w-xl mx-auto text-sm md:text-base leading-relaxed">
+            <p className="font-sans text-cream/75 max-w-xl mx-auto text-sm md:text-base leading-relaxed">
               Skip the long exploratory sales calls. Request a custom proposal highlighting search optimization opportunities and growth pathways.
             </p>
 
@@ -2202,7 +2265,7 @@ export default function App() {
               </button>
             </div>
 
-            <p className="font-mono text-[10px] text-cream/50 tracking-wide">
+            <p className="font-mono text-[10px] text-cream/60 tracking-wide">
               15-DAY MONEY BACK GUARANTEE · NO RISK · EXPLAINED IN 24 HOURS
             </p>
           </div>
@@ -2211,7 +2274,7 @@ export default function App() {
       </main>
 
       {/* FOOTER */}
-      <footer className="bg-cream border-t-2 border-ink pt-16 pb-8 px-6 md:px-12 select-none overflow-hidden relative">
+      <footer className="defer-paint bg-cream border-t-2 border-ink pt-16 pb-8 px-6 md:px-12 select-none overflow-hidden relative">
         <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-5 gap-8 relative z-10">
           
           {/* Logo Brand / Pitch Column */}
@@ -2371,12 +2434,12 @@ export default function App() {
 
         </div>
 
-        {/* Oversized watermark text bleeding off bottom */}
-        <div className="text-center w-full select-none pointer-events-none mt-16 overflow-hidden">
-          <span className="font-display font-black text-[12vw] tracking-tighter text-ink/[0.04] leading-none block uppercase">
-            OPTIMIZEINDEX.
-          </span>
-        </div>
+        {/* Oversized watermark bleeding off the bottom. It sits at 4% opacity
+            by design — it is texture, not content — so the word itself lives in
+            CSS (.brand-watermark::after) rather than the DOM. Keeping it as a
+            real text node meant every accessibility audit correctly flagged a
+            1.08:1 contrast failure on decoration nobody is meant to read. */}
+        <div className="brand-watermark" aria-hidden="true" />
 
         {/* Legal bar */}
         <div className="max-w-7xl mx-auto mt-6 pt-6 border-t border-ink/10 flex flex-col md:flex-row justify-between items-center text-[10px] font-mono text-stone relative z-10">
@@ -2424,26 +2487,29 @@ function parseMarkdownToReact(text: string) {
   if (!text) return null;
   const lines = text.split('\n');
   return lines.map((line, idx) => {
-    // Headings
+    // Headings, demoted one level. The page already has its own <h1> (the
+    // client name), so rendering markdown `#` as h1 gave every case study two
+    // h1s. Demoting keeps one h1 per page and a clean nested outline; the
+    // visual sizes are unchanged.
     if (line.startsWith('# ')) {
       return (
-        <h1 key={idx} className="font-display font-black text-2xl md:text-3xl lg:text-4xl text-cream tracking-tight mt-8 mb-4 border-b border-cream/10 pb-2">
+        <h2 key={idx} className="font-display font-black text-2xl md:text-3xl lg:text-4xl text-cream tracking-tight mt-8 mb-4 border-b border-cream/10 pb-2">
           {line.replace('# ', '')}
-        </h1>
+        </h2>
       );
     }
     if (line.startsWith('## ')) {
       return (
-        <h2 key={idx} className="font-display font-bold text-xl md:text-2xl text-lime tracking-tight mt-6 mb-3">
+        <h3 key={idx} className="font-display font-bold text-xl md:text-2xl text-lime tracking-tight mt-6 mb-3">
           {line.replace('## ', '')}
-        </h2>
+        </h3>
       );
     }
     if (line.startsWith('### ')) {
       return (
-        <h3 key={idx} className="font-display font-semibold text-lg text-cream tracking-tight mt-5 mb-2">
+        <h4 key={idx} className="font-display font-semibold text-lg text-cream tracking-tight mt-5 mb-2">
           {line.replace('### ', '')}
-        </h3>
+        </h4>
       );
     }
     // Dividers

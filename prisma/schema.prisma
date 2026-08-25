@@ -48,6 +48,8 @@ model Lead {
   // pre-conversion story (pages viewed, time on site, sessions to convert)
   visitorId String?
   sessionId String?
+  // The instant audit this lead came out of, when it came from the hero tool
+  auditId   String?
 
   // Technical context
   userAgent String?
@@ -65,6 +67,53 @@ model Lead {
   @@index([utmSource, utmMedium, utmCampaign])
   @@index([visitorId])
   @@index([sessionId])
+  @@index([auditId])
+}
+
+// One row per instant audit run from the homepage hero. Written whether or
+// not the visitor ever hands over an email — the domains people check are
+// lead intelligence on their own, and the row doubles as a 6-hour cache so a
+// repeat scan costs neither a crawl nor a PageSpeed call.
+model SiteAudit {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  url      String // what the visitor typed, normalized
+  finalUrl String? // after redirects
+  domain   String // registrable host, www stripped — the cache key
+
+  overallScore     Int?
+  technicalScore   Int?
+  contentScore     Int?
+  performanceScore Int?
+  geoScore         Int?
+
+  // Core Web Vitals, once PageSpeed has answered
+  psiFetched Boolean @default(false)
+  lcpMs      Int?
+  clsScore   Float?
+  inpMs      Int?
+  cwvSource  String? // field | lab — never conflate the two
+
+  // Full category + check payload, so a report can be regenerated later
+  checks Json?
+
+  // Set when the scan failed, so failure patterns are visible
+  errorCode String?
+
+  // Who ran it
+  visitorId String?
+  sessionId String?
+  leadEmail String? // filled in if they went on to submit the form
+  ipAddress String?
+  userAgent String?
+
+  durationMs Int?
+
+  @@index([domain])
+  @@index([createdAt])
+  @@index([leadEmail])
+  @@index([visitorId])
 }
 
 // One row per unique browser (anonymous id persisted in localStorage).

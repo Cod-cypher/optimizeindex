@@ -18,6 +18,8 @@ export interface LeadPayload {
   service?: string;
   budget?: string;
   comments?: string;
+  /** Set when the lead came out of the instant hero audit. */
+  auditId?: string;
 }
 
 interface Attribution {

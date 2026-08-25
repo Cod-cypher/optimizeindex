@@ -1,9 +1,17 @@
 import "dotenv/config";
 import express from "express";
+import compression from "compression";
 import path from "path";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
+import { runScan } from "./server/audit/scan";
+import { runPsi } from "./server/audit/psi";
+import { overallScore } from "./server/audit/checks";
+import { AuditError, normalizeInput } from "./server/audit/url";
+import { checkRateLimit } from "./server/audit/ratelimit";
+import { REDIRECTS } from "./src/routes";
+import type { AuditCategory, AuditResult } from "./shared/auditTypes";
 
 // All inbound lead notifications are delivered to this inbox.
 const LEAD_NOTIFY_EMAIL = "vickigms1@gmail.com";
@@ -74,7 +82,49 @@ async function startServer() {
   const PORT = Number(process.env.PORT) || 3000;
 
   // Middleware
+  //
+  // gzip everything compressible. nginx in front of this has no gzip_types, and
+  // nginx's default covers text/html only — so without this the ~500 KB JS
+  // bundle went over the wire uncompressed.
+  app.use(compression());
   app.use(express.json());
+
+  /**
+   * Canonical host + legacy URL redirects.
+   *
+   * Must run before every route so nothing serves duplicate content at 200.
+   * Two URLs with identical content split the ranking signals they earn, and
+   * the site had four such pairs plus the www host.
+   */
+  app.use((req, res, next) => {
+    if (req.path.startsWith("/api/")) return next();
+
+    const host = String(req.headers.host || "");
+    const proto = String(req.headers["x-forwarded-proto"] || req.protocol || "https");
+
+    // www -> apex. nginx serves both hostnames from one block and passes Host
+    // through, so doing it here fixes it without a server-side nginx edit.
+    if (host.toLowerCase().startsWith("www.")) {
+      const target = `${proto}://${host.slice(4)}${req.originalUrl}`;
+      res.redirect(301, target);
+      return;
+    }
+
+    const alias = REDIRECTS[req.path.replace(/\/+$/, "") || "/"];
+    if (alias) {
+      const query = req.originalUrl.slice(req.path.length); // preserve ?goal=…
+      res.redirect(301, alias + query);
+      return;
+    }
+
+    // Trailing slashes on anything but the root are a second URL for the same page.
+    if (req.path.length > 1 && req.path.endsWith("/")) {
+      res.redirect(301, req.path.replace(/\/+$/, "") + req.originalUrl.slice(req.path.length));
+      return;
+    }
+
+    next();
+  });
 
   // Health endpoint for uptime monitoring (e.g. UptimeRobot pinging every 5 min).
   // Returns 503 when the database is unreachable so monitors alert on real outages.
@@ -219,6 +269,211 @@ async function startServer() {
     }
   });
 
+  /* -----------------------------------------------------------------------
+     INSTANT SITE AUDIT
+     Two stages so the hero can show real findings in a few seconds while
+     Google's speed test — the slow half — is still running.
+
+     These are the only routes that make the server fetch a URL a stranger
+     supplied, so they are the only ones that are rate limited. The SSRF
+     guarding lives in server/audit/url.ts.
+  ----------------------------------------------------------------------- */
+
+  const AUDIT_CACHE_MS = 6 * 60 * 60 * 1000;
+
+  function categoryScore(categories: AuditCategory[], id: string): number | null {
+    return categories.find((c) => c.id === id)?.score ?? null;
+  }
+
+  function sendAuditError(res: express.Response, err: unknown) {
+    if (err instanceof AuditError) {
+      const status = err.code === "BLOCKED_HOST" || err.code === "INVALID_URL" ? 400 : 502;
+      res.status(status).json({ error: { code: err.code, message: err.message, status: err.status } });
+      return;
+    }
+    console.error("[Audit] Unexpected failure:", err);
+    res.status(500).json({
+      error: { code: "UNKNOWN", message: "Something went wrong running that scan." },
+    });
+  }
+
+  app.post("/api/audit/scan", async (req, res) => {
+    const body = req.body || {};
+    const rawUrl = String(body.url ?? "").slice(0, 2000);
+    const visitorId = String(body.visitorId ?? "").slice(0, 100) || null;
+    const sessionId = String(body.sessionId ?? "").slice(0, 100) || null;
+
+    // Normalize first: it's pure string work, and it gives us the cache key
+    // before we spend a crawl or a rate-limit slot on it.
+    let domain: string;
+    try {
+      domain = normalizeInput(rawUrl).domain;
+    } catch (err) {
+      sendAuditError(res, err);
+      return;
+    }
+
+    // A recent complete audit of the same domain is served whole. This is
+    // what stops the endpoint being used to hammer a third-party site.
+    const cached = await prisma.siteAudit
+      .findFirst({
+        where: {
+          domain,
+          psiFetched: true,
+          checks: { not: Prisma.DbNull },
+          createdAt: { gt: new Date(Date.now() - AUDIT_CACHE_MS) },
+        },
+        orderBy: { createdAt: "desc" },
+      })
+      .catch(() => null);
+
+    if (cached?.checks) {
+      const payload = cached.checks as unknown as AuditResult;
+      res.json({
+        ...payload,
+        auditId: cached.id,
+        meta: { ...payload.meta, cached: true, psiPending: false },
+      });
+      return;
+    }
+
+    const limit = checkRateLimit(clientIp(req) || "unknown");
+    if (!limit.allowed) {
+      res.status(429).json({
+        error: { code: "RATE_LIMITED", message: limit.message, retryAfterSec: limit.retryAfterSec },
+      });
+      return;
+    }
+
+    try {
+      const { result } = await runScan(rawUrl);
+
+      const saved = await prisma.siteAudit
+        .create({
+          data: {
+            url: result.url,
+            finalUrl: result.finalUrl,
+            domain: result.domain,
+            overallScore: result.overall,
+            technicalScore: categoryScore(result.categories, "technical"),
+            contentScore: categoryScore(result.categories, "content"),
+            geoScore: categoryScore(result.categories, "geo"),
+            durationMs: result.meta.durationMs,
+            // Stored so the PageSpeed stage can merge into it server-side,
+            // and so a cache hit can replay the whole report.
+            checks: result as unknown as Prisma.InputJsonValue,
+            visitorId,
+            sessionId,
+            ipAddress: clientIp(req).slice(0, 100),
+            userAgent: String(req.headers["user-agent"] ?? "").slice(0, 500),
+          },
+        })
+        .catch((err) => {
+          // The visitor still gets their audit if the database is down.
+          console.error("[Audit] Could not persist scan:", err);
+          return null;
+        });
+
+      console.log(`[Audit] Scanned ${result.domain} — ${result.overall}/100 in ${result.meta.durationMs}ms`);
+      res.json({ ...result, auditId: saved?.id ?? "" });
+    } catch (err) {
+      // Failures are recorded too — a domain someone tried to check is a lead
+      // signal even when the scan couldn't complete.
+      await prisma.siteAudit
+        .create({
+          data: {
+            url: rawUrl.slice(0, 500),
+            domain,
+            errorCode: err instanceof AuditError ? err.code : "UNKNOWN",
+            visitorId,
+            sessionId,
+            ipAddress: clientIp(req).slice(0, 100),
+          },
+        })
+        .catch(() => {});
+      sendAuditError(res, err);
+    }
+  });
+
+  app.post("/api/audit/psi", async (req, res) => {
+    const body = req.body || {};
+    const auditId = String(body.auditId ?? "").slice(0, 100);
+    const rawUrl = String(body.url ?? "").slice(0, 2000);
+    if (!rawUrl) {
+      res.status(400).json({ error: { code: "INVALID_URL", message: "url is required" } });
+      return;
+    }
+    // Re-validate: this URL arrives from the client and must clear the same
+    // bar as the original scan before we hand it to Google.
+    try {
+      normalizeInput(rawUrl);
+    } catch (err) {
+      sendAuditError(res, err);
+      return;
+    }
+
+    try {
+      const outcome = await runPsi(rawUrl);
+
+      // The other three categories are read back from the stored scan rather
+      // than accepted from the client, so the overall score can't be forged.
+      const stored = auditId
+        ? await prisma.siteAudit.findUnique({ where: { id: auditId } }).catch(() => null)
+        : null;
+      const priorResult = stored?.checks as unknown as AuditResult | null;
+
+      const combined: AuditCategory[] = [
+        ...(priorResult?.categories ?? []).filter((c) => c.id !== "performance"),
+        outcome.category,
+      ];
+      // Only meaningful when the stored scan was found; otherwise the client
+      // recomputes from the categories it is already holding.
+      const overall = priorResult ? overallScore(combined) : null;
+
+      if (stored && priorResult) {
+        const merged: AuditResult = {
+          ...priorResult,
+          auditId: stored.id,
+          overall: overall ?? priorResult.overall,
+          overallState: "final",
+          categories: priorResult.categories.map((c) =>
+            c.id === "performance" ? outcome.category : c,
+          ),
+          cwv: outcome.cwv,
+          lighthouse: outcome.lighthouse,
+          meta: { ...priorResult.meta, psiPending: false },
+        };
+        await prisma.siteAudit
+          .update({
+            where: { id: stored.id },
+            data: {
+              psiFetched: outcome.available,
+              performanceScore: outcome.category.score,
+              overallScore: overall ?? undefined,
+              lcpMs: outcome.cwv?.lcpMs ?? null,
+              clsScore: outcome.cwv?.cls ?? null,
+              inpMs: outcome.cwv?.inpMs ?? null,
+              cwvSource: outcome.cwv?.source ?? null,
+              checks: merged as unknown as Prisma.InputJsonValue,
+            },
+          })
+          .catch(() => {});
+      }
+
+      res.json({
+        auditId,
+        available: outcome.available,
+        note: outcome.note,
+        overall,
+        category: outcome.category,
+        cwv: outcome.cwv,
+        lighthouse: outcome.lighthouse,
+      });
+    } catch (err) {
+      sendAuditError(res, err);
+    }
+  });
+
   app.post("/api/leads", async (req, res) => {
     const body = req.body || {};
     if (!body.email || !body.website) {
@@ -253,6 +508,7 @@ async function startServer() {
       // Journey linkage to the analytics tables
       visitorId: str(body.visitorId, 100),
       sessionId: str(body.sessionId, 100),
+      auditId: str(body.auditId, 100),
       // Technical context captured server-side
       userAgent: str(req.headers["user-agent"], 500),
       ipAddress: str(clientIp(req), 100),
@@ -282,6 +538,13 @@ async function startServer() {
           .update({ where: { id: leadData.sessionId }, data: { isConverted: true } })
           .catch(() => {});
       }
+      // Tie the audit they ran to the email they gave, so the report we send
+      // back is the one they actually saw.
+      if (leadData.auditId) {
+        await prisma.siteAudit
+          .update({ where: { id: leadData.auditId }, data: { leadEmail: leadData.email } })
+          .catch(() => {});
+      }
     } catch (err) {
       console.error("[Leads] Database write failed, falling back to file backup:", err);
     }
@@ -309,10 +572,58 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+    // dist/client only. The backend bundle (dist/server.cjs, plus its sourcemap)
+    // and the SSR bundle (dist/ssr) deliberately live outside this directory —
+    // serving the whole of dist/ published the entire backend at /server.cjs.
+    const distPath = path.join(process.cwd(), "dist", "client");
+
+    // Hashed assets are immutable and can be cached for a year; HTML must
+    // revalidate or a pre-render fix would take a year to reach repeat visitors.
+    app.use(
+      express.static(distPath, {
+        index: false, // the route resolver below owns HTML, not express.static
+        // Without this, express.static sees dist/services/ as a directory and
+        // 301s /services -> /services/, which the trailing-slash rule above
+        // then 301s straight back. Every pre-rendered route was a redirect loop.
+        redirect: false,
+        setHeaders(res, filePath) {
+          if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+            res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+          } else if (filePath.endsWith(".html")) {
+            res.setHeader("Cache-Control", "public, max-age=0, must-revalidate");
+          }
+        },
+      }),
+    );
+
+    /**
+     * Serves the pre-rendered HTML for a path, or a real 404.
+     *
+     * The old fallback returned dist/index.html for *every* unmatched path at
+     * HTTP 200 — a soft 404. Google treats those as thin duplicates of the
+     * homepage, and it meant a typo'd URL looked like a real page.
+     */
+    const pageFor = (urlPath: string): string | null => {
+      const clean = urlPath.length > 1 ? urlPath.replace(/\/+$/, "") : "/";
+      const candidate =
+        clean === "/" ? path.join(distPath, "index.html") : path.join(distPath, clean, "index.html");
+      // Refuse anything that escapes dist — the path comes from the URL.
+      const resolved = path.resolve(candidate);
+      if (!resolved.startsWith(path.resolve(distPath))) return null;
+      return fs.existsSync(resolved) ? resolved : null;
+    };
+
+    app.get("*", (req, res) => {
+      const page = pageFor(req.path);
+      if (page) {
+        res.setHeader("Cache-Control", "public, max-age=0, must-revalidate");
+        res.sendFile(page);
+        return;
+      }
+      const notFound = path.join(distPath, "404.html");
+      res
+        .status(404)
+        .sendFile(fs.existsSync(notFound) ? notFound : path.join(distPath, "index.html"));
     });
   }
 

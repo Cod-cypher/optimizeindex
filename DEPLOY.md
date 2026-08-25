@@ -104,3 +104,68 @@ npx prisma generate && npx prisma migrate deploy
 npm run build
 pm2 restart optimizeindex
 ```
+
+## What `npm run build` does now
+
+The site is **pre-rendered**, not a bare SPA. `npm run build` runs four steps:
+
+1. `vite build` — client bundle
+2. `vite build --ssr src/entry-server.tsx` — server bundle used only at build time
+3. `tsx scripts/prerender.ts` — renders all 9 routes plus a 404 page to static
+   HTML in `dist/`, and regenerates `dist/sitemap.xml`
+4. `esbuild server.ts` — the Express server
+
+Nothing extra to run on deploy — the existing `npm run build` covers it. But if
+step 3 is skipped or fails, the site silently reverts to shipping an empty
+`<div id="root">`, which is invisible to crawlers and to every AI assistant.
+**After deploying, confirm the HTML actually has content:**
+
+```bash
+curl -s https://optimizeindex.com/ | grep -c "<h1"      # expect 1
+curl -s https://optimizeindex.com/services | grep -o '<link rel="canonical"[^>]*>'
+# expect .../services — NOT the homepage
+curl -s -o /dev/null -w '%{http_code}\n' https://optimizeindex.com/no-such-page   # expect 404
+```
+
+Route metadata (titles, descriptions, canonicals, JSON-LD) lives in
+`src/routes.ts`. Adding a page means adding it there — the prerenderer and the
+sitemap both read from that list.
+
+`npm run verify` scores the built output against the real audit checks in
+`server/audit/checks.ts`. Run it before deploying; it fails the build on a
+regression.
+
+### Regenerating assets (rarely needed)
+
+- `npm run fonts` — re-downloads the self-hosted fonts into `public/fonts/`
+  and rewrites `src/fonts.css`. Only needed when the font list changes.
+- `npm run images` — regenerates the derived logo sizes from `public/logo.png`.
+
+Both outputs are committed, so normal builds never touch the network.
+
+## Deploy gotcha: devDependencies
+
+`npm run build` needs `tsx`, `esbuild`, `typescript` and `tailwindcss`, and all
+four are devDependencies. If `NODE_ENV=production` is exported in the shell you
+deploy from, npm sets `omit=dev` and skips them — the build then fails at the
+prerender step. Your current shell doesn't set it (the old build already relied
+on esbuild), but to be safe use:
+
+```bash
+npm ci --include=dev || npm install --include=dev
+```
+
+`sharp` is an optionalDependency — it's only used by `npm run images`, and a
+failed native build there won't abort the install.
+
+## Pending
+
+- **`prisma migrate deploy`** still needs to run for the `SiteAudit` table and
+  the `Lead.auditId` column (migration `20260825000000_site_audit`). Until then
+  the homepage audit tool works but persists nothing.
+- **`PAGESPEED_API_KEY`** is not set. Without it Google rate-limits the
+  PageSpeed endpoint hard enough that most visitors get no speed data.
+- **nginx config changed** — `deploy/nginx-optimizeindex.conf` now adds gzip
+  types and a www → apex redirect block. Copy it to the server and
+  `nginx -t && systemctl reload nginx` to apply. The app performs the same
+  redirect itself, so this is an optimisation rather than a requirement.

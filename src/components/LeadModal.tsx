@@ -167,7 +167,7 @@ export default function LeadModal({ isOpen, onClose, type, preselectedGoal }: Le
                 We audit your search footprint, benchmark your competitors, and send back a plan built for your
                 business.
               </p>
-              <p className="modal-note font-mono text-[10px] uppercase tracking-widest text-stone/80 mt-2.5">
+              <p className="modal-note font-mono text-[10px] uppercase tracking-widest text-stone mt-2.5">
                 Only your site and email are required
               </p>
             </div>
