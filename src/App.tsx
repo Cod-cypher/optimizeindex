@@ -52,6 +52,11 @@ import Starburst from './components/Starburst';
 import Marquee from './components/Marquee';
 import Logo from './components/Logo';
 
+// The four services shown on the homepage. Conversion Optimization (09)
+// takes the slot SEO used to have. Listed by id rather than SERVICES.slice(0, 4)
+// so the selection doesn't silently depend on the order of the data file.
+const HOME_SERVICE_IDS = ['gmb', 'cro', 'aeo', 'geo'];
+
 // Every path that resolves to a real page. Aliases are 301'd server-side
 // (see REDIRECTS in routes.ts) but are listed here so a client-side visit to
 // one during a session doesn't flash the not-found view.
@@ -572,7 +577,7 @@ export default function App() {
                 <div className="inline-flex items-center gap-2 px-3 py-1 bg-paper border-1.5 border-ink rounded-full shadow-hard -rotate-1">
                   <span className="w-2 h-2 rounded-full bg-lime border border-ink animate-pulse" />
                   <span className="font-sans text-[13px] font-bold text-ink">
-                    SEO for local & trade businesses
+                    AI for local & trade businesses
                   </span>
                 </div>
               )}
@@ -591,7 +596,7 @@ export default function App() {
                 <span className="font-serif-accent italic text-lime bg-ink px-3 py-1 rounded-sm shadow-hard inline-block rotate-1">
                   found
                 </span>{' '}
-                on Google.
+                through AI
               </h1>
 
               {/* Subcopy */}
@@ -687,7 +692,8 @@ export default function App() {
 
           {/* BENTO GRID (2x2 equal grid) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {SERVICES.slice(0, 4).map((serv) => (
+            {HOME_SERVICE_IDS.map((id) => SERVICES.find((s) => s.id === id)).map((serv) => (
+              serv ? (
               <div
                 key={serv.id}
                 className="bg-paper border-2 border-ink p-6 md:p-8 rounded-2xl shadow-hard hover:shadow-hard-hover hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all relative flex flex-col justify-between group"
@@ -699,13 +705,13 @@ export default function App() {
 
                 {/* Content */}
                 <div className="space-y-4 text-left">
-                  
+
                   {/* Title & Starburst New badge if applicable */}
                   <div className="flex items-center gap-3">
                     <h3 className="font-display font-extrabold text-2xl text-ink tracking-tight">
                       {serv.title}
                     </h3>
-                    
+
                     {/* Generates standard lime mini starburst for GEO as differentiator */}
                     {serv.isHot && (
                       <div className="px-2 py-0.5 bg-lime text-ink text-[9px] font-mono font-bold border border-ink rounded rotate-3">
@@ -738,6 +744,7 @@ export default function App() {
                   </a>
                 </div>
               </div>
+              ) : null
             ))}
           </div>
 
