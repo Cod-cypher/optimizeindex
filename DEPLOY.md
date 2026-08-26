@@ -34,8 +34,20 @@ localhost (faster, and lets you firewall port 5432 later):
 ```bash
 cat > .env << 'EOF'
 DATABASE_URL="postgresql://myappuser:strongpassword@localhost:5432/optimizeindex?schema=public"
+SESSION_SECRET="paste-the-output-of-the-command-below"
 EOF
 ```
+
+`SESSION_SECRET` signs the admin session cookies for the proposal portal. The
+server **refuses to start in production without it** rather than issue sessions
+it cannot verify. Generate one with:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
+```
+
+Rotating this value signs every admin out — that is how you force a logout
+everywhere.
 
 Build and prepare the database client:
 
@@ -158,14 +170,87 @@ npm ci --include=dev || npm install --include=dev
 `sharp` is an optionalDependency — it's only used by `npm run images`, and a
 failed native build there won't abort the install.
 
+## Proposal portal
+
+A private admin at `/admin` builds a personalized proposal for a prospect and
+publishes it to a human-readable URL at the root — `optimizeindex.com/abc-logistics`.
+
+**First-time setup on the server:**
+
+```bash
+npx prisma migrate deploy                       # creates the portal tables
+npm run admin -- you@example.com "a long passphrase"
+```
+
+There is no sign-up page and no password-reset email; `npm run admin` is the
+only way an account is created, and re-running it for an existing email resets
+that password.
+
+**Templates.** New proposals can start from a built-in vertical (flatbed,
+towing, local delivery, dump truck), a fully filled-in worked example, or a
+template you saved yourself from a proposal you had already built.
+
+A saved template carries whatever you ticked when you saved it. That includes
+the prospect-specific groups — contact details, call volumes, the projection and
+its basis — because `Duplicate` has always copied an entire proposal anyway, so
+withholding the same data here bought no safety and only made templates less
+useful than the button beside them. The groups that describe one business rather
+than how the agency works are flagged **About this company** in the save dialog
+and in the picker: carrying them into a proposal for a different company means
+checking them before it goes out. `validateForPublish` still refuses a
+projection with no stated basis.
+
+A template can also be applied to a draft that already exists — **Fill from a
+template** in Step 5. By default it fills only empty fields; the overwrite
+checkbox lets the template win everywhere.
+
+The link (slug) is never carried by a template, in either direction.
+
+**Two things that will bite you if missed:**
+
+1. **`uploads/` must survive a deploy and must be backed up.** It holds every
+   prospect logo and photo. It lives outside `dist/` deliberately, because
+   `npm run build` empties `dist` — but a deploy that wipes the whole directory
+   will still take the images with it. Nothing else in the repo references
+   them, so a lost `uploads/` means broken images on every published proposal.
+
+2. **The admin session cookie is `Secure`, so login requires HTTPS.** Until
+   certbot has run (step 5), `/admin` will accept a password and then appear to
+   do nothing — the browser refuses to store the cookie over plain HTTP. This
+   is deliberate: a session cookie should not travel in the clear.
+
+**nginx** needs `client_max_body_size 10m` (image uploads are sent as base64,
+so the body is ~4/3 the file size) and a `/uploads/` location block. Both are
+already in `deploy/nginx-optimizeindex.conf`.
+
+**Privacy.** Proposal pages are served with `X-Robots-Tag: noindex, nofollow`,
+`Cache-Control: private, no-store` and a matching meta tag, and never appear in
+`sitemap.xml`. They are not secret — anyone with the link can read one — but
+they will not be indexed. Google Analytics is deliberately stripped from these
+pages so prospect names do not enter the marketing GA4 property.
+
 ## Pending
 
-- **`prisma migrate deploy`** still needs to run for the `SiteAudit` table and
-  the `Lead.auditId` column (migration `20260825000000_site_audit`). Until then
-  the homepage audit tool works but persists nothing.
+- **SSL / certbot has still not been run.** This now blocks the proposal
+  portal outright, not just page security: the admin session cookie is
+  `Secure`, so `/admin` cannot be logged into over plain HTTP. See step 5.
+- **`SESSION_SECRET`** must be added to the server's `.env` before deploying
+  this build — without it the app will not start in production.
+- ~~`prisma migrate deploy` for the proposal portal tables~~ — **done**.
+  Migrations `20260826000000_proposal_portal` and `20260827000000_saved_templates`
+  are both applied, and an admin account exists. Both were additive only: five
+  new tables and one enum, with no change to `Lead`, `SiteAudit` or the
+  analytics tables.
+- **`uploads/` is not in git.** Proposal images live there and are referenced by
+  rows in the database, so a deploy that does not carry the directory across
+  leaves broken images on published proposals. Copy it to the server the first
+  time (`scp uploads/*.webp …:/opt/optimizeindex/uploads/`), keep it out of any
+  clean-checkout deploy step, and put it in your backups.
 - **`PAGESPEED_API_KEY`** is not set. Without it Google rate-limits the
   PageSpeed endpoint hard enough that most visitors get no speed data.
-- **nginx config changed** — `deploy/nginx-optimizeindex.conf` now adds gzip
-  types and a www → apex redirect block. Copy it to the server and
-  `nginx -t && systemctl reload nginx` to apply. The app performs the same
-  redirect itself, so this is an optimisation rather than a requirement.
+- **nginx config changed** — `deploy/nginx-optimizeindex.conf` adds gzip types,
+  a www → apex redirect block, `client_max_body_size 10m` and a `/uploads/`
+  location. Copy it to the server and `nginx -t && systemctl reload nginx`.
+  The gzip and redirect parts are optimisations (the app does the redirect
+  itself), but **`client_max_body_size` is required** — without it every
+  proposal image upload over ~750 KB fails with a 413 before reaching Node.

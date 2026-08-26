@@ -10,6 +10,26 @@ import { runPsi } from "./server/audit/psi";
 import { overallScore } from "./server/audit/checks";
 import { AuditError, normalizeInput } from "./server/audit/url";
 import { checkRateLimit } from "./server/audit/ratelimit";
+import {
+  checkLoginRate,
+  clearLoginRate,
+  clearSessionCookie,
+  readCookie,
+  requireAdmin,
+  SESSION_COOKIE,
+  sessionSecret,
+  setSessionCookie,
+  signSession,
+  verifyPassword,
+  verifySession,
+} from "./server/auth";
+import {
+  isLikelyBot,
+  isViewable,
+  serializeForScriptTag,
+  toPublicProposal,
+} from "./server/proposals/public";
+import { proposalAdminRoutes, UPLOAD_DIR } from "./server/proposals/routes";
 import { REDIRECTS } from "./src/routes";
 import type { AuditCategory, AuditResult } from "./shared/auditTypes";
 
@@ -79,7 +99,12 @@ function clientCountry(req: express.Request): string {
 
 async function startServer() {
   const app = express();
-  const PORT = Number(process.env.PORT) || 3000;
+  const PORT = Number(process.env.PORT) || 3001;
+
+  // Resolve the signing secret up front. In production a missing SESSION_SECRET
+  // throws here, at boot, rather than at the first login attempt — a server that
+  // cannot sign sessions should not come up claiming to be healthy.
+  sessionSecret();
 
   // Middleware
   //
@@ -564,12 +589,351 @@ async function startServer() {
     res.json({ ok: true, id: dbId || "backup" });
   });
 
+  /* =======================================================================
+     Proposal portal
+     =======================================================================
+     Admin authentication, then the public proposal pages served at the root
+     (optimizeindex.com/abc-logistics).
+
+     These are the only pages on the site that are not pre-rendered — they are
+     per-prospect, so there is no build-time artifact for them. They are served
+     from an empty app shell with the proposal JSON inlined into the HTML, which
+     keeps the prospect's first paint a single round trip.
+  ======================================================================= */
+
+  // --- Auth -------------------------------------------------------------
+
+  app.post("/api/admin/login", async (req, res) => {
+    const ip = clientIp(req) || "unknown";
+    const gate = checkLoginRate(ip);
+    if (!gate.allowed) {
+      res.setHeader("Retry-After", String(gate.retryAfterSec ?? 60));
+      res.status(429).json({ error: "too_many_attempts", retryAfterSec: gate.retryAfterSec });
+      return;
+    }
+
+    const email = String(req.body?.email || "").trim().toLowerCase();
+    const password = String(req.body?.password || "");
+    if (!email || !password) {
+      res.status(400).json({ error: "missing_credentials" });
+      return;
+    }
+
+    try {
+      const user = await prisma.adminUser.findUnique({ where: { email } });
+
+      // One generic message for "no such account", "wrong password" and
+      // "deactivated". Distinguishing them turns the login form into a way to
+      // enumerate who has an account.
+      if (!user || !user.isActive || !verifyPassword(password, user.passwordHash)) {
+        console.warn(`[Auth] Failed login for ${email} from ${ip}`);
+        res.status(401).json({ error: "invalid_credentials" });
+        return;
+      }
+
+      clearLoginRate(ip);
+      setSessionCookie(res, signSession(user.id));
+      await prisma.adminUser.update({
+        where: { id: user.id },
+        data: { lastLoginAt: new Date() },
+      });
+
+      res.json({ ok: true, user: { id: user.id, email: user.email, name: user.name } });
+    } catch (err) {
+      console.error("[Auth] Login failed:", err);
+      res.status(503).json({ error: "auth_unavailable" });
+    }
+  });
+
+  app.post("/api/admin/logout", (req, res) => {
+    clearSessionCookie(res);
+    res.json({ ok: true });
+  });
+
+  app.get("/api/admin/me", async (req, res) => {
+    const userId = verifySession(readCookie(req, SESSION_COOKIE));
+    if (!userId) {
+      res.status(401).json({ error: "unauthenticated" });
+      return;
+    }
+    try {
+      const user = await prisma.adminUser.findUnique({
+        where: { id: userId },
+        select: { id: true, email: true, name: true, isActive: true },
+      });
+      if (!user || !user.isActive) {
+        clearSessionCookie(res);
+        res.status(401).json({ error: "unauthenticated" });
+        return;
+      }
+      res.json({ user: { id: user.id, email: user.email, name: user.name } });
+    } catch (err) {
+      console.error("[Auth] /me failed:", err);
+      res.status(503).json({ error: "auth_unavailable" });
+    }
+  });
+
+  // --- Admin proposal API -----------------------------------------------
+
+  app.use("/api/admin", requireAdmin(prisma), proposalAdminRoutes(prisma));
+
+  /**
+   * Uploaded images.
+   *
+   * Served from outside dist/ because `vite build` empties that directory on
+   * every deploy, which would delete every prospect's logo. The filenames are
+   * random hex, so a long immutable cache is safe — an edited image gets a new
+   * name rather than a new version of an old one.
+   *
+   * `dotfiles: "deny"` and the absence of `index` keep this to exactly what was
+   * uploaded, nothing more.
+   */
+  app.use(
+    "/uploads",
+    express.static(UPLOAD_DIR, {
+      index: false,
+      redirect: false,
+      dotfiles: "deny",
+      maxAge: "1y",
+      immutable: true,
+    }),
+  );
+
+  // --- Public proposal read + view tracking -----------------------------
+
+  /**
+   * Resolves a single URL segment to a viewable proposal.
+   *
+   * Returns null for drafts, archived and expired proposals as well as unknown
+   * slugs, so all four produce an identical 404. A distinguishable response
+   * would confirm that a named company is a prospect of ours.
+   */
+  async function lookupProposal(slug: string) {
+    if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(slug)) return null;
+    try {
+      const proposal = await prisma.proposal.findUnique({ where: { slug } });
+      if (!proposal || !isViewable(proposal)) return null;
+      return proposal;
+    } catch (err) {
+      console.error(`[Proposals] Lookup failed for "${slug}":`, err);
+      return null;
+    }
+  }
+
+  /**
+   * Logs the render as an *unconfirmed* view.
+   *
+   * Email clients and security gateways prefetch links, so this alone is not
+   * evidence a human opened anything. POST /api/p/:slug/view (fired 3s into a
+   * real browser session) is what promotes the row to confirmed.
+   */
+  async function recordProposalView(proposalId: string, req: express.Request) {
+    const userAgent = String(req.headers["user-agent"] || "");
+    try {
+      await prisma.proposalView.create({
+        data: {
+          proposalId,
+          confirmed: false,
+          isBot: isLikelyBot(userAgent),
+          ipAddress: clientIp(req),
+          userAgent,
+          referrer: String(req.headers.referer || ""),
+        },
+      });
+    } catch (err) {
+      // Never let analytics break the page the prospect came to read.
+      console.error("[Proposals] View logging failed:", err);
+    }
+  }
+
+  /**
+   * Promotes the most recent view for this viewer to confirmed.
+   *
+   * Also clears isBot: running JavaScript three seconds in is stronger evidence
+   * of a real browser than the user-agent heuristic is evidence against one, so
+   * a misflagged prospect still gets counted.
+   */
+  app.post("/api/p/:slug/view", async (req, res) => {
+    const proposal = await lookupProposal(String(req.params.slug || ""));
+    if (!proposal) {
+      res.status(404).json({ error: "not_found" });
+      return;
+    }
+
+    const viewerKey = String(req.body?.viewerKey || "").slice(0, 64) || null;
+    try {
+      const recent = await prisma.proposalView.findFirst({
+        where: { proposalId: proposal.id, ipAddress: clientIp(req) },
+        orderBy: { viewedAt: "desc" },
+      });
+      if (recent) {
+        await prisma.proposalView.update({
+          where: { id: recent.id },
+          data: { confirmed: true, isBot: false, viewerKey },
+        });
+      } else {
+        await prisma.proposalView.create({
+          data: {
+            proposalId: proposal.id,
+            confirmed: true,
+            isBot: false,
+            viewerKey,
+            ipAddress: clientIp(req),
+            userAgent: String(req.headers["user-agent"] || ""),
+          },
+        });
+      }
+      res.json({ ok: true });
+    } catch (err) {
+      console.error("[Proposals] View confirm failed:", err);
+      res.status(503).json({ error: "unavailable" });
+    }
+  });
+
+  /** Engagement on the way out: how long they stayed, how far they scrolled. */
+  app.post("/api/p/:slug/engagement", async (req, res) => {
+    const proposal = await lookupProposal(String(req.params.slug || ""));
+    if (!proposal) {
+      res.status(404).json({ error: "not_found" });
+      return;
+    }
+    const viewerKey = String(req.body?.viewerKey || "").slice(0, 64);
+    const durationMs = Number(req.body?.durationMs);
+    const maxScrollPct = Number(req.body?.maxScrollPct);
+
+    try {
+      const recent = await prisma.proposalView.findFirst({
+        where: { proposalId: proposal.id, viewerKey: viewerKey || undefined, confirmed: true },
+        orderBy: { viewedAt: "desc" },
+      });
+      if (recent) {
+        await prisma.proposalView.update({
+          where: { id: recent.id },
+          data: {
+            durationMs: Number.isFinite(durationMs) ? Math.min(durationMs, 6 * 60 * 60 * 1000) : null,
+            maxScrollPct: Number.isFinite(maxScrollPct)
+              ? Math.max(0, Math.min(100, Math.round(maxScrollPct)))
+              : null,
+          },
+        });
+      }
+      res.json({ ok: true });
+    } catch (err) {
+      console.error("[Proposals] Engagement update failed:", err);
+      res.status(503).json({ error: "unavailable" });
+    }
+  });
+
+  /** Only these event names are accepted — the endpoint is public. */
+  const PROPOSAL_EVENTS = new Set([
+    "cta_click",
+    "section_view",
+    "phone_click",
+    "email_click",
+    "reply_submit",
+  ]);
+
+  app.post("/api/p/:slug/event", async (req, res) => {
+    const proposal = await lookupProposal(String(req.params.slug || ""));
+    if (!proposal) {
+      res.status(404).json({ error: "not_found" });
+      return;
+    }
+    const name = String(req.body?.name || "");
+    if (!PROPOSAL_EVENTS.has(name)) {
+      res.status(400).json({ error: "unknown_event" });
+      return;
+    }
+    try {
+      await prisma.proposalEvent.create({
+        data: {
+          proposalId: proposal.id,
+          name,
+          label: String(req.body?.label || "").slice(0, 200) || null,
+          viewerKey: String(req.body?.viewerKey || "").slice(0, 64) || null,
+        },
+      });
+      res.json({ ok: true });
+    } catch (err) {
+      console.error("[Proposals] Event write failed:", err);
+      res.status(503).json({ error: "unavailable" });
+    }
+  });
+
+  /**
+   * Injects the proposal payload and a noindex directive into the app shell.
+   *
+   * The payload goes in as JSON rather than being fetched after load, so the
+   * page the prospect opens is complete on first paint. serializeForScriptTag
+   * escapes it — a company name containing "</script>" would otherwise close
+   * the tag and turn the rest of the payload into markup.
+   */
+  function injectShell(html: string, payload: string | null): string {
+    // The built shell carries its own robots meta, as a safety net for the case
+    // where app-shell.html is fetched directly. The dev template does not, so
+    // it is added here only when absent rather than unconditionally.
+    const robots = /<meta[^>]+name="robots"/i.test(html)
+      ? ""
+      : '<meta name="robots" content="noindex, nofollow" />';
+    const script = payload ? `<script>window.__PROPOSAL__ = ${payload};</script>` : "";
+    return html.replace("</head>", `${robots}${script}</head>`);
+  }
+
+  /**
+   * Headers for every page in the portal.
+   *
+   * Both the admin app and the proposal pages carry a named prospect's business
+   * data. `X-Robots-Tag` is belt-and-braces with the meta tag above: it also
+   * covers the case where a crawler reads the headers but not the body.
+   */
+  function setPrivateHeaders(res: express.Response) {
+    res.setHeader("X-Robots-Tag", "noindex, nofollow");
+    res.setHeader("Cache-Control", "private, no-store");
+    res.setHeader("Referrer-Policy", "no-referrer");
+  }
+
   // Vite Middleware integration for SPA routing
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
+
+    /**
+     * Dev equivalents of the production shell routes below.
+     *
+     * These must be registered before vite.middlewares, whose SPA fallback
+     * would otherwise answer /admin and every proposal slug with an
+     * un-injected index.html.
+     */
+    const devShell = async (url: string) => {
+      const raw = fs.readFileSync(path.join(process.cwd(), "index.html"), "utf-8");
+      return vite.transformIndexHtml(url, raw);
+    };
+
+    app.get(/^\/admin(?:\/.*)?$/, async (req, res, next) => {
+      try {
+        setPrivateHeaders(res);
+        res.status(200).type("html").send(injectShell(await devShell(req.originalUrl), null));
+      } catch (err) {
+        next(err);
+      }
+    });
+
+    app.get(/^\/[a-z0-9][a-z0-9-]*$/, async (req, res, next) => {
+      try {
+        const proposal = await lookupProposal(req.path.slice(1));
+        if (!proposal) return next();
+
+        void recordProposalView(proposal.id, req);
+        setPrivateHeaders(res);
+        const payload = serializeForScriptTag(toPublicProposal(proposal));
+        res.status(200).type("html").send(injectShell(await devShell(req.originalUrl), payload));
+      } catch (err) {
+        next(err);
+      }
+    });
+
     app.use(vite.middlewares);
   } else {
     // dist/client only. The backend bundle (dist/server.cjs, plus its sourcemap)
@@ -613,13 +977,58 @@ async function startServer() {
       return fs.existsSync(resolved) ? resolved : null;
     };
 
-    app.get("*", (req, res) => {
+    /**
+     * The un-prerendered app shell, written by scripts/prerender.ts alongside
+     * the static pages. Everything the portal serves is built from this: the
+     * pre-rendered index.html contains the marketing homepage's markup and
+     * would flash it before React replaced it.
+     */
+    const shellPath = path.join(distPath, "app-shell.html");
+    let shellHtml: string | null = null;
+    const readShell = (): string | null => {
+      if (shellHtml !== null) return shellHtml;
+      if (!fs.existsSync(shellPath)) {
+        console.error(
+          `[Proposals] ${shellPath} is missing. Run \`npm run build\` — the prerender step writes it. ` +
+            "The admin app and every proposal page will 404 until it exists.",
+        );
+        return null;
+      }
+      shellHtml = fs.readFileSync(shellPath, "utf-8");
+      return shellHtml;
+    };
+
+    app.get(/^\/admin(?:\/.*)?$/, (req, res, next) => {
+      const shell = readShell();
+      if (!shell) return next();
+      setPrivateHeaders(res);
+      res.status(200).type("html").send(injectShell(shell, null));
+    });
+
+    app.get("*", async (req, res) => {
       const page = pageFor(req.path);
       if (page) {
         res.setHeader("Cache-Control", "public, max-age=0, must-revalidate");
         res.sendFile(page);
         return;
       }
+
+      // Not a pre-rendered page. Before 404ing, check whether this single
+      // segment is a published proposal — this is what makes
+      // optimizeindex.com/abc-logistics resolve.
+      const segments = req.path.split("/").filter(Boolean);
+      if (segments.length === 1) {
+        const shell = readShell();
+        const proposal = shell ? await lookupProposal(segments[0]) : null;
+        if (proposal && shell) {
+          void recordProposalView(proposal.id, req);
+          setPrivateHeaders(res);
+          const payload = serializeForScriptTag(toPublicProposal(proposal));
+          res.status(200).type("html").send(injectShell(shell, payload));
+          return;
+        }
+      }
+
       const notFound = path.join(distPath, "404.html");
       res
         .status(404)

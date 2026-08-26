@@ -31,8 +31,6 @@ import {
   Building2,
   Phone,
   Target,
-  Menu,
-  X
 } from 'lucide-react';
 
 import { GOALS, SERVICES, CASE_STUDIES, PROCESS_STEPS, TESTIMONIALS, AUDIT_FAQS, QUOTE_FAQS } from './data';
@@ -51,6 +49,8 @@ import InteractiveChart from './components/InteractiveChart';
 import Starburst from './components/Starburst';
 import Marquee from './components/Marquee';
 import Logo from './components/Logo';
+import SiteNav from './components/SiteNav';
+import SiteFooter from './components/SiteFooter';
 
 // The four services shown on the homepage. Conversion Optimization (09)
 // takes the slot SEO used to have. Listed by id rather than SERVICES.slice(0, 4)
@@ -70,7 +70,6 @@ const KNOWN_PATHS = new Set<string>([
 export default function App() {
   // Navigation active state and mobile menu toggle
   const [activeSection, setActiveSection] = useState('home');
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -110,8 +109,6 @@ export default function App() {
     else if (view === 'audit') targetPath = '/audit';
     else if (view === 'privacy-policy') targetPath = '/privacy-policy';
     else if (view === 'terms-of-conversion') targetPath = '/terms-of-service';
-
-    setIsMobileMenuOpen(false);
 
     if (location.pathname === '/' && view === 'home' && hash) {
       const el = document.getElementById(hash.replace('#', ''));
@@ -341,213 +338,7 @@ export default function App() {
     <div className="min-h-dvh bg-cream text-ink font-sans relative flex flex-col antialiased selection:bg-lime selection:text-ink">
       
       {/* HEADER / NAVIGATION */}
-      <header className="sticky top-0 z-40 w-full bg-cream/95 backdrop-blur-md border-b-1.5 border-ink select-none">
-        <div className="max-w-7xl mx-auto px-6 md:px-12 h-18 flex items-center justify-between">
-          
-          {/* Logo Brand */}
-          <a 
-            href="/" 
-            onClick={(e) => { 
-              e.preventDefault(); 
-              setAuditResetKey((k) => k + 1);
-              navigateTo('home'); 
-            }} 
-            className="flex items-center group p-1"
-            id="nav-logo"
-          >
-            <Logo size={32} variant="light" priority />
-          </a>
-
-          {/* Desktop Navigation links */}
-          <nav className="hidden md:flex items-center gap-7 font-mono text-xs font-bold uppercase tracking-wider">
-            <a 
-              href="/services"
-              onClick={(e) => {
-                e.preventDefault();
-                navigateTo('services');
-              }}
-              className="nav-link focus-ring rounded-sm cursor-pointer text-left font-bold"
-              aria-current={currentView === 'services' ? 'page' : undefined}
-              id="nav-link-services"
-            >
-              SERVICES
-            </a>
-            <a 
-              href="/case-studies"
-              onClick={(e) => {
-                e.preventDefault();
-                navigateTo('case-studies');
-              }}
-              className="nav-link focus-ring rounded-sm cursor-pointer text-left font-bold"
-              aria-current={currentView === 'case-studies' ? 'page' : undefined}
-              id="nav-link-cases"
-            >
-              CASE STUDIES
-            </a>
-            <a 
-              href="/#process"
-              onClick={(e) => {
-                e.preventDefault();
-                navigateTo('home', '#process');
-              }}
-              className="nav-link focus-ring rounded-sm cursor-pointer text-left font-bold"
-              id="nav-link-process"
-            >
-              PROCESS
-            </a>
-            <a 
-              href="/#testimonials"
-              onClick={(e) => {
-                e.preventDefault();
-                navigateTo('home', '#testimonials');
-              }}
-              className="nav-link focus-ring rounded-sm cursor-pointer text-left font-bold"
-              id="nav-link-testimonials"
-            >
-              TESTIMONIALS
-            </a>
-          </nav>
-
-          {/* Nav CTAs - Two Doors */}
-          <div className="flex items-center gap-3">
-            <a
-              href="/quote"
-              onClick={(e) => {
-                e.preventDefault();
-                navigateTo('quote');
-              }}
-              className="group hidden lg:inline-flex items-center gap-1.5 px-4 py-2 border-1.5 border-ink/25 text-ink font-mono text-[11px] font-bold uppercase rounded-full hover:border-ink hover:bg-ink hover:text-cream transition-colors duration-150 cursor-pointer focus-ring"
-              id="nav-quote-btn"
-            >
-              <span>Get Free Quote</span>
-              <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
-            </a>
-            <a
-              href="/audit"
-              onClick={(e) => {
-                e.preventDefault();
-                navigateTo('audit');
-              }}
-              className={`group hidden sm:flex px-4 py-2 text-[11px] font-mono font-bold uppercase rounded-full border-1.5 border-ink transition-all duration-200 cursor-pointer focus-ring items-center gap-1.5 ${
-                currentView === 'audit'
-                  ? 'bg-lime text-ink shadow-hard'
-                  : 'bg-ink text-cream hover:bg-lime hover:text-ink hover:shadow-hard hover:-translate-y-0.5'
-              }`}
-              aria-current={currentView === 'audit' ? 'page' : undefined}
-              id="nav-audit-btn"
-            >
-              <span>Free Audit</span>
-              <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
-            </a>
-
-            {/* Mobile Menu Toggle Button */}
-            <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="flex md:hidden p-2 text-ink border-2 border-ink bg-paper rounded-xl shadow-hard hover:bg-cream transition-all cursor-pointer focus-ring"
-              aria-label="Toggle menu"
-              id="mobile-menu-toggle"
-            >
-              {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* MOBILE NAVIGATION DRAWER */}
-      <AnimatePresence>
-        {isMobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.15 }}
-            className="md:hidden fixed top-18 left-0 right-0 z-30 bg-cream border-b-2 border-ink shadow-hard-lg px-6 py-8 select-none"
-          >
-            <nav className="flex flex-col gap-1 font-mono text-sm font-bold uppercase tracking-wider text-ink">
-              <a 
-                href="/services"
-                onClick={(e) => {
-                  e.preventDefault();
-                  navigateTo('services');
-                }}
-                className={`flex items-center gap-3 py-3 px-3 -mx-3 rounded-xl transition-colors ${
-                  currentView === 'services'
-                    ? 'bg-ink text-lime'
-                    : 'text-ink/70 hover:text-ink hover:bg-ink/5'
-                }`}
-                aria-current={currentView === 'services' ? 'page' : undefined}
-                id="mobile-nav-services"
-              >
-                SERVICES
-              </a>
-              <a 
-                href="/case-studies"
-                onClick={(e) => {
-                  e.preventDefault();
-                  navigateTo('case-studies');
-                }}
-                className={`flex items-center gap-3 py-3 px-3 -mx-3 rounded-xl transition-colors ${
-                  currentView === 'case-studies'
-                    ? 'bg-ink text-lime'
-                    : 'text-ink/70 hover:text-ink hover:bg-ink/5'
-                }`}
-                aria-current={currentView === 'case-studies' ? 'page' : undefined}
-                id="mobile-nav-cases"
-              >
-                CASE STUDIES
-              </a>
-              <a 
-                href="/#process"
-                onClick={(e) => {
-                  e.preventDefault();
-                  navigateTo('home', '#process');
-                }}
-                className="flex items-center gap-3 py-3 px-3 -mx-3 rounded-xl text-ink/70 hover:text-ink hover:bg-ink/5 transition-colors"
-                id="mobile-nav-process"
-              >
-                PROCESS
-              </a>
-              <a 
-                href="/#testimonials"
-                onClick={(e) => {
-                  e.preventDefault();
-                  navigateTo('home', '#testimonials');
-                }}
-                className="flex items-center gap-3 py-3 px-3 -mx-3 rounded-xl text-ink/70 hover:text-ink hover:bg-ink/5 transition-colors"
-                id="mobile-nav-testimonials"
-              >
-                TESTIMONIALS
-              </a>
-
-              {/* Mobile CTAs */}
-              <div className="flex flex-col gap-3 pt-5 mt-3 border-t border-ink/10">
-                <a
-                  href="/quote"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    navigateTo('quote');
-                  }}
-                  className="py-3.5 px-5 border-1.5 border-ink text-ink font-mono text-xs font-bold uppercase rounded-full hover:bg-ink hover:text-cream transition-all text-center"
-                  id="mobile-nav-quote"
-                >
-                  Get Free Quote →
-                </a>
-                <a
-                  href="/audit"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    navigateTo('audit');
-                  }}
-                  className="py-3.5 px-5 bg-lime text-ink font-mono text-xs font-bold uppercase rounded-full border-1.5 border-ink hover:bg-lime/90 transition-all shadow-hard text-center"
-                  id="mobile-nav-audit"
-                >
-                  Free Audit →
-                </a>
-              </div>
-            </nav>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <SiteNav onLogoClick={() => setAuditResetKey((k) => k + 1)} />
 
       {/* BODY CONTENT CONTAINER */}
       <main className="flex-1">
@@ -2293,201 +2084,7 @@ export default function App() {
       </main>
 
       {/* FOOTER */}
-      <footer className="defer-paint bg-cream border-t-2 border-ink pt-16 pb-8 px-6 md:px-12 select-none overflow-hidden relative">
-        <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-5 gap-8 relative z-10">
-          
-          {/* Logo Brand / Pitch Column */}
-          <div className="col-span-2 space-y-4 text-left">
-            <Logo size={38} variant="light" />
-            <p className="font-sans text-stone text-xs leading-relaxed max-w-sm">
-              We are SEO and GEO performance engineers. We replace slide decks with profit attribution. Every line of code is written to convert intent into scalable transactions.
-            </p>
-            
-            <div className="pt-2">
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-paper border border-ink text-forest font-mono text-[9px] font-bold rounded uppercase">
-                <Shield className="w-3.5 h-3.5" />
-                No-Contract Security Active
-              </span>
-            </div>
-          </div>
-
-          {/* Column 1: Services List */}
-          <div className="text-left space-y-3">
-            <p className="font-mono text-xs font-bold uppercase tracking-wider text-ink border-b border-ink/10 pb-2">SERVICES</p>
-            <ul className="space-y-2 font-mono text-[11px] text-stone uppercase">
-              <li>
-                <a 
-                  href="/audit?goal=revenue&service=seo" 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    navigate('/audit?goal=revenue&service=seo');
-                  }}
-                  className="hover:text-ink transition-colors text-left font-bold block"
-                >
-                  ORGANIC SEO
-                </a>
-              </li>
-              <li>
-                <a 
-                  href="/audit?goal=conversions&service=geo" 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    navigate('/audit?goal=conversions&service=geo');
-                  }}
-                  className="hover:text-ink transition-colors text-left font-bold block"
-                >
-                  GENERATIVE GEO
-                </a>
-              </li>
-              <li>
-                <a 
-                  href="/audit?goal=roi&service=paid-search" 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    navigate('/audit?goal=roi&service=paid-search');
-                  }}
-                  className="hover:text-ink transition-colors text-left font-bold block"
-                >
-                  PAID SEARCH ADS
-                </a>
-              </li>
-              <li>
-                <a 
-                  href="/audit?goal=cac&service=paid-social" 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    navigate('/audit?goal=cac&service=paid-social');
-                  }}
-                  className="hover:text-ink transition-colors text-left font-bold block"
-                >
-                  PAID SOCIAL ADS
-                </a>
-              </li>
-              <li>
-                <a 
-                  href="/audit?goal=profit&service=cro" 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    navigate('/audit?goal=profit&service=cro');
-                  }}
-                  className="hover:text-ink transition-colors text-left font-bold block"
-                >
-                  CRO TESTING
-                </a>
-              </li>
-            </ul>
-          </div>
-
-          {/* Column 2: Goals List */}
-          <div className="text-left space-y-3">
-            <p className="font-mono text-xs font-bold uppercase tracking-wider text-ink border-b border-ink/10 pb-2">BY PERFORMANCE GOAL</p>
-            <ul className="space-y-2 font-mono text-[11px] text-stone uppercase">
-              {GOALS.map(goal => (
-                <li key={goal.id}>
-                  <a
-                    href={`/audit?goal=${goal.id}`}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      navigate(`/audit?goal=${goal.id}`);
-                    }}
-                    className="hover:text-ink transition-colors text-left block"
-                    id={`footer-goal-nav-${goal.id}`}
-                  >
-                    {goal.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Column 3: Firm Details */}
-          <div className="text-left space-y-3">
-            <p className="font-mono text-xs font-bold uppercase tracking-wider text-ink border-b border-ink/10 pb-2">THE AGENCY</p>
-            <ul className="space-y-2 font-mono text-[11px] text-stone uppercase">
-              <li>
-                <a 
-                  href="/case-studies"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    navigateTo('case-studies');
-                  }}
-                  className="hover:text-ink transition-colors text-left font-bold block"
-                >
-                  CASE STUDIES
-                </a>
-              </li>
-              <li>
-                <a 
-                  href="mailto:contact@optimizeindex.com"
-                  className="hover:text-ink transition-colors text-left font-bold block"
-                >
-                  CONTACT US
-                </a>
-              </li>
-              <li>
-                <a 
-                  href="/audit"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    navigateTo('audit');
-                  }}
-                  className="hover:text-ink transition-colors text-left font-bold block"
-                >
-                  FREE AUDIT
-                </a>
-              </li>
-              <li>
-                <a 
-                  href="/quote"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    navigateTo('quote');
-                  }}
-                  className="hover:text-ink transition-colors text-left font-bold block"
-                >
-                  GET FREE QUOTE
-                </a>
-              </li>
-            </ul>
-          </div>
-
-        </div>
-
-        {/* Oversized watermark bleeding off the bottom. It sits at 4% opacity
-            by design — it is texture, not content — so the word itself lives in
-            CSS (.brand-watermark::after) rather than the DOM. Keeping it as a
-            real text node meant every accessibility audit correctly flagged a
-            1.08:1 contrast failure on decoration nobody is meant to read. */}
-        <div className="brand-watermark" aria-hidden="true" />
-
-        {/* Legal bar */}
-        <div className="max-w-7xl mx-auto mt-6 pt-6 border-t border-ink/10 flex flex-col md:flex-row justify-between items-center text-[10px] font-mono text-stone relative z-10">
-          <p>© 2026 OPTIMIZEINDEX PERFORMANCE AGENCY. ALL RIGHTS RESERVED.</p>
-          <div className="flex gap-4 mt-2 md:mt-0 uppercase">
-            <a 
-              href="/privacy-policy" 
-              onClick={(e) => {
-                e.preventDefault();
-                navigateTo('privacy-policy');
-              }}
-              className="hover:underline"
-            >
-              PRIVACY POLICY
-            </a>
-            <span>·</span>
-            <a
-              href="/terms-of-service"
-              onClick={(e) => {
-                e.preventDefault();
-                navigateTo('terms-of-conversion');
-              }}
-              className="hover:underline"
-            >
-              TERMS OF SERVICE
-            </a>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
 
       {/* LEAD CONVERSION DIALOG MODAL */}
       <LeadModal

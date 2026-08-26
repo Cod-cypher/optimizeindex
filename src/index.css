@@ -28,6 +28,39 @@
     animation: marquee 25s linear infinite;
   }
 
+  /* Indeterminate progress sweep for the portal's loading states.
+     Indeterminate rather than a percentage because the wait is a network round
+     trip of unknown length — a fake percentage bar that stalls at 90% is worse
+     than an honest one that just keeps moving. */
+  @keyframes portal-sweep {
+    0%   { transform: translateX(-105%); }
+    100% { transform: translateX(320%); }
+  }
+  .animate-portal-sweep {
+    animation: portal-sweep 1.15s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  }
+
+  /* Staggered dots under the label. */
+  @keyframes portal-blink {
+    0%, 80%, 100% { opacity: 0.2; }
+    40%           { opacity: 1; }
+  }
+  .animate-portal-blink {
+    animation: portal-blink 1.3s ease-in-out infinite;
+  }
+
+  /* Reduced motion: hold a static, clearly-filled bar rather than removing the
+     indicator entirely — the point is to show that something is happening. */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-portal-sweep {
+      animation: none;
+      transform: none;
+      width: 100%;
+      opacity: 0.4;
+    }
+    .animate-portal-blink { animation: none; opacity: 0.6; }
+  }
+
   /* 1.5px borders — used throughout the site. Tailwind has no built-in
      `border-1.5`, so these must be declared by hand or they emit nothing. */
   .border-1\.5   { border-width: 1.5px; }
@@ -213,6 +246,39 @@
     font-size: 0.625rem;
     font-weight: 700;
     flex-shrink: 0;
+  }
+
+  /* Compact variant for the admin proposal editor.
+     The base .field is deliberately generous — it is filled in once, on a
+     phone, often outdoors. The editor is the opposite case: dozens of fields
+     filled in repeatedly at a desk, where the roomy sizing turns one form into
+     several screens of scrolling. Font size is held at 16px below 640px so iOS
+     Safari still does not zoom on focus. */
+  .field-compact {
+    padding: 0.5rem 0.7rem;
+    border-radius: 0.6rem;
+    line-height: 1.35;
+  }
+  .field-compact.field-label-inline {
+    padding-top: 1.35rem;
+  }
+  @media (min-width: 640px) {
+    .field-compact { font-size: 0.9375rem; }
+  }
+  /* Tighter label to match. */
+  .form-label-compact {
+    display: block;
+    font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: -0.005em;
+    color: #34322C;
+    margin-bottom: 0.3rem;
+  }
+  .form-label-compact .opt {
+    font-weight: 400;
+    color: #6B6659;
+    margin-left: 0.3rem;
   }
 
   /* Selectable pill (goal / objective choosers) */

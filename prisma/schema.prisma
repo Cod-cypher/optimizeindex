@@ -222,3 +222,191 @@ model Event {
   @@index([name, createdAt])
   @@index([createdAt])
 }
+
+/**
+ * ---------------------------------------------------------------------------
+ * Proposal portal
+ * ---------------------------------------------------------------------------
+ * An admin builds a personalized growth proposal for a prospect and publishes
+ * it to a human-readable slug (optimizeindex.com/abc-logistics). The prospect
+ * opens the link; the admin sees whether they actually did.
+ * These pages carry a named prospect's business data, so they are served
+ * noindex/nofollow and never enter sitemap.xml.
+ * ---------------------------------------------------------------------------
+ */
+
+enum ProposalStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+/// Staff login. A table rather than a password in .env, so the password can be
+/// rotated and a second seat added without a redeploy.
+/// Seed with: npm run admin -- <email> <password>
+model AdminUser {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String?
+  /// scrypt, stored as "<saltHex>:<derivedKeyHex>". See server/auth.ts.
+  passwordHash String
+  createdAt    DateTime  @default(now())
+  lastLoginAt  DateTime?
+  isActive     Boolean   @default(true)
+
+  proposals      Proposal[]
+  savedTemplates SavedTemplate[]
+}
+
+model Proposal {
+  id          String         @id @default(cuid())
+  /// The public URL segment: optimizeindex.com/<slug>. Checked against a
+  /// reserved list (see server/proposals/slug.ts) so a proposal can never
+  /// shadow /services, /admin, /api or a static asset.
+  slug        String         @unique
+  status      ProposalStatus @default(DRAFT)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  publishedAt DateTime?
+  /// Optional. Past this, the page stops rendering.
+  expiresAt   DateTime?
+  /// Optional gate. Null means the slug alone is the key, which is the default
+  /// because these links get sent by text and pasted into email.
+  accessCode  String?
+
+  authorId String
+  author   AdminUser @relation(fields: [authorId], references: [id])
+
+  // --- Company ---
+  companyName   String
+  contactName   String?
+  email         String?
+  phone         String?
+  websiteUrl    String?
+  city          String?
+  state         String?
+  /// Miles.
+  serviceRadius Int?
+  industry      String?
+  fleetSize     Int?
+  /// string[] — "flatbed", "heavy duty wrecker", ...
+  truckTypes    Json?
+  heroImageUrl  String?
+  logoImageUrl  String?
+
+  // --- Current situation ---
+  /// Average inbound calls per month, as reported by the prospect.
+  currentCalls Int?
+  /// [{ source, share?, calls?, note? }]
+  callSources  Json?
+  currentNotes String?
+
+  // --- Opportunity ---
+  // Scalars, not JSON: these are the numbers worth querying across proposals.
+  projectedCalls  Int?
+  /// Cents.
+  avgJobValue     Int?
+  timeframeMonths Int?
+  /// Required before publishing whenever projectedCalls is set. A projection
+  /// with no stated basis is a fabricated statistic, which this codebase does
+  /// not ship — see the deliberately empty `sameAs` in src/routes.ts.
+  projectionBasis String?
+
+  // --- Plan / pricing / CTA ---
+  /// [{ title, timeline, items: string[] }]
+  phases         Json?
+  /// string[]
+  deliverables   Json?
+  /// Cents. Null hides the whole investment section.
+  monthlyPrice   Int?
+  setupFee       Int?
+  termMonths     Int?
+  ctaLabel       String?
+  ctaUrl         String?
+  /// [{ heading, body }] — escape hatch for one-off sections.
+  customSections Json?
+
+  /// Internal only. Stripped by toPublicProposal() and never sent to the page.
+  adminNotes String?
+
+  views  ProposalView[]
+  events ProposalEvent[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([authorId])
+}
+
+/// One row per page render of a published proposal.
+///
+/// `confirmed` is the important column. Gmail and Outlook prefetch links in
+/// email, so a raw render count reports "viewed 3 times" seconds after the
+/// message is sent. The server writes the row unconfirmed; a beacon fired 3
+/// seconds into a real browser session flips it. Only confirmed rows are shown
+/// as views.
+model ProposalView {
+  id         String   @id @default(cuid())
+  proposalId String
+  proposal   Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  viewedAt   DateTime @default(now())
+
+  /// Anonymous per-proposal id from localStorage. Separates "one prospect
+  /// opened it four times" from "four people opened it".
+  viewerKey    String?
+  confirmed    Boolean @default(false)
+  isBot        Boolean @default(false)
+  durationMs   Int?
+  maxScrollPct Int?
+
+  ipAddress String?
+  userAgent String?
+  referrer  String?
+
+  @@index([proposalId, viewedAt])
+  @@index([viewerKey])
+}
+
+model ProposalEvent {
+  id         String   @id @default(cuid())
+  proposalId String
+  proposal   Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  /// cta_click | section_view | phone_click | email_click | reply_submit
+  name      String
+  label     String?
+  viewerKey String?
+  metadata  Json?
+
+  @@index([proposalId, createdAt])
+  @@index([name])
+}
+
+/// A template the admin saved from a proposal they had already built.
+///
+/// Named SavedTemplate rather than ProposalTemplate so it cannot be confused
+/// with the built-in verticals in shared/proposalTemplates.ts, which are code,
+/// not rows. Both end up side by side in the picker.
+///
+/// `fields` holds the same allowlisted shape the built-ins use, and holds only
+/// the groups the admin ticked when saving — which may include findings about
+/// the prospect it was built from: contact details, call volumes, the
+/// projection and its basis. That is deliberate; see the header of
+/// server/proposals/templates.ts for why, and note that it makes a row here
+/// worth the same care as the proposal it came from.
+///
+/// Rows are scoped to their author. The picker labels them "Yours".
+model SavedTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  fields      Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  authorId String
+  author   AdminUser @relation(fields: [authorId], references: [id])
+
+  @@index([createdAt])
+  @@index([authorId])
+}

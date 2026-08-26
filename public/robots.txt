@@ -1,4 +1,10 @@
 User-agent: *
 Allow: /
 
+# Private proposal portal. Individual proposals live at the root
+# (optimizeindex.com/<company-slug>) and cannot be listed here without naming
+# our prospects, so they carry noindex in both the response header and the page
+# itself — that, not this file, is what keeps them out of the index.
+Disallow: /admin
+
 Sitemap: https://optimizeindex.com/sitemap.xml

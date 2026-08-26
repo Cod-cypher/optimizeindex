@@ -82,8 +82,44 @@ async function main() {
     console.log(`  ${route.path.padEnd(34)} ${String(words).padStart(5)} words`);
   }
 
+  await writeShell(template);
   await writeSitemap(ROUTES, SITE_ORIGIN);
-  console.log(`[prerender] ${written} pages + sitemap.xml written to dist/`);
+  console.log(`[prerender] ${written} pages + app-shell.html + sitemap.xml written to dist/`);
+}
+
+/**
+ * The empty app shell, for pages that cannot exist at build time.
+ *
+ * The proposal portal serves per-prospect pages at the root and a private admin
+ * app at /admin. Neither has a build-time artifact, and neither can reuse
+ * dist/index.html — that file now contains the pre-rendered marketing homepage,
+ * so it would paint the homepage and then have React throw it away.
+ *
+ * This is the pre-render template with its fallback head intact and an empty
+ * root, which is exactly what those routes need. server.ts injects the
+ * per-proposal payload into it at request time.
+ */
+async function writeShell(template: string) {
+  const shell = template
+    // A neutral title so the tab is never blank in the moment before React
+    // mounts. The real one is set by the page itself, and deliberately does not
+    // name the prospect here — this file is served for every proposal.
+    .replace(
+      HEAD_BLOCK,
+      '<!--app-head--><title>OptimizeIndex</title>' +
+        '<meta name="robots" content="noindex, nofollow" /><!--/app-head-->',
+    )
+    .replace(APP_HTML, '')
+    // Left as "false": there is no server-rendered markup to hydrate, so
+    // src/main.tsx must mount from scratch.
+    .replace('data-prerendered="true"', 'data-prerendered="false"')
+    // Strip the GA4 snippet. These pages are private, one per prospect, and
+    // sending them to the marketing property would both put prospect company
+    // names into GA4 URLs and mix proposal traffic into the funnel reports the
+    // site is measured on. The portal has its own first-party tracking.
+    .replace(/<script>\s*window\.dataLayer[\s\S]*?<\/script>/, '');
+
+  await fs.writeFile(path.join(DIST, 'app-shell.html'), shell, 'utf-8');
 }
 
 async function writeSitemap(

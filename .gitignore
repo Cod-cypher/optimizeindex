@@ -8,3 +8,4 @@ coverage/
 !.env.example
 leads.json
 optimizeindex-deploy.zip
+uploads/

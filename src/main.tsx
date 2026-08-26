@@ -1,18 +1,26 @@
 import {StrictMode} from 'react';
 import {createRoot, hydrateRoot} from 'react-dom/client';
 import {BrowserRouter} from 'react-router-dom';
-import App from './App.tsx';
+import AppRouter from './AppRouter.tsx';
 import './index.css';
 import {initTracker} from './lib/tracker';
 
-initTracker();
+// The marketing site's first-party analytics. Skipped on the proposal portal:
+// those pages are private, one per prospect, and have their own tracking that
+// reports to the admin dashboard rather than into the site-wide funnel.
+const isPortalPage =
+  window.location.pathname.startsWith('/admin') || window.__PROPOSAL__ !== undefined;
+
+if (!isPortalPage) {
+  initTracker();
+}
 
 const container = document.getElementById('root')!;
 
 const tree = (
   <StrictMode>
     <BrowserRouter>
-      <App />
+      <AppRouter />
     </BrowserRouter>
   </StrictMode>
 );

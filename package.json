@@ -11,6 +11,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
+    "admin": "tsx scripts/create-admin.ts",
     "fonts": "tsx scripts/fetch-fonts.ts",
     "verify": "tsx scripts/verify-seo.ts",
     "images": "tsx scripts/optimize-images.ts",
