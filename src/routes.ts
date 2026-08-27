@@ -18,6 +18,7 @@
  */
 
 import { CASE_STUDIES, AUDIT_FAQS, QUOTE_FAQS } from './data';
+import { TOWING_PILLAR, TOWING_STATES, TOWING_UPDATED } from './content/towing';
 import type { Faq } from './types';
 
 export const SITE_ORIGIN = 'https://optimizeindex.com';
@@ -170,6 +171,88 @@ const caseStudyRoutes: RouteMeta[] = CASE_STUDIES.map((study) => ({
   ],
 }));
 
+/* -------------------------------------------------------------------------
+   Towing vertical
+
+   Generated from src/content/towing.ts using the same pattern as the case
+   studies above, so a sixth state is one entry in TOWING_STATES and needs no
+   change here, in the sitemap generator, or in the SEO gate.
+
+   Note the title/H1 split. Titles carry the terms people actually search
+   ("Towing Company Marketing in California"); the H1 on the page carries the
+   brand voice ("Proudly Serving California Towing Companies"). head.ts already
+   keeps these independent — titles come from here, H1s from the components.
+------------------------------------------------------------------------- */
+
+export const TOWING_BASE = '/towing-companies';
+
+/**
+ * `Service` narrowed by audience and, on the state pages, by area.
+ *
+ * areaServed is how this site expresses geographic relevance at all: there is
+ * no real postal address, so a State entity is the honest way to say "we work
+ * here" without inventing a LocalBusiness that does not exist.
+ */
+function towingService(area?: string) {
+  return {
+    '@type': 'Service',
+    name: area ? `Towing company marketing in ${area}` : 'Towing company marketing',
+    serviceType: 'Towing company marketing',
+    provider: { '@id': `${SITE_ORIGIN}/#organization` },
+    audience: { '@type': 'BusinessAudience', name: 'Towing companies' },
+    areaServed: area ? { '@type': 'State', name: area } : 'US',
+    inLanguage: 'en-US',
+    dateModified: TOWING_UPDATED,
+  };
+}
+
+/** Hand-written so each reads like a sentence rather than a filled template. */
+const TOWING_STATE_DESCRIPTIONS: Record<string, string> = {
+  california:
+    'Get your California towing company found on Google Maps and AI assistants. Why CHP rotation work is not a business model, and how to win direct calls instead.',
+  florida:
+    'Florida sets maximum non-consensual towing rates by county, so you cannot compete on price. How Florida towing companies compete on visibility and reviews.',
+  georgia:
+    'Atlanta concentrates Georgia towing demand where I-75, I-85 and I-20 meet. How to rank in a dense map pack and win heavy-duty work on the freight corridors.',
+  pennsylvania:
+    'Pennsylvania towing revenue concentrates into winter. How Philadelphia and Pittsburgh operators build map-pack visibility and reviews before the season turns.',
+  indiana:
+    'Indiana is a freight state, so heavy-duty recovery is a bigger share of towing demand. How to market by interstate corridor and win the Indianapolis map pack.',
+};
+
+const towingRoutes: RouteMeta[] = [
+  {
+    path: TOWING_BASE,
+    title: 'Towing Company Marketing & Lead Generation | OptimizeIndex',
+    description:
+      'We help towing companies get found on Google Maps and AI assistants, and turn that into direct calls. Measured in calls and booked tows, not rankings.',
+    priority: 0.9,
+    jsonLd: [
+      towingService(),
+      breadcrumb([
+        { name: 'Home', path: '/' },
+        { name: 'Towing Companies', path: TOWING_BASE },
+      ]),
+      faqPage(TOWING_PILLAR.faqs),
+    ],
+  },
+  ...TOWING_STATES.map((s) => ({
+    path: `${TOWING_BASE}/${s.slug}`,
+    title: `Towing Company Marketing in ${s.state} | OptimizeIndex`,
+    description: TOWING_STATE_DESCRIPTIONS[s.slug],
+    priority: 0.8,
+    jsonLd: [
+      towingService(s.state),
+      breadcrumb([
+        { name: 'Home', path: '/' },
+        { name: 'Towing Companies', path: TOWING_BASE },
+        { name: s.state, path: `${TOWING_BASE}/${s.slug}` },
+      ]),
+      faqPage(s.faqs),
+    ],
+  })),
+];
+
 export const ROUTES: RouteMeta[] = [
   {
     path: '/',
@@ -197,6 +280,7 @@ export const ROUTES: RouteMeta[] = [
     ],
   },
   ...caseStudyRoutes,
+  ...towingRoutes,
   {
     path: '/audit',
     title: 'Free 15-Point SEO & AI Search Audit | OptimizeIndex',

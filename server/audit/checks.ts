@@ -123,7 +123,36 @@ function hasAnyType(types: Set<string>, wanted: string[]): string | null {
  * Resolves whether a named crawler may fetch "/" per robots.txt.
  * Absence of any rule means allowed, which is the spec default.
  */
-export function robotsAllows(text: string, userAgent: string): boolean {
+/**
+ * Google's robots.txt path matching: "*" is any sequence of characters and a
+ * trailing "$" anchors the end. Everything else is literal, and a rule matches
+ * from the start of the path.
+ *
+ * Worth doing properly rather than by prefix comparison. Stripping at the
+ * first "*" and prefix-matching looks equivalent but silently mishandles a
+ * pattern with content after the wildcard: "Disallow: /*.pdf" would reduce to
+ * the prefix "/", which matches every path on the site and blocks the whole
+ * origin.
+ */
+function robotsPatternMatches(pattern: string, path: string): boolean {
+  const anchored = pattern.endsWith("$");
+  const body = anchored ? pattern.slice(0, -1) : pattern;
+  const source = body
+    .split("*")
+    .map((part) => part.replace(/[^A-Za-z0-9_/-]/g, (c) => "\\" + c))
+    .join(".*");
+  return new RegExp(`^${source}${anchored ? "$" : ""}`).test(path);
+}
+
+/**
+ * Whether `userAgent` is allowed to fetch `path`.
+ *
+ * `path` was added when scripts/verify-seo.ts needed to assert that no
+ * indexable route is disallowed and that /admin stays disallowed for every
+ * named crawler group. It defaults to "/" so the two callers below — and the
+ * live audit tool's behaviour — are unchanged.
+ */
+export function robotsAllows(text: string, userAgent: string, path = '/'): boolean {
   const lines = text.split(/\r?\n/).map((l) => l.replace(/#.*$/, "").trim());
   const groups: { agents: string[]; rules: { allow: boolean; path: string }[] }[] = [];
   let current: (typeof groups)[number] | null = null;
@@ -162,10 +191,8 @@ export function robotsAllows(text: string, userAgent: string): boolean {
   let best: { allow: boolean; path: string } | null = null;
   for (const rule of group.rules) {
     if (rule.path === "") continue; // "Disallow:" with no value allows everything
-    if (!"/".startsWith(rule.path.replace(/\*.*$/, ""))) continue;
-    if (rule.path !== "/" && !rule.path.startsWith("/")) continue;
-    const matches = rule.path === "/" || rule.path === "/*";
-    if (!matches) continue;
+    if (!rule.path.startsWith("/")) continue;
+    if (!robotsPatternMatches(rule.path, path)) continue;
     if (!best || rule.path.length > best.path.length || (rule.path.length === best.path.length && rule.allow)) {
       best = rule;
     }

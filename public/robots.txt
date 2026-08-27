@@ -4,7 +4,65 @@ Allow: /
 # Private proposal portal. Individual proposals live at the root
 # (optimizeindex.com/<company-slug>) and cannot be listed here without naming
 # our prospects, so they carry noindex in both the response header and the page
-# itself — that, not this file, is what keeps them out of the index.
+# itself - that, not this file, is what keeps them out of the index.
+Disallow: /admin
+
+# AI crawlers, named explicitly.
+#
+# The wildcard group above already allows all of these. They are named anyway so
+# the decision is visible and deliberate: a future edit that tightens the
+# wildcard would otherwise silently remove this site from the assistants it is
+# built to be cited by.
+#
+# Every group repeats `Disallow: /admin`. That repetition is required, not
+# stylistic - a crawler obeys only the most specific group that matches its
+# name, so a named group without it would grant that crawler access to the
+# private admin app which the wildcard group denies.
+#
+# Note Google-Extended governs Gemini model training only. Google AI Overviews
+# are served from the standard Googlebot index, so there is no way to appear in
+# one and not the other.
+
+# OpenAI - ChatGPT search index, user-triggered fetches, and training
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+User-agent: GPTBot
+Allow: /
+Disallow: /admin
+
+# Perplexity
+User-agent: PerplexityBot
+User-agent: Perplexity-User
+Allow: /
+Disallow: /admin
+
+# Anthropic
+User-agent: ClaudeBot
+User-agent: Claude-SearchBot
+User-agent: Claude-User
+Allow: /
+Disallow: /admin
+
+# Microsoft - also the index behind Copilot
+User-agent: Bingbot
+Allow: /
+Disallow: /admin
+
+# Google
+User-agent: Googlebot
+User-agent: Google-Extended
+Allow: /
+Disallow: /admin
+
+# Apple
+User-agent: Applebot
+User-agent: Applebot-Extended
+Allow: /
+Disallow: /admin
+
+# Common Crawl - a training corpus many models are built from
+User-agent: CCBot
+Allow: /
 Disallow: /admin
 
 Sitemap: https://optimizeindex.com/sitemap.xml

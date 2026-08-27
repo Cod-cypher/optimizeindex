@@ -6,7 +6,8 @@
       "PowerShell(npm install prisma @prisma/client --no-audit --no-fund)",
       "PowerShell($env:DATABASE_URL = \"postgresql://myappuser:strongpassword@167.233.120.70:5432/optimizeindex_verify?schema=public\"; npx prisma migrate deploy)",
       "PowerShell(npm run lint)",
-      "PowerShell($conns = Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue; if \\($conns\\) { foreach \\($p in \\($conns | Select-Object -ExpandProperty OwningProcess -Unique\\)\\) { Stop-Process -Id $p -Force -Confirm:$false } }; npm run dev)"
+      "PowerShell($conns = Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue; if \\($conns\\) { foreach \\($p in \\($conns | Select-Object -ExpandProperty OwningProcess -Unique\\)\\) { Stop-Process -Id $p -Force -Confirm:$false } }; npm run dev)",
+      "WebSearch"
     ]
   }
 }

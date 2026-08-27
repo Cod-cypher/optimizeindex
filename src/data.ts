@@ -502,12 +502,26 @@ export const TESTIMONIALS: Testimonial[] = [
   }
 ];
 
+/**
+ * The homepage ticker.
+ *
+ * Every numeric claim here must have a live case study page behind it. The
+ * three EcoClean figures that used to sit in this list (+280% local leads,
+ * -45% acquisition cost, top-3 map pack) were removed because the EcoClean
+ * case study is commented out below — the site was asserting numbers a visitor
+ * could not go and check, on a site whose entire pitch is verified attribution.
+ * Restore them here if and when that case study is restored.
+ *
+ * The non-numeric entries are commitments made elsewhere on the site, not
+ * metrics. That is deliberate: padding a results ticker with invented results
+ * is the exact failure this list was cleaned up to remove.
+ */
 export const TICKER_ITEMS = [
-  { stat: "ORGANIC TRAFFIC · JADE TITLE SERVICES", value: "+4,900%" },
-  { stat: "LOCAL LEADS · ECOCLEAN SERVICES", value: "+280%" },
-  { stat: "SEARCH & MAP CLICKS · SUJOOD MATS", value: "+185%" },
-  { stat: "ACQUISITION COST · ECOCLEAN SERVICES", value: "-45%" },
-  { stat: "MAP PACK RANKINGS · ECOCLEAN SERVICES", value: "TOP 3" }
+  { stat: "ORGANIC TRAFFIC · JADE TITLE SERVICES · GA4", value: "+4,900%" },
+  { stat: "NO CONTRACTS · CANCEL ANY TIME", value: "0" },
+  { stat: "SEARCH & MAP CLICKS · SUJOOD MATS · SEARCH CONSOLE", value: "+185%" },
+  { stat: "DAY MONEY-BACK GUARANTEE", value: "15" },
+  { stat: "HOUR REPLY, EVERY ENQUIRY", value: "24" }
 ];
 
 /**

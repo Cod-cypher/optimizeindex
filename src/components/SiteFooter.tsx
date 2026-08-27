@@ -12,13 +12,28 @@ import { Shield } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Logo from './Logo';
 import { GOALS } from '../data';
+import { TOWING_STATES } from '../content/towing';
+import { TOWING_BASE } from '../routes';
 
+// The first two point at the services page rather than straight into the audit
+// form. Every entry here used to dead-end at /audit, which meant a column
+// labelled SERVICES contained no link to a page describing a service.
 const SERVICE_LINKS = [
-  { label: 'ORGANIC SEO', href: '/audit?goal=revenue&service=seo' },
-  { label: 'GENERATIVE GEO', href: '/audit?goal=conversions&service=geo' },
+  { label: 'ORGANIC SEO', href: '/services' },
+  { label: 'GENERATIVE GEO', href: '/services' },
   { label: 'PAID SEARCH ADS', href: '/audit?goal=roi&service=paid-search' },
   { label: 'PAID SOCIAL ADS', href: '/audit?goal=cac&service=paid-social' },
   { label: 'CRO TESTING', href: '/audit?goal=profit&service=cro' },
+];
+
+// Sitewide inbound links to the towing cluster. Without these the six pages are
+// orphans: nothing links to them, so they are crawled late and rank slowly.
+const TOWING_LINKS = [
+  { label: 'TOWING COMPANIES', href: TOWING_BASE },
+  ...TOWING_STATES.map((s) => ({
+    label: s.state.toUpperCase(),
+    href: `${TOWING_BASE}/${s.slug}`,
+  })),
 ];
 
 const AGENCY_LINKS = [
@@ -41,7 +56,7 @@ export default function SiteFooter() {
 
   return (
     <footer className="defer-paint bg-cream border-t-2 border-ink pt-16 pb-8 px-6 md:px-12 select-none overflow-hidden relative">
-      <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-5 gap-8 relative z-10">
+      <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-6 gap-8 relative z-10">
         <div className="col-span-2 space-y-4 text-left">
           <Logo size={38} variant="light" />
           <p className="font-sans text-stone text-xs leading-relaxed max-w-sm">
@@ -66,6 +81,21 @@ export default function SiteFooter() {
               <li key={s.label}>
                 <a href={s.href} onClick={go(s.href)} className={linkClass}>
                   {s.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="text-left space-y-3">
+          <p className="font-mono text-xs font-bold uppercase tracking-wider text-ink border-b border-ink/10 pb-2">
+            PROUDLY SERVING
+          </p>
+          <ul className="space-y-2 font-mono text-[11px] text-stone uppercase">
+            {TOWING_LINKS.map((t) => (
+              <li key={t.href}>
+                <a href={t.href} onClick={go(t.href)} className={linkClass}>
+                  {t.label}
                 </a>
               </li>
             ))}

@@ -223,7 +223,10 @@ function onClick(e: MouseEvent) {
   const href = target instanceof HTMLAnchorElement ? target.href : '';
 
   if (href.startsWith('tel:')) {
-    trackEvent('phone_click', href.replace('tel:', ''), { text });
+    // `id` rides along so a tap can be attributed to the block that earned it —
+    // the towing pages put a call CTA inside each section rather than one at
+    // the bottom, and without this every tap looks identical in the data.
+    trackEvent('phone_click', href.replace('tel:', ''), { text, id });
   } else if (href.startsWith('mailto:')) {
     trackEvent('email_click', href.replace('mailto:', ''), { text });
   } else if (href && new URL(href, window.location.href).origin !== window.location.origin) {

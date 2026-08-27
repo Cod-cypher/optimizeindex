@@ -18,6 +18,10 @@
 import { lazy, Suspense } from 'react';
 import { useLocation } from 'react-router-dom';
 import App from './App';
+import TowingPillarPage from './pages/TowingPillarPage';
+import TowingStatePage from './pages/TowingStatePage';
+import { getTowingState } from './content/towing';
+import { TOWING_BASE } from './routes';
 import type { PublicProposal } from '../shared/proposalTypes';
 
 const AdminApp = lazy(() => import('./admin/AdminApp'));
@@ -56,6 +60,29 @@ export default function AppRouter() {
         <AdminApp />
       </Suspense>
     );
+  }
+
+  /*
+    The towing vertical.
+
+    Imported eagerly rather than lazily, unlike the admin and proposal apps
+    below. These are marketing pages that must be pre-rendered into static HTML
+    by scripts/prerender.ts, and renderToString would emit the Suspense
+    fallback for a lazy component instead of the page — leaving crawlers and
+    assistants an empty div, which is the exact failure the pre-render step
+    exists to prevent.
+
+    Matched before the proposal check because these paths are real routes in
+    ROUTES; a proposal can never legitimately own one (scripts/verify-seo.ts
+    asserts no single-segment route collides with the proposal namespace).
+  */
+  const towingPath = location.pathname.replace(/\/+$/, '') || '/';
+  if (towingPath === TOWING_BASE) return <TowingPillarPage />;
+  if (towingPath.startsWith(`${TOWING_BASE}/`)) {
+    const state = getTowingState(towingPath.slice(TOWING_BASE.length + 1));
+    // An unknown state falls through to App's not-found view, which the server
+    // has already answered with a real 404 status.
+    if (state) return <TowingStatePage state={state} />;
   }
 
   /*

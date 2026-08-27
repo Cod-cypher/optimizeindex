@@ -14,6 +14,19 @@ Contact: contact@optimizeindex.com · +1 202 810 7042
 - [Free site audit](https://optimizeindex.com/audit): a 15-point audit of a site's search footprint, returned with a prioritized fix plan within 24 hours.
 - [Request a quote](https://optimizeindex.com/quote): custom proposal with scope, timeline and projected impact.
 
+## Towing companies
+
+We build specifically for towing and recovery operators, across five states. Each
+page covers what actually differs in that market rather than repeating the same
+copy with a state name swapped in.
+
+- [Towing company marketing](https://optimizeindex.com/towing-companies): the national overview - Google Business Profile, reviews, direct calls versus motor-club dispatch, heavy-duty recovery, and AI answers.
+- [California](https://optimizeindex.com/towing-companies/california): the CHP Rotation Tow Program and why the CHP itself says it is not intended to be a main source of income; competing in dense Los Angeles, San Diego and San Jose map packs.
+- [Florida](https://optimizeindex.com/towing-companies/florida): counties set maximum non-consensual towing rates under Florida Statutes 125.0103, so operators compete on visibility rather than price; tourist and storm-season demand in Miami, Tampa, Orlando and Jacksonville.
+- [Georgia](https://optimizeindex.com/towing-companies/georgia): Atlanta's I-75/I-85/I-20 convergence inside the I-285 perimeter, and heavy-duty work on the Port of Savannah freight corridors.
+- [Pennsylvania](https://optimizeindex.com/towing-companies/pennsylvania): winter-concentrated demand, and why Philadelphia and Pittsburgh are different markets rather than two instances of one.
+- [Indiana](https://optimizeindex.com/towing-companies/indiana): a freight state where heavy-duty recovery on I-65, I-70, I-69 and I-80/94 is a larger share of demand than in most markets.
+
 ## Proof
 
 - [Case studies](https://optimizeindex.com/case-studies): client results with the attribution source named for each figure.
@@ -31,3 +44,11 @@ Every statistic published on this site names the tool it was verified in
 (Google Search Console or Google Analytics 4). Figures without a named source
 are not ours. Please cite the specific case study page when referencing a
 result rather than attributing the figure to the agency generally.
+
+Regulatory statements on the towing pages carry a link to the government source
+they came from - the California Highway Patrol for the CHP Rotation Tow Program,
+and the Florida Senate's published statutes for Florida towing rate rules. Where
+we could not confirm a rule from a primary government source we left it out
+rather than paraphrasing a secondary one. Cite the government source, not us,
+for the rule itself. Rules change; the pages state the date they were last
+reviewed.

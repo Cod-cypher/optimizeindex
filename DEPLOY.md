@@ -72,6 +72,23 @@ curl -s http://127.0.0.1:3002/api/health   # expect {"status":"ok","db":"up",...
 
 ## 4. nginx site
 
+> **Only copy this file on a first install, before certbot has ever run.**
+>
+> `certbot --nginx` edits `/etc/nginx/sites-available/optimizeindex.conf` in
+> place: it adds the `listen 443 ssl` block and the certificate paths. The copy
+> below overwrites that file with the repo's port-80-only version, so HTTPS
+> stops answering and the site goes down — the certificate is untouched on disk,
+> but nginx no longer knows about it.
+>
+> Check first:
+> ```bash
+> ls /etc/letsencrypt/live/ 2>/dev/null
+> ```
+> If that lists `optimizeindex.com`, **do not run the copy.** Apply whatever
+> changed in the repo file by hand instead. If you copy it by mistake, recover
+> with `certbot --nginx -d optimizeindex.com -d www.optimizeindex.com` and
+> choose **1 (reinstall)** — not 2, which burns a rate-limited reissue.
+
 ```bash
 cp /opt/optimizeindex/deploy/nginx-optimizeindex.conf /etc/nginx/sites-available/optimizeindex.conf
 ln -s /etc/nginx/sites-available/optimizeindex.conf /etc/nginx/sites-enabled/
@@ -79,6 +96,11 @@ nginx -t && systemctl reload nginx
 ```
 
 Check: http://optimizeindex.com should load the site.
+
+The gzip directives live inside the `server` block rather than at the top of the
+file. At the top they land in the http context, where `gzip on` collides with
+the one Debian/Ubuntu already sets in `nginx.conf`, and nginx refuses to start
+with `"gzip" directive is duplicate`.
 
 ## 5. SSL certificate (Let's Encrypt)
 
@@ -229,11 +251,59 @@ already in `deploy/nginx-optimizeindex.conf`.
 they will not be indexed. Google Analytics is deliberately stripped from these
 pages so prospect names do not enter the marketing GA4 property.
 
+## Search Console, Bing, and IndexNow
+
+The towing pages are new URLs. Nothing below is required for the site to run,
+but until it's done there is no way to tell whether the new pages are being
+indexed at all.
+
+**Verify the site in both.** There is currently no verification tag anywhere in
+the repo, so this has to be done once:
+
+- **Google Search Console** — verify by DNS TXT record (survives redeploys,
+  unlike an HTML file), then submit `https://optimizeindex.com/sitemap.xml`.
+- **Bing Webmaster Tools** — same, and it is not optional if AI visibility
+  matters: ChatGPT search and Copilot both lean on Bing's index. Google Search
+  Console tells you nothing about either.
+
+**IndexNow** (optional, ~2 minutes) tells Bing about changed URLs immediately
+rather than waiting for a re-crawl:
+
+```bash
+# Any 8-128 hex characters. Generate once, keep it.
+INDEXNOW_KEY=$(openssl rand -hex 16)
+
+# Writes public/<key>.txt (required for verification) and submits every
+# indexable route from src/routes.ts.
+INDEXNOW_KEY=$key npm run indexnow
+```
+
+Add `INDEXNOW_KEY` to the server `.env` and run `npm run indexnow` after
+`npm run build` on deploys that change page content. The key file has to be
+published at the site root, so the run that writes it must happen **before**
+`npm run build` copies `public/` into `dist/`, or be followed by another build.
+Without the variable set the script exits 0 and does nothing, so it is safe to
+leave in a deploy script unconditionally. Google does not participate in
+IndexNow — for Google, the sitemap is the mechanism.
+
+**Verify after deploying:**
+
+```bash
+curl -sI https://optimizeindex.com/towing-companies | head -1        # 200
+curl -sI https://optimizeindex.com/towing-companies/nevada | head -1 # 404, not 200
+curl -s  https://optimizeindex.com/sitemap.xml | grep -c '<loc>'     # 15
+# The AI crawlers must get the full pre-rendered page, not a shell:
+curl -s -A "OAI-SearchBot" https://optimizeindex.com/towing-companies/california | grep -c "Rotation Tow"
+```
+
 ## Pending
 
-- **SSL / certbot has still not been run.** This now blocks the proposal
-  portal outright, not just page security: the admin session cookie is
-  `Secure`, so `/admin` cannot be logged into over plain HTTP. See step 5.
+- ~~SSL / certbot has still not been run~~ — **done.** A certificate for
+  `optimizeindex.com` and `www.optimizeindex.com` exists and renews on the
+  systemd timer. This note was stale and cost an outage: it said certbot had not
+  run, so step 4's `cp` was treated as safe, and it overwrote the `listen 443`
+  block certbot had written. `certbot --nginx` → option **1 (reinstall)** put it
+  back. See the warning on step 4 — that copy is a first-install-only step now.
 - **`SESSION_SECRET`** must be added to the server's `.env` before deploying
   this build — without it the app will not start in production.
 - ~~`prisma migrate deploy` for the proposal portal tables~~ — **done**.
@@ -246,6 +316,12 @@ pages so prospect names do not enter the marketing GA4 property.
   leaves broken images on published proposals. Copy it to the server the first
   time (`scp uploads/*.webp …:/opt/optimizeindex/uploads/`), keep it out of any
   clean-checkout deploy step, and put it in your backups.
+- **Search Console / Bing verification is not set up**, and no verification tag
+  exists in the repo. See the section above. Until this is done the six new
+  towing URLs cannot be monitored, and there is no way to see whether they are
+  indexed.
+- **`INDEXNOW_KEY`** is not set. Optional — see above. Without it `npm run
+  indexnow` exits 0 and does nothing.
 - **`PAGESPEED_API_KEY`** is not set. Without it Google rate-limits the
   PageSpeed endpoint hard enough that most visitors get no speed data.
 - **nginx config changed** — `deploy/nginx-optimizeindex.conf` adds gzip types,

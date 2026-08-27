@@ -447,8 +447,12 @@ export default function App() {
               {/* Overlapping Ink Card (bottom-left, anchors right) */}
               <div className="absolute left-[20px] bottom-[15px] bg-ink border-1.5 border-ink px-4 py-3 rounded-xl shadow-hard z-20 rotate-[-4deg] max-w-[210px] text-left select-none pointer-events-none">
                 <p className="font-mono text-[9px] text-lime uppercase">CLIENT RESULT</p>
-                <p className="font-display font-black text-sm text-lime leading-tight">+280% LOCAL LEADS</p>
-                <p className="font-mono text-[8px] text-cream/60 mt-1">EcoClean Services · GBP verified</p>
+                {/* Swapped off EcoClean: those figures had no live case study
+                    page behind them once that study was commented out, so the
+                    card was asserting a result a visitor could not verify.
+                    Sujood Mats is verified in Search Console and has a page. */}
+                <p className="font-display font-black text-sm text-lime leading-tight">+185% SEARCH &amp; MAP CLICKS</p>
+                <p className="font-mono text-[8px] text-cream/60 mt-1">Sujood Mats · Search Console</p>
               </div>
 
             </div>
@@ -477,7 +481,22 @@ export default function App() {
               One focused team. Every digital lever that moves <span className="font-serif-accent italic text-lime bg-ink px-2.5 py-0.5 rounded-sm shadow-hard inline-block -rotate-1">revenue</span>.
             </h2>
             <p className="font-sans text-stone mt-4 leading-relaxed">
-              No vanity-metric slide decks. We get you found everywhere your customers search — Google, Google Maps, voice assistants, and AI tools like ChatGPT — and we measure it in leads and sales.
+              No vanity-metric slide decks. We get you found everywhere your customers search — Google, Google Maps, voice assistants, and AI tools like ChatGPT — and we measure it in leads and sales.{' '}
+              {/* One contextual link into the towing cluster. Deliberately a
+                  sentence rather than a nav item: the homepage serves every
+                  trade, and promoting one vertical into the header would
+                  misrepresent the business. */}
+              <a
+                href="/towing-companies"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate('/towing-companies');
+                }}
+                className="font-bold text-ink underline hover:text-lime focus-ring"
+                id="home-towing-link"
+              >
+                Run a towing company? Start here.
+              </a>
             </p>
           </div>
 
@@ -854,7 +873,18 @@ export default function App() {
                   Our Full-Spectrum <span className="font-serif-accent italic text-lime bg-ink px-2.5 py-0.5 rounded-sm shadow-hard inline-block -rotate-1">Growth</span> Engine
                 </h1>
                 <p className="font-sans text-stone mt-6 leading-relaxed text-base md:text-lg">
-                  Beyond core SEO and AI search optimization, we run every channel that drives measurable growth — paid ads, content, conversion optimization, and web design. One team, one accountable strategy.
+                  Beyond core SEO and AI search optimization, we run every channel that drives measurable growth — paid ads, content, conversion optimization, and web design. One team, one accountable strategy.{' '}
+                  <a
+                    href="/towing-companies"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      navigate('/towing-companies');
+                    }}
+                    className="font-bold text-ink underline hover:text-lime focus-ring"
+                    id="services-towing-link"
+                  >
+                    See how this works for towing companies.
+                  </a>
                 </p>
               </div>
 
@@ -1119,8 +1149,17 @@ export default function App() {
                       <span className="w-1.5 h-1.5 rounded-full bg-lime animate-pulse" />
                       {currentCaseStudy.category}
                     </span>
+                    {/* The H1 carries the result, not just the client name. A
+                        bare name is a keyword-free heading, and it is also an
+                        unusable chunk: AI search retrieves passages, and a
+                        heading reading only "Sujood Mats" tells a retrieval
+                        system nothing about what the page shows. This matches
+                        the `headline` already used in the Article JSON-LD. */}
                     <h1 className="font-display font-black text-3xl md:text-5xl text-cream tracking-tight mt-4 leading-[1.1]">
-                      {currentCaseStudy.client}
+                      {currentCaseStudy.client}:{' '}
+                      <span className="text-lime">
+                        {currentCaseStudy.stat} {currentCaseStudy.metric}
+                      </span>
                     </h1>
                   </div>
 
