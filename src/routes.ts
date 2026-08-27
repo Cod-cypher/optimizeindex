@@ -178,10 +178,11 @@ const caseStudyRoutes: RouteMeta[] = CASE_STUDIES.map((study) => ({
    studies above, so a sixth state is one entry in TOWING_STATES and needs no
    change here, in the sitemap generator, or in the SEO gate.
 
-   Note the title/H1 split. Titles carry the terms people actually search
-   ("Towing Company Marketing in California"); the H1 on the page carries the
-   brand voice ("Proudly Serving California Towing Companies"). head.ts already
-   keeps these independent — titles come from here, H1s from the components.
+   Every state page now targets a comparison query, so each sets titleOverride
+   and h1Override to "Best AI Towing Agency in <State>" and the two match. The
+   generated fallback below is kept because head.ts holds titles and H1s
+   independently — a future state that wants brand-voice framing can simply
+   omit both overrides and get it.
 ------------------------------------------------------------------------- */
 
 export const TOWING_BASE = '/towing-companies';
@@ -207,17 +208,27 @@ function towingService(area?: string) {
 }
 
 /** Hand-written so each reads like a sentence rather than a filled template. */
+/**
+ * Hand-written per state, 70-160 chars, all unique.
+ *
+ * These frame the buying decision rather than the market, because every state
+ * page now targets a comparison query ("best AI towing agency in <state>").
+ * None of them claim we are the best - the pages answer that question honestly
+ * and the description has to match what the page actually says.
+ */
 const TOWING_STATE_DESCRIPTIONS: Record<string, string> = {
   california:
-    'Get your California towing company found on Google Maps and AI assistants. Why CHP rotation work is not a business model, and how to win direct calls instead.',
+    'Comparing AI agencies for your California towing company? No agency can honestly call itself the best. Here is how to judge one, and where AI actually helps.',
   florida:
-    'Florida sets maximum non-consensual towing rates by county, so you cannot compete on price. How Florida towing companies compete on visibility and reviews.',
+    'Florida caps non-consensual tow rates by county, so AI has to earn its place elsewhere. How to evaluate an AI agency for a Florida towing company.',
   georgia:
-    'Atlanta concentrates Georgia towing demand where I-75, I-85 and I-20 meet. How to rank in a dense map pack and win heavy-duty work on the freight corridors.',
+    'Atlanta consumer calls and Savannah freight work need different systems. How to choose an AI agency for a Georgia towing company, and what to ask it.',
   pennsylvania:
-    'Pennsylvania towing revenue concentrates into winter. How Philadelphia and Pittsburgh operators build map-pack visibility and reviews before the season turns.',
+    'Pennsylvania towing revenue lands in a few weather weeks. How to evaluate an AI agency for a Pennsylvania towing company, and what it should measure.',
   indiana:
-    'Indiana is a freight state, so heavy-duty recovery is a bigger share of towing demand. How to market by interstate corridor and win the Indianapolis map pack.',
+    'Most Indiana towing revenue comes from freight your analytics never sees. How to choose an AI agency for an Indiana towing company, and what to ask.',
+  michigan:
+    'Comparing AI agencies for your Michigan towing company? No agency can honestly call itself the best. Here is how to judge one, and what we do differently.',
 };
 
 const towingRoutes: RouteMeta[] = [
@@ -238,7 +249,11 @@ const towingRoutes: RouteMeta[] = [
   },
   ...TOWING_STATES.map((s) => ({
     path: `${TOWING_BASE}/${s.slug}`,
-    title: `Towing Company Marketing in ${s.state} | OptimizeIndex`,
+    // titleOverride is set only where the page targets a comparison query and
+    // the title needs to be that query. Everything else about the route is
+    // generated identically, which is what keeps the two title strategies
+    // comparable in Search Console later.
+    title: `${s.titleOverride ?? `Towing Company Marketing in ${s.state}`} | ${SITE_NAME}`,
     description: TOWING_STATE_DESCRIPTIONS[s.slug],
     priority: 0.8,
     jsonLd: [

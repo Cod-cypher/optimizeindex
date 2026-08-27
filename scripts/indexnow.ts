@@ -8,7 +8,8 @@
  * sitemap written by scripts/prerender.ts is the mechanism.
  *
  * Usage:
- *   INDEXNOW_KEY=<key> npm run indexnow          # every indexable route
+ *   INDEXNOW_KEY=<key> npm run indexnow -- --dry-run   # show what would be sent
+ *   INDEXNOW_KEY=<key> npm run indexnow                # every indexable route
  *   INDEXNOW_KEY=<key> npm run indexnow -- /towing-companies /audit
  *
  * The key is any 8-128 character hex string you choose. It must also be served
@@ -36,18 +37,30 @@ async function main() {
     throw new Error('[indexnow] INDEXNOW_KEY must be 8-128 hex characters (dashes allowed).');
   }
 
-  // The verification file has to be reachable at the root, or the endpoint
-  // rejects every submission as unauthorised.
-  const keyFile = path.join(process.cwd(), 'public', `${key}.txt`);
-  await fs.writeFile(keyFile, key, 'utf-8');
-  console.log(`[indexnow] wrote public/${key}.txt`);
-
+  const dryRun = process.argv.includes('--dry-run');
   const explicit = process.argv.slice(2).filter((a) => a.startsWith('/'));
   const paths = explicit.length
     ? explicit
     : ROUTES.filter((r) => !r.noindex && r.priority != null).map((r) => r.path);
 
   const urlList = paths.map((p) => `${SITE_ORIGIN}${p}`);
+
+  if (dryRun) {
+    console.log(`[indexnow] DRY RUN — nothing written, nothing submitted.`);
+    console.log(`[indexnow] would write public/${key}.txt`);
+    console.log(`[indexnow] would send ${urlList.length} URLs:`);
+    for (const u of urlList) console.log(`  ${u}`);
+    console.log(`[indexnow] host=${HOST} keyLocation=${SITE_ORIGIN}/${key}.txt`);
+    return;
+  }
+
+  // The verification file has to be reachable at the site root, or the endpoint
+  // rejects every submission as unauthorised. Written here rather than earlier
+  // so --dry-run leaves no stray key file behind in public/.
+  const keyFile = path.join(process.cwd(), 'public', `${key}.txt`);
+  await fs.writeFile(keyFile, key, 'utf-8');
+  console.log(`[indexnow] wrote public/${key}.txt`);
+
   console.log(`[indexnow] submitting ${urlList.length} URLs for ${HOST}`);
 
   const res = await fetch(ENDPOINT, {

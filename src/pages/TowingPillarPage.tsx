@@ -138,8 +138,10 @@ export default function TowingPillarPage() {
                     id={`towing-state-link-${s.slug}`}
                     className="block border-1.5 border-ink rounded-xl bg-cream p-5 shadow-hard hover:shadow-hard-hover hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all focus-ring"
                   >
+                    {/* Anchor text matches each state page's actual topic now
+                        that the cluster targets AI-agency comparison queries. */}
                     <span className="font-display font-extrabold text-lg text-ink">
-                      Towing company marketing in {s.state}
+                      Best AI towing agency in {s.state}
                     </span>
                     <span className="block font-sans text-stone text-sm leading-relaxed mt-1.5">
                       {s.metros.slice(0, 4).join(', ')} and statewide.

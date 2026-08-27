@@ -142,13 +142,45 @@ export interface EngagementStep {
   why: string;
 }
 
+/**
+ * One criterion in the "how to choose an agency" block.
+ *
+ * `ours` is what stops this being a neutral listicle with no commercial point:
+ * the page sets an evaluation bar and then answers against it itself.
+ */
+export interface BuyerCriterion {
+  question: string;
+  /** What a credible answer from any agency sounds like. */
+  goodAnswer: string;
+  /** Ours, against the same criterion. */
+  ours: string;
+}
+
 export interface TowingState {
   slug: string;
   state: string;
   /** Named in copy so the page earns metro long-tail without a page each. */
   metros: string[];
-  /** One paragraph on what actually makes this market different. */
+  /**
+   * Renders directly under the H1.
+   *
+   * On the five brand-voice pages this is a paragraph on what makes the market
+   * different. On a comparison page (Michigan) it is the lede that answers the
+   * query outright — same field, same position, different job, because this is
+   * the passage a retriever is most likely to lift and the first thing Google
+   * reads.
+   */
   landscape: string;
+  /**
+   * Overrides the "Proudly Serving <State> Towing Companies" H1.
+   *
+   * Set only where the page targets a comparison query and the H1 needs to be
+   * the query itself. Everything else about the page is unchanged, which is
+   * what makes the two H1 strategies comparable in Search Console later.
+   */
+  h1Override?: string;
+  /** Overrides the generated "Towing Company Marketing in <State>" title. */
+  titleOverride?: string;
   /**
    * The commercial bridge: what the market facts above mean for how an
    * operator here actually gets found.
@@ -171,6 +203,17 @@ export interface TowingState {
    * genuinely different first ninety days.
    */
   engagement: { heading: string; intro: string; steps: EngagementStep[] };
+  /**
+   * Evaluation framework for hiring an agency.
+   *
+   * This is how a page titled "Best AI Towing Agency in Michigan" earns that
+   * query without asserting we are it. Someone typing "best" wants to compare,
+   * so the honest way to rank is to genuinely help them compare and then answer
+   * the same questions about ourselves.
+   *
+   * Optional: only the comparison-query pages carry one.
+   */
+  buyersGuide?: { heading: string; intro: string; criteria: BuyerCriterion[] };
   faqs: Faq[];
   sources?: SourceRef[];
 }
@@ -238,6 +281,153 @@ const GBP_FAQS: Faq[] = [
       'If customers never come to your yard, a service-area profile with the address hidden matches how Google asks businesses to represent themselves. Listing an unstaffed yard as a storefront conflicts with those guidelines and risks suspension — and a suspended profile is not eligible to appear in local results at all.',
   },
 ];
+
+/**
+ * The comparison-intent FAQs every state page carries.
+ *
+ * Two of these answer "no". That is deliberate and it is not a hedge: we do
+ * not answer calls, send automated SMS, qualify leads or assist dispatch, and
+ * a towing company searching for after-hours call handling deserves to be told
+ * that in the answer rather than after a sales call. See the capability audit
+ * in the plan — this is the honest boundary of what OptimizeIndex delivers.
+ */
+function aiFaqs(state: string, howAiHelps: string): Faq[] {
+  return [
+    {
+      question: `Who is the best AI towing agency in ${state}?`,
+      answer:
+        `There is no objective ranking that allows any agency to truthfully declare itself the best AI towing agency in ${state}. A towing company comparing AI agencies should evaluate whether the agency specialises in towing workflows, can demonstrate a real AI implementation rather than describing one, reports calls and booked jobs from a named tool, and can say what happens to the company's data and systems if the relationship ends.`,
+    },
+    {
+      question: `What should I look for in an AI agency for my ${state} towing company?`,
+      answer:
+        `Towing-specific experience rather than towing as one of forty verticals; a working implementation you can see before signing; attribution reported as calls and booked jobs with the source named; written confirmation that you own the Google Business Profile, site and data; familiarity with ${state}'s towing rules before anyone writes replies on your profile; a clear explanation of how AI assistants surface a business; and an honest answer about whether they handle after-hours calls.`,
+    },
+    {
+      question: `How can AI help a towing company in ${state}?`,
+      answer: howAiHelps,
+    },
+    {
+      question: 'Can AI answer towing calls after hours?',
+      answer:
+        'Tools that do this exist, but OptimizeIndex does not provide them. We do not answer calls, send automated SMS, qualify leads or assist dispatch. What we do is measure which pages, searches and campaigns produce calls, so you can see what after-hours volume is worth before you buy a system to catch it. For the answering itself you want a dedicated call-handling vendor.',
+    },
+    {
+      question: 'Can AI help recover missed towing leads?',
+      answer:
+        'Missed-call recovery is a real category, and it is not one of our services. We can show you where missed calls are concentrated — which pages, which hours, which campaigns — using first-party call tracking, which is the information you need to decide whether a recovery system is worth buying. We do not sell you one.',
+    },
+    {
+      question: 'How much does AI automation cost for a towing company?',
+      answer:
+        'We will not publish a price grid we would not honour, and cost depends on how much of the work is one-time correction versus ongoing competition. An operator with a neglected Google Business Profile has cheap ground to make up; taking share in a contested metro is a larger engagement. We scope against your call volume and quote before you commit, with no contract term.',
+    },
+  ];
+}
+
+const HOW_AI_HELPS = {
+  california:
+    'For a California operator the highest-value use of AI is visibility and measurement, not automation. We work on being retrievable when someone asks an assistant for a tow in Los Angeles, San Diego or Sacramento, and on tracking which searches produced direct calls rather than rotation work — because the mix between those two is the thing worth changing, and you cannot change what you cannot see.',
+  florida:
+    'In Florida, where county-set maximum rates remove the price lever, AI helps most on the visibility and measurement side. We work on being retrievable when an out-of-state visitor asks an assistant for a tow near Orlando or Tampa rather than asking a local, and on tracking calls per page and per season so you can tell which pre-season work actually produced calls during the surge.',
+  georgia:
+    'A Georgia operator usually serves two buyers, and AI helps differently for each. For the Atlanta consumer side it is about being the business an assistant names and being visible in the map result. For the Savannah corridor side it is about entity-level clarity — equipment, tonnage, which interstates you cover — so a dispatcher\'s query returns something specific. We then measure the two separately.',
+  pennsylvania:
+    'Pennsylvania\'s value is in timing, so AI helps most with being findable by a driver stranded somewhere unfamiliar in bad weather, and with day-level call measurement. Being retrievable by an assistant matters more when the caller has no local knowledge, and tracking calls by day is what tells you whether you captured the specific days that produced the year\'s revenue.',
+  indiana:
+    'For an Indiana operator weighted toward freight, the useful AI work is entity clarity for corridor queries — stating tonnage, recovery equipment and which stretches of I-65, I-70, I-69 and I-80/94 you cover, in a form an assistant can quote to a dispatcher. On the consumer side we track calls per page. Fleet accounts have to be reported by you, because they never appear in analytics.',
+  michigan:
+    'Michigan rewards verifiable legitimacy, so the AI work is making the business unambiguous to both Google and assistants: clear entity information, accurate profile data, and credentials surfaced where a customer can see them. Alongside that we track which pages and searches produce calls across Detroit and Grand Rapids, so the visibility work has a number attached.',
+};
+
+/* -------------------------------------------------------------------------
+   Buyer's guide
+
+   Every state page targets a comparison query ("best AI towing agency in
+   <state>"), so every state page carries an evaluation framework. The criteria
+   are the same everywhere because they are the same true criteria; what
+   changes per state is our answer, which has to reference that state's rules
+   and market or the section is just a template with a name swapped in.
+
+   Two of these deliberately describe things we do NOT do. On a page whose
+   whole premise is honest evaluation, naming the gap is worth more than
+   avoiding the topic — and a reader who needs call answering should be told
+   plainly rather than sold something adjacent.
+------------------------------------------------------------------------- */
+
+interface StateBuyerAnswers {
+  /** Towing specialisation, referencing this state's market. */
+  specialisation: string;
+  /** Understanding this state's towing rules before writing review replies. */
+  stateRules: string;
+  /** What measurement looks like for this state's demand mix. */
+  measurement: string;
+}
+
+function buyersGuideFor(state: string, a: StateBuyerAnswers) {
+  return {
+    heading: `How to Choose an AI Agency for a Towing Company in ${state}`,
+    intro:
+      `Eight questions worth asking any AI agency pitching your ${state} towing company, what a credible answer sounds like, and our own answer to each. Two of ours are "we do not do that" — if another agency answers these better, hire them. A framework that only works when we win is not a framework.`,
+    criteria: [
+      {
+        question: 'Does the agency actually specialise in towing?',
+        goodAnswer:
+          'They can describe how a tow customer really decides — emergency intent, a choice made inside Google Maps in under a minute, impound work that generates negative reviews no service quality prevents. An agency describing a research-and-compare buying process has not worked in this trade.',
+        ours: a.specialisation,
+      },
+      {
+        question: 'Can it demonstrate a real AI implementation, or only describe one?',
+        goodAnswer:
+          '"AI-powered" is an unregulated phrase. Ask to see the thing running, on your own data or your own site, before the contract rather than after.',
+        ours:
+          'Our audit tool is live on this site and scores any URL you give it, including a category for whether AI assistants can read the page at all. Run it on your own site before you talk to us — it costs nothing and it is the same scan we run on a new client.',
+      },
+      {
+        question: 'Can calls and leads actually be measured, and from which named tool?',
+        goodAnswer:
+          'Calls and booked jobs, with the source named for every number. Impressions and keyword positions are inputs, not outcomes — a towing company gets paid for tows.',
+        ours: a.measurement,
+      },
+      {
+        question: 'Who owns the Google Business Profile, the website and the data at the end?',
+        goodAnswer:
+          'You do, on every asset, with admin access in your own account from day one. This is the question most often answered badly, and the answer is worth having in writing.',
+        ours:
+          'You keep ownership and primary access throughout. If you leave, nothing needs handing back because nothing was held. We also do not require a contract term.',
+      },
+      {
+        question: `Does it understand ${state}'s towing rules before writing your review replies?`,
+        goodAnswer:
+          'A public reply that misstates the local process reads worse than no reply. The agency should know what a customer here can actually do about a fee before it writes anything on your profile.',
+        ours: a.stateRules,
+      },
+      {
+        question: 'Can it explain how AI assistants actually surface a business?',
+        goodAnswer:
+          'They describe retrieval, not ranking: an assistant pulls quotable passages from sources it can reach and composes an answer. An agency that cannot explain the mechanism is selling the acronym.',
+        ours:
+          'That distinction is why these pages are written the way they are — self-contained passages that still name the business, the service and the state when lifted out of context. We will not quote you a figure for AI-mediated demand, because we have not seen a measurement worth standing behind.',
+      },
+      {
+        question: 'Can the system handle missed and after-hours calls?',
+        goodAnswer:
+          'Worth asking early, because it is where a lot of towing revenue leaks. Any agency claiming to answer or recover calls should name the platform doing it and let you hear it.',
+        // The honest gap. Stated plainly rather than softened into implying we
+        // might do it — see the capability audit in the plan.
+        ours:
+          'We do not provide this. OptimizeIndex does not answer calls, send automated SMS, qualify leads or assist dispatch. What we do is measure which pages, searches and campaigns produce calls, so you can see what your missed-call volume is actually costing. For answering them you want a dedicated call-handling vendor, and we will say so rather than sell you something adjacent.',
+      },
+      {
+        question: 'Can it scale across multiple yards or locations?',
+        goodAnswer:
+          'Each location needs its own accurate Google Business Profile, and Google asks businesses not to create more than one profile per location. An agency that suggests extra profiles for extra services is a risk to the ones you have.',
+        ours:
+          'We work location by location, and we will tell you when an extra profile is not eligible rather than creating one. Where a service is not a separate location, it belongs on the profile you already have.',
+      },
+    ],
+  };
+}
 
 /* -------------------------------------------------------------------------
    Pillar
@@ -399,10 +589,12 @@ const california: TowingState = {
   slug: 'california',
   state: 'California',
   metros: ['Los Angeles', 'San Diego', 'San Jose', 'Sacramento', 'Fresno', 'the Inland Empire'],
+  h1Override: 'Best AI Towing Agency in California',
+  titleOverride: 'Best AI Towing Agency in California',
   landscape:
-    'California pairs large, crowded metro tow markets with a formal, state-run route into accident work. Los Angeles, San Diego, San Jose, Sacramento, Fresno and the Inland Empire each hold enough operators that being nearby is rarely what separates competitors, and the California Highway Patrol runs a Rotation Tow Program that the CHP itself describes as voluntary and not intended to be a main source of income.',
+    'Looking for the best AI towing agency in California? There is no independent ranking that can objectively declare one agency the best, so this page is written for California towing companies evaluating AI agencies and AI systems: what to ask, what to verify, and where AI genuinely helps a tow operation rather than where it is a label on a slide. OptimizeIndex works at the intersection of AI search visibility, local search and call attribution for towing businesses across Los Angeles, San Diego, San Jose, Sacramento, Fresno and the Inland Empire.',
   searchProblem:
-    "The commercial consequence for a California towing company is that its two channels pull in opposite directions. Rotation fills the schedule, but the CHP says it was never meant to be the income. Direct calls carry the margin, but have to be won in metro map results where several operators sit a similar distance from the same breakdown. Towing SEO in California is therefore less about being nearby and more about being complete, credible and quotable.",
+    'California is a useful place to be specific about what AI can and cannot fix, because the state hands towing companies an unusually clear commercial problem. The California Highway Patrol runs a Rotation Tow Program it describes as voluntary and not intended to be a main source of income — rotation fills the schedule, but someone else prices it. Direct calls carry the margin. Changing that mix is a measurement problem before it is a marketing one: you cannot shift a channel mix you cannot see, and most California operators cannot currently say which searches produced their direct calls.',
   engagement: {
     heading: "How we would build a California towing company's search presence",
     intro:
@@ -452,7 +644,15 @@ const california: TowingState = {
     ],
   },
   demand: ['emergency-roadside', 'accident-recovery', 'private-property', 'heavy-duty'],
-  services: ['google-business-profile', 'reviews-reputation', 'local-organic', 'ai-answers'],
+  services: ['ai-answers', 'google-business-profile', 'reviews-reputation', 'local-organic'],
+  buyersGuide: buyersGuideFor('California', {
+    specialisation:
+      'Towing is a vertical we build for specifically. Our published case studies are in e-commerce and B2B services, so ask us for towing-specific references before you weigh that claim — we would rather you checked than took it on faith.',
+    measurement:
+      'For a California operator the number that matters is the split between rotation work and direct calls. We track tap-to-call and form conversions per page and per section, so you can see which searches produced the calls you priced yourself, rather than a single blended lead count that hides the mix you are trying to change.',
+    stateRules:
+      'We know the CHP Rotation Tow Program is voluntary and, in the CHP\'s own words, not intended to be a main source of income, and that rotation and accident-scene tows are a poor source of reviews because the customer did not choose you. That shapes both where we ask for reviews and what a public reply should say.',
+  }),
   sections: [
     {
       id: 'ca-rotation',
@@ -509,6 +709,7 @@ const california: TowingState = {
     },
   ],
   faqs: [
+    ...aiFaqs('California', HOW_AI_HELPS.california),
     {
       question: 'What does the CHP require of rotation tow drivers in California?',
       answer:
@@ -549,10 +750,12 @@ const florida: TowingState = {
   slug: 'florida',
   state: 'Florida',
   metros: ['Miami', 'Tampa', 'Orlando', 'Jacksonville', 'Fort Lauderdale', 'St. Petersburg'],
+  h1Override: 'Best AI Towing Agency in Florida',
+  titleOverride: 'Best AI Towing Agency in Florida',
   landscape:
-    "Florida is unusual in that a towing company's non-consensual pricing is set by local government and published openly. Under Florida Statutes section 125.0103, counties must establish maximum rates for towing from private property and for removal and storage from accident scenes, and a municipality that enacts its own rate ordinance displaces the county's within its limits. Layered on top is a demand pattern shaped by tourism, seasonal residents and storm season across Miami, Tampa, Orlando and Jacksonville.",
+    'Looking for the best AI towing agency in Florida? No independent ranking exists that can objectively name one agency the best, so this page is built for Florida towing companies evaluating AI agencies and AI systems — the criteria worth applying, and where AI actually earns its place in a tow operation. OptimizeIndex works at the intersection of AI search visibility, local search and call attribution for towing businesses across Miami, Tampa, Orlando, Jacksonville, Fort Lauderdale and St. Petersburg.',
   searchProblem:
-    'What that means commercially is that a Florida towing company competes on almost everything except price. Where the county or municipality sets and publishes the maximum for non-consensual work, the differentiators left are being found first, being trusted quickly, and having a profile that was ready before the season rather than during it. Towing SEO in Florida is mostly a visibility and reputation problem.',
+    'Florida sharpens the question of what an AI agency is even for, because it removes the obvious lever. Under Florida Statutes section 125.0103, counties must establish maximum rates for towing from private property and for accident-scene removal and storage, and must publish them. With price set locally and openly, what is left is being found first and trusted quickly — and knowing which of your seasons, pages and campaigns actually produced calls, in a market where demand arrives in tourist and storm surges rather than a flat line.',
   engagement: {
     heading: "How we would build a Florida towing company's search presence",
     intro:
@@ -601,7 +804,15 @@ const florida: TowingState = {
     ],
   },
   demand: ['private-property', 'emergency-roadside', 'long-distance', 'roadside-services'],
-  services: ['reviews-reputation', 'google-business-profile', 'local-organic', 'ai-answers'],
+  services: ['ai-answers', 'reviews-reputation', 'google-business-profile', 'local-organic'],
+  buyersGuide: buyersGuideFor('Florida', {
+    specialisation:
+      'Towing is a vertical we build for specifically, including the impound side most agencies avoid discussing. Our published case studies are in e-commerce and B2B services, so ask for towing-specific references before weighing that.',
+    measurement:
+      'Florida demand is seasonal, so an annual average tells you very little. We track calls per page and per period, which is what lets you see whether the work done before a tourist or storm season actually produced calls during it — rather than discovering in April that the spend went somewhere untraceable.',
+    stateRules:
+      'We work from Florida Statutes section 125.0103: counties must set and publish maximum non-consensual towing and storage rates, a municipal ordinance can displace the county\'s inside its limits, and the local government must run a fee-complaint process. A reply that points at the published rates and that process reads very differently from one arguing about fairness.',
+  }),
   sections: [
     {
       id: 'fl-rates',
@@ -660,6 +871,7 @@ const florida: TowingState = {
     },
   ],
   faqs: [
+    ...aiFaqs('Florida', HOW_AI_HELPS.florida),
     {
       question: 'Who sets maximum towing rates in Florida?',
       answer:
@@ -698,10 +910,12 @@ const georgia: TowingState = {
   slug: 'georgia',
   state: 'Georgia',
   metros: ['Atlanta', 'Savannah', 'Augusta', 'Columbus', 'Macon'],
+  h1Override: 'Best AI Towing Agency in Georgia',
+  titleOverride: 'Best AI Towing Agency in Georgia',
   landscape:
-    'Georgia towing demand concentrates heavily around Atlanta, where I-75, I-85 and I-20 converge inside the I-285 perimeter and produce sustained breakdown and accident volume in a compact area. At the other end of the state the Port of Savannah — which the Georgia Ports Authority describes as the third-busiest container gateway in the United States — anchors commercial traffic on the corridors feeding it. The result is one intensely contested metro market and a set of freight routes that behave quite differently.',
+    'Looking for the best AI towing agency in Georgia? There is no objective ranking that lets any agency truthfully claim that title, so this page is written for Georgia towing companies comparing AI agencies and AI systems: the questions worth asking, and the places AI genuinely helps a tow business. OptimizeIndex works at the intersection of AI search visibility, local search and call attribution for towing operators across Atlanta, Savannah, Augusta, Columbus and Macon.',
   searchProblem:
-    'Commercially that splits a Georgia operator in two. The Atlanta side is a Google Maps problem: many operators sit a similar drive from the same perimeter breakdown, so relevance and prominence carry more of the weight than distance does. The corridor side is a website problem, because a dispatcher routing a recovery to the port evaluates equipment before they ever look at a map. Towing SEO in Georgia therefore means building for two buyers rather than one, and most Georgia towing websites try to do both jobs with a single page and do neither well.',
+    'Georgia is where a generic AI marketing package tends to fall over, because a Georgia operator is usually running two businesses. Around Atlanta, where I-75, I-85 and I-20 converge inside the I-285 perimeter, the buyer is a stranded motorist choosing in a map result. On the corridors feeding the Port of Savannah the buyer is a dispatcher evaluating equipment on a website days before an incident. Those two need different content, different entity signals for AI assistants, and different measurement — consumer calls versus named accounts. Most Georgia towing sites try to serve both with one page and one number.',
   engagement: {
     heading: "How we would build a Georgia towing company's search presence",
     intro:
@@ -751,7 +965,15 @@ const georgia: TowingState = {
     ],
   },
   demand: ['emergency-roadside', 'heavy-duty', 'accident-recovery', 'private-property'],
-  services: ['google-business-profile', 'reviews-reputation', 'local-organic', 'ai-answers'],
+  services: ['ai-answers', 'google-business-profile', 'local-organic', 'reviews-reputation'],
+  buyersGuide: buyersGuideFor('Georgia', {
+    specialisation:
+      'Towing is a vertical we build for specifically, and in Georgia that means treating the Atlanta consumer market and the Savannah freight corridors as two different problems rather than one campaign. Our published case studies are in e-commerce and B2B services, so ask for towing references before weighing that.',
+    measurement:
+      'A Georgia operator running both sides needs two numbers, not one. We track consumer calls per page, and we report corridor and fleet work separately as accounts and repeat dispatch — which has to come from you, because it never appears in web analytics. Reporting both halves on one blended figure hides which half moved.',
+    stateRules:
+      'Georgia does not give us a statute to point at the way Florida or Michigan does, and we will not pretend otherwise. What we do work from is the pattern: private-property enforcement around Atlanta apartments produces clustered complaints traceable to one address, so the useful work is signage, grace periods and logged authorisation per tow rather than a better-worded reply.',
+  }),
   sections: [
     {
       id: 'ga-atlanta',
@@ -808,6 +1030,7 @@ const georgia: TowingState = {
     },
   ],
   faqs: [
+    ...aiFaqs('Georgia', HOW_AI_HELPS.georgia),
     {
       question: 'Why does my Atlanta towing company get review clusters from one apartment complex?',
       answer:
@@ -836,10 +1059,12 @@ const pennsylvania: TowingState = {
   slug: 'pennsylvania',
   state: 'Pennsylvania',
   metros: ['Philadelphia', 'Pittsburgh', 'Allentown', 'Erie', 'Harrisburg', 'Scranton'],
+  h1Override: 'Best AI Towing Agency in Pennsylvania',
+  titleOverride: 'Best AI Towing Agency in Pennsylvania',
   landscape:
-    'Pennsylvania towing demand is shaped by weather and by two large metros with very different geography. Philadelphia and Pittsburgh anchor opposite ends of the state across terrain that produces genuine winter recovery work, and the northwest corner sees lake-effect snow — the National Weather Service attributes between 45 and 53 percent of seasonal snowfall along the eastern shores of Lakes Erie and Ontario to lake-effect events, with totals highest in January. The result is a market with a pronounced seasonal peak and a steady base of private-property work in dense, older city neighbourhoods.',
+    'Looking for the best AI towing agency in Pennsylvania? No independent ranking exists that can objectively declare one agency the best, so this page is for Pennsylvania towing companies evaluating AI agencies and AI systems — what to ask, what to verify, and where AI is genuinely useful to a tow operation. OptimizeIndex works at the intersection of AI search visibility, local search and call attribution for towing businesses across Philadelphia, Pittsburgh, Allentown, Erie, Harrisburg and Scranton.',
   searchProblem:
-    'Commercially, Pennsylvania punishes late work more than most markets. A large share of the year\'s tow revenue arrives in a handful of weather weeks, every operator in the county is busy on the same days, and the operator a stranded driver finds first is usually the one whose profile and reviews were already in order months earlier. Towing SEO in Pennsylvania is consequently a calendar problem as much as a content one: a Pennsylvania towing company can do everything right in January and still have missed the season.',
+    'Pennsylvania is the state where timing matters more than anywhere else on this site, and that changes what you should want from an agency. A large share of the year\'s tow revenue arrives in a handful of weather weeks — the National Weather Service attributes between 45 and 53 percent of seasonal snowfall along the eastern shores of Lakes Erie and Ontario to lake-effect events, with totals highest in January. Every operator in the county is busy the same days. The useful question is not whether traffic rose over the year but whether you were visible on the specific days that produced revenue, which is a day-level attribution problem an annual report will hide.',
   engagement: {
     heading: "How we would build a Pennsylvania towing company's search presence",
     intro:
@@ -889,7 +1114,15 @@ const pennsylvania: TowingState = {
     ],
   },
   demand: ['emergency-roadside', 'accident-recovery', 'private-property', 'roadside-services'],
-  services: ['google-business-profile', 'reviews-reputation', 'local-organic', 'paid-search'],
+  services: ['ai-answers', 'google-business-profile', 'reviews-reputation', 'paid-search'],
+  buyersGuide: buyersGuideFor('Pennsylvania', {
+    specialisation:
+      'Towing is a vertical we build for specifically, and in Pennsylvania that means planning around a season rather than a quarter. Our published case studies are in e-commerce and B2B services, so ask for towing-specific references before weighing that claim.',
+    measurement:
+      'For a weather-driven business the annual number is close to meaningless. We track calls per page and per day, so the question becomes whether you were visible on the specific days conditions turned — which is the only version of the question a Pennsylvania operator should care about.',
+    stateRules:
+      'Pennsylvania does not hand us a published rate framework the way Florida does, and we will not invent one. What we work from instead is the seasonal reality: storm-day tows involve long waits nobody controls, and a reply that sets expectations honestly reads better than one defending a four-hour response after the fact.',
+  }),
   sections: [
     {
       id: 'pa-winter',
@@ -932,6 +1165,7 @@ const pennsylvania: TowingState = {
     },
   ],
   faqs: [
+    ...aiFaqs('Pennsylvania', HOW_AI_HELPS.pennsylvania),
     {
       question: 'How much of Erie\'s snowfall comes from lake-effect events?',
       answer:
@@ -966,10 +1200,12 @@ const indiana: TowingState = {
   slug: 'indiana',
   state: 'Indiana',
   metros: ['Indianapolis', 'Fort Wayne', 'Evansville', 'South Bend', 'Gary'],
+  h1Override: 'Best AI Towing Agency in Indiana',
+  titleOverride: 'Best AI Towing Agency in Indiana',
   landscape:
-    'Indiana calls itself the Crossroads of America, and the freight numbers support the name: INDOT reports that 724 million tons of freight travel through Indiana each year, making it the fifth busiest state for commercial freight traffic, and that Indiana has more pass-through highways than any other state. I-65, I-70, I-69, I-74 and I-80/94 cross the state. That mix makes heavy-duty and commercial recovery a larger part of Indiana towing demand than consumer roadside work alone would suggest.',
+    'Looking for the best AI towing agency in Indiana? There is no objective ranking that allows an agency to truthfully claim it, so this page is written for Indiana towing companies comparing AI agencies and AI systems: the criteria that separate them, and where AI helps a tow business that runs on freight rather than on consumer roadside work. OptimizeIndex works at the intersection of AI search visibility, local search and call attribution for towing operators across Indianapolis, Fort Wayne, Evansville, South Bend and Gary.',
   searchProblem:
-    'Commercially that inverts the usual advice. A large share of Indiana towing demand comes from freight moving through the state, and a fleet dispatcher choosing a heavy-duty operator is checking equipment, corridor coverage and insurance rather than reading Google reviews. An Indiana operator can spend a year building consumer review volume and move very little of the work that actually pays, while the corridor pages that would reach the fleet buyer never get written. Towing SEO in Indiana usually means starting with the website rather than the profile.',
+    'Indiana inverts most AI marketing pitches, and that is the useful thing to know before you buy one. INDOT reports 724 million tons of freight moving through Indiana each year, making it the fifth busiest state for commercial freight traffic, with more pass-through highways than any other state and as much as a third of that freight never stopping. A fleet dispatcher picking a heavy-duty operator is checking equipment, corridor coverage and insurance — not reading reviews, and not converting anywhere your analytics can see. An agency that reports only web metrics will show you a flat quarter on the half of the business that pays best.',
   engagement: {
     heading: "How we would build an Indiana towing company's search presence",
     intro:
@@ -1019,7 +1255,15 @@ const indiana: TowingState = {
     ],
   },
   demand: ['heavy-duty', 'accident-recovery', 'emergency-roadside', 'long-distance'],
-  services: ['local-organic', 'google-business-profile', 'reviews-reputation', 'ai-answers'],
+  services: ['ai-answers', 'local-organic', 'google-business-profile', 'reviews-reputation'],
+  buyersGuide: buyersGuideFor('Indiana', {
+    specialisation:
+      'Towing is a vertical we build for specifically, and in Indiana that means being honest that the freight side of your business is worth more of the attention than a consumer review campaign. Our published case studies are in e-commerce and B2B services, so ask for towing references before weighing that.',
+    measurement:
+      'This is the criterion Indiana operators should press hardest on, because most of the work that pays best is invisible to analytics. We track consumer calls per page, and report fleet work as accounts and repeat dispatch supplied by you, labelled as client-reported. An agency showing you a single web-metrics dashboard is not measuring your business.',
+    stateRules:
+      'Indiana does not give us a published statute to work from the way Florida or Michigan does, and we will not manufacture one. What we work from is INDOT\'s freight picture — fifth busiest state, more pass-through highways than any other, roughly a third of freight never stopping — which tells you the buyer is often a carrier with no local presence at all.',
+  }),
   sections: [
     {
       id: 'in-corridors',
@@ -1077,6 +1321,7 @@ const indiana: TowingState = {
     },
   ],
   faqs: [
+    ...aiFaqs('Indiana', HOW_AI_HELPS.indiana),
     {
       question: 'How much freight moves through Indiana?',
       answer:
@@ -1101,12 +1346,237 @@ const indiana: TowingState = {
   ],
 };
 
+/*
+   Michigan is the comparison-query experiment.
+
+   The other five are local-service pages: brand voice in the H1, keywords in
+   the title. This one targets "best towing ai agency in michigan" directly, so
+   the H1 and title carry the query and the lede answers it in the first
+   paragraph. Nothing else about the page differs — same data model, same
+   components, same guardrails — which is what makes the two H1 strategies
+   comparable in Search Console in a couple of months.
+
+   Naming the query is not the same as claiming the superlative. The lede and
+   the first FAQ both state outright that no agency can honestly declare itself
+   best; the page earns the query by being the most useful answer to it.
+*/
+const michigan: TowingState = {
+  slug: 'michigan',
+  state: 'Michigan',
+  metros: ['Detroit', 'Grand Rapids', 'Warren', 'Sterling Heights', 'Ann Arbor', 'Lansing', 'Flint'],
+  h1Override: 'Best AI Towing Agency in Michigan',
+  titleOverride: 'Best AI Towing Agency in Michigan',
+  // The lede. Deliberately explicit about AI + towing + Michigan + the entity
+  // in the first hundred words, because this is the passage a retriever lifts
+  // and the first thing Google reads. Every later section can afford to be
+  // subtle; this one cannot.
+  landscape:
+    'Looking for the best towing AI agency in Michigan? There is no independent ranking that can objectively declare one agency the best. Instead, Michigan towing companies should compare agencies on their towing-specific AI capabilities, measurable results, ownership of business assets and data, and ability to handle the unique demands of towing operations. OptimizeIndex works specifically at the intersection of AI, towing-company marketing, lead handling and local search. We work with towing operators across Detroit, Grand Rapids, Warren, Ann Arbor, Lansing and Flint, and the framework below is the same one we would want a towing company to apply to us.',
+  searchProblem:
+    'Michigan is a useful place to apply that framework, because the state already asks consumers to vet towing companies this way. The Attorney General publishes and periodically reissues a consumer alert on Michigan towing laws, fee complaints route to the Attorney General, local police or the Michigan State Police Commercial Vehicle Enforcement Division, and a towing company\'s operating authority is publicly checkable. In a market where your own legitimacy is a matter of public record, being visibly credible is part of the search problem rather than separate from it — and it is exactly the standard worth holding an AI agency to before you sign anything.',
+  demand: ['emergency-roadside', 'private-property', 'heavy-duty', 'accident-recovery'],
+  services: ['ai-answers', 'google-business-profile', 'reviews-reputation', 'local-organic'],
+  buyersGuide: buyersGuideFor('Michigan', {
+    specialisation:
+      'Towing is a vertical we build for specifically, because its search behaviour is unusual enough to need its own approach. Our published case studies are in e-commerce and B2B services, so ask us for towing-specific references before you weigh that claim.',
+    measurement:
+      'We report impressions and clicks from Google Search Console, calls from your phone system and our own click tracking, and booked tows and revenue from your dispatch records — labelled as client-reported, because that is what they are.',
+    stateRules:
+      'We work from Michigan\'s published guidance: an owner can contest both the tow and the reasonableness of the fees in district court, with 20 days from the notice date to request a hearing, and complaints can go to the Attorney General, local police or MSP CVED. We write replies that state that process rather than arguing the fee.',
+  }),
+  sections: [
+    {
+      id: 'mi-what-ai-agency-does',
+      service: 'ai-answers',
+      question: 'What does an AI agency actually do for a towing company?',
+      answer:
+        'For a towing company, useful AI work is narrow: make the business findable and quotable by assistants, use AI to speed up the content and review-response workload, and keep the Google Business Profile and call handling accurate. It is not a chatbot on your website.',
+      detail: [
+        'The honest version of AI marketing for a towing company has two halves. The first is being retrievable — assistants answer "who should I call for a tow in Detroit" with named businesses assembled from sources they can reach, so the work is making clear, specific, quotable information exist about your operation, on your site and in the third-party places models draw from.',
+        'The second is throughput. Review replies, service pages, corridor pages and Google Business Profile posts are all work that a small operator never gets to. AI makes that volume achievable, but it does not make it correct — a reply written without knowing Michigan\'s dispute process is worse than no reply.',
+        'What it is not: a chat widget, a "we use AI" badge, or a monthly report with a language model summarising your rankings. If an agency cannot say which specific task the AI performs and how you would tell whether it worked, the AI is decoration.',
+      ],
+      callCta: 'Ask us what we would actually automate',
+    },
+    {
+      id: 'mi-accountability',
+      service: 'reviews-reputation',
+      demand: 'private-property',
+      question: 'Why does Michigan towing attract more consumer-protection attention than most trades?',
+      answer:
+        'Because the state actively publishes guidance about it. The Michigan Attorney General has issued and reissued a consumer alert on towing laws, complaints route three separate ways, and a towing company\'s operating authority and insurance status are publicly checkable.',
+      detail: [
+        'A Michigan vehicle owner can contest both whether the vehicle was properly towed and the reasonableness of the towing and storage fees, in district court, with 20 days from the notice date to request a hearing. If the court finds the tow was improper, the towing and storage fees are reimbursed and the abandoned vehicle fee is returned.',
+        'Complaints do not only land as reviews. They can be filed with the Department of Attorney General, the local police agency, or the Michigan State Police Commercial Vehicle Enforcement Division. Operators must have active liability and workers\' compensation insurance on file or an approved exemption, and a member of the public can check operating authority through CVED\'s Intrastate Carrier Authority Registration System.',
+        'For marketing this cuts in an unexpected direction. In a state where a prospective customer can verify your standing, visible legitimacy is a competitive asset rather than a compliance chore. Surfacing your authority, insurance and licensing on your own site is cheap, and most Michigan operators do not do it.',
+      ],
+      callCta: 'Talk about your Michigan profile',
+    },
+    {
+      id: 'mi-signage',
+      demand: 'private-property',
+      service: 'reviews-reputation',
+      question: 'How does Michigan\'s posted-notice requirement reduce disputes before they become reviews?',
+      answer:
+        'Michigan requires a property owner to have clearly visible notice posted before a vehicle is towed from private property without the owner\'s consent. Confirming that signage is in place on every account you serve removes the most common basis for a dispute.',
+      detail: [
+        'This is the Michigan version of the impound reputation problem, and it has a more concrete lever than most states offer. The requirement sits with the property owner rather than the towing company, which is precisely why it gets missed: the operator carries the reputational cost of a tow the property never signed properly.',
+        'The practical move is to make signage part of onboarding a property client rather than something assumed. Photograph the posted notice when the account starts, re-photograph periodically, and keep it with the enforcement authorisation for each tow. It costs very little and it changes what you are able to say in a public reply.',
+        'It also changes which accounts are worth keeping. A property that will not maintain compliant signage is buying your revenue with your reputation, and that trade is better priced consciously than discovered in a review cluster six months later.',
+      ],
+    },
+    {
+      id: 'mi-border',
+      demand: 'heavy-duty',
+      service: 'local-organic',
+      question: 'How do Michigan operators win cross-border and freight recovery work?',
+      answer:
+        'Detroit is the top port for Canadian freight, carrying 21.5 percent of northern-border truck traffic and $94.2 billion in trade according to the Bureau of Transportation Statistics. That volume supports heavy-duty demand that is booked on a website, not in a map result.',
+      detail: [
+        'Commercial recovery around the crossings behaves like ordinary B2B. A dispatcher wants tonnage capacity, equipment on the roster, which stretches of I-75, I-94, I-96 and I-69 you actually cover, and how fast you respond — and they evaluate that before an incident rather than during one.',
+        'Border traffic is also not static, which matters if you are building pages around it. BTS notes Port Huron functioning as Detroit\'s roughly 65-mile resiliency partner, with commercial carriers shifting between the two crossings; the Gordie Howe International Bridge adds capacity to the corridor. Pages built around the routes you cover age better than pages built around a single crossing.',
+        'Ticket sizes for heavy recovery are generally well above consumer tows and the relationships tend to recur. Whether it is the right focus depends on your equipment and how much of that work is already spoken for locally.',
+      ],
+      callCta: 'Talk about corridor coverage',
+    },
+    {
+      id: 'mi-metros',
+      service: 'google-business-profile',
+      demand: 'emergency-roadside',
+      question: 'What is different about competing in Detroit versus Grand Rapids?',
+      answer:
+        'Google bases local results on relevance, distance and prominence. Around Detroit, Warren and Sterling Heights many operators sit a similar drive from the same call, so distance separates them less. Grand Rapids, Lansing, Ann Arbor and Flint are thinner fields where profile fundamentals go further.',
+      detail: [
+        'Towing SEO in Detroit is mostly a contested-map-pack problem. With operators spread across the metro at comparable distances, the factors with slack in them are relevance — category, individually listed services, an honest service area, truthful hours, real fleet photography — and prominence, which Google describes as drawing on signals including links and review count.',
+        'Towing marketing in Grand Rapids, Lansing, Ann Arbor and Flint tends to reward the same fundamentals more quickly, simply because fewer competing profiles have had the work done. An operator in one of those markets often has cheap ground to make up that a Detroit operator does not.',
+        'What we would not tell a Michigan operator is that doing this produces a particular position. Google does not publish weightings and the competitive set keeps moving. What we would say is that an incomplete profile is competing against complete ones on a factor Google explicitly documents, and that is fixable in an afternoon.',
+      ],
+      callCta: 'Get your Michigan profile reviewed',
+    },
+  ],
+  engagement: {
+    heading: 'How we would build a Michigan towing company\'s search presence',
+    intro:
+      'Scope depends on your mix of consumer, property and commercial work, but for a Michigan operator this is the order we would work in — and it leads with something no other state page does, because Michigan is the state where your legitimacy is publicly checkable.',
+    steps: [
+      {
+        service: 'local-organic',
+        title: 'Trust and credential visibility',
+        what: 'Surfacing operating authority, insurance status and licensing on the site, alongside real photos of the fleet and the yard.',
+        why: 'A Michigan customer can already verify these through CVED. Making them easy to find converts a compliance fact into a reason to call you rather than the next result.',
+      },
+      {
+        service: 'google-business-profile',
+        title: 'Google Business Profile optimization (GMB)',
+        what: 'Primary category, individually listed services, service area, truthful overnight hours, real fleet photos and the Q&A section, plus a suspension-risk check.',
+        why: 'Around Detroit distance separates operators less than it would in a thin market, so relevance is the factor with the most slack in it. Google says complete, accurate profiles are more likely to appear.',
+      },
+      {
+        demand: 'private-property',
+        title: 'Signage and dispute reduction on property accounts',
+        what: 'Signage verification and photography built into onboarding each property client, with enforcement authorisation logged per tow.',
+        why: 'Michigan requires posted notice before a private-property tow. Confirming it removes the most common basis for a dispute, and gives you something factual to say when one arrives anyway.',
+      },
+      {
+        service: 'reviews-reputation',
+        title: 'Review acquisition and statutory-aware replies',
+        what: 'Post-tow SMS requests fired from dispatch on consensual jobs, plus reply templates that state the Michigan dispute process rather than arguing the fee.',
+        why: 'Fee complaints in Michigan have formal destinations, so a reply that names the process reads as confident. Arguing fairness in public damages you more than the original review did.',
+      },
+      {
+        service: 'ai-answers',
+        title: 'AI-search and entity visibility',
+        what: 'Content written so an extracted passage still names the business, the service and the metro, plus presence in the third-party sources assistants draw on.',
+        why: 'Assistants return named businesses assembled from what they can retrieve. Being retrievable is separate work from ranking, and it is early enough in this trade to be worth starting.',
+      },
+      {
+        demand: 'heavy-duty',
+        title: 'Cross-border and heavy-duty corridor pages',
+        what: 'Tonnage, recovery equipment and coverage stated plainly across I-75, I-94, I-96 and I-69, including the crossings.',
+        why: 'Detroit carries the largest share of northern-border truck traffic, and that dispatcher compares on a website in a way a stranded motorist never does.',
+      },
+      {
+        service: 'local-organic',
+        title: 'Detroit and Grand Rapids metro pages',
+        what: 'Separate pages for the metros you genuinely dispatch to, rather than one statewide page.',
+        why: 'Competing in Detroit and competing in Grand Rapids are different problems, and a single page cannot describe either credibly to a customer or a crawler.',
+      },
+      {
+        title: 'Call and lead measurement',
+        what: 'Tap-to-call and form conversions tracked per page and per section, reported as impressions to clicks to calls, with booked tows from your dispatch records.',
+        why: 'A campaign that lifts sessions without moving phone volume has not changed your call mix, and a report built on impressions will not show you that.',
+      },
+    ],
+  },
+  faqs: [
+    ...aiFaqs('Michigan', HOW_AI_HELPS.michigan),
+    {
+      question: 'How do I compare the top AI agencies for towing companies?',
+      answer:
+        'Ask each the same questions and compare the answers side by side rather than comparing pitches. The useful ones are specific and checkable: show me the AI running, show me an attribution report, tell me who owns the profile at the end. Agencies that answer in capabilities rather than examples are usually describing a template.',
+    },
+    {
+      question: 'How do I get my towing company recommended by ChatGPT or other AI assistants?',
+      answer:
+        'Assistants retrieve passages from sources they can reach and compose an answer, rather than ranking pages. So the work is making clear, specific text about your business, services and coverage area exist in a form a model can quote — on your own site, and in the directories, trade sources and community discussion assistants draw on.',
+    },
+    {
+      question: 'Can I contest a towing fee in Michigan?',
+      answer:
+        'Michigan\'s consumer guidance states that a vehicle owner can challenge whether a vehicle was properly towed and the reasonableness of the towing and storage fees, in an appropriate district court, with 20 days from the notice date to request a hearing. If the court finds the tow improper, towing and storage fees are reimbursed and the abandoned vehicle fee returned. Confirm current requirements against the state source.',
+    },
+    {
+      question: 'Does a Michigan property owner need a posted sign before towing?',
+      answer:
+        'Michigan\'s consumer guidance states that for private property, the property owner must have a clearly visible notice posted before a vehicle is towed without the owner\'s consent. Towing operators serving property accounts should confirm compliant signage is in place rather than assuming it.',
+    },
+    {
+      question: 'How do I check whether a Michigan towing company is licensed?',
+      answer:
+        'Michigan towing companies must submit active liability insurance, workers\' compensation insurance, or an approved exemption. Operating authority can be checked through the Michigan State Police Commercial Vehicle Enforcement Division\'s Intrastate Carrier Authority Registration System.',
+    },
+    ...GBP_FAQS,
+  ],
+  sources: [
+    {
+      label: 'Michigan Consumer Protection - Michigan\'s Towing Laws',
+      url: 'https://www.michigan.gov/consumerprotection/protect-yourself/consumer-alerts/auto/towing',
+      supports:
+        'Vehicle owners may challenge whether a vehicle was properly towed and the reasonableness of towing and storage fees in district court; 20 days from the notice date to request a hearing; reimbursement of fees where a tow is found improper.',
+      checkedAt: '2026-08-28',
+    },
+    {
+      label: 'Michigan Attorney General - Consumer Alert on Michigan Towing Laws (July 2025)',
+      url: 'https://www.michigan.gov/ag/news/press-releases/2025/07/03/attorney-general-nessel-reissues-consumer-alert-on-michigan-towing-laws',
+      supports:
+        'Posted-notice requirement for private-property tows; complaints may be filed with the Department of Attorney General, local police, or MSP Commercial Vehicle Enforcement Division; insurance filing requirements and public checking of operating authority via CVED\'s Intrastate Carrier Authority Registration System.',
+      checkedAt: '2026-08-28',
+    },
+    {
+      label: 'Michigan Legislature - MCL 257.252a',
+      url: 'https://www.legislature.mi.gov/Laws/MCL?objectName=mcl-257-252a',
+      supports:
+        'Circumstances for police-ordered removal, LEIN entry within 24 hours of impound, and the redemption window before a vehicle is deemed abandoned.',
+      checkedAt: '2026-08-28',
+    },
+    {
+      label: 'Bureau of Transportation Statistics - Transborder Freight Data Annual Report 2025',
+      url: 'https://www.bts.gov/newsroom/transborder-freight-data-annual-report-2025-0',
+      supports:
+        'Detroit is the top port for Canadian freight, carrying 21.5 percent of northern-border truck traffic and $94.2 billion in trade, with Port Huron as its roughly 65-mile resiliency partner.',
+      checkedAt: '2026-08-28',
+    },
+    GOOGLE_LOCAL_RANKING,
+  ],
+};
+
 export const TOWING_STATES: TowingState[] = [
   california,
   florida,
   georgia,
   pennsylvania,
   indiana,
+  michigan,
 ];
 
 export function getTowingState(slug: string): TowingState | undefined {
@@ -1140,5 +1610,15 @@ export const CONTENT_GAPS: { state: string; topic: string }[] = [
     state: 'All',
     topic:
       'Operator-count or market-density rankings by state or metro. No primary source counts tow operators this way, so comparative density claims were removed rather than sourced.',
+  },
+  {
+    state: 'Michigan',
+    topic:
+      'West-Michigan lake-effect snowfall. Citable from the National Weather Service, but Pennsylvania already carries the seasonality angle and reusing it would push the two pages together on exactly the metric the similarity gate measures.',
+  },
+  {
+    state: 'Michigan',
+    topic:
+      'Michigan no-fault auto insurance. Distinctive to the state, but could not be tied to towing economics from a primary source, so it is not on the page.',
   },
 ];

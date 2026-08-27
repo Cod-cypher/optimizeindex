@@ -60,17 +60,27 @@ export default function TowingStatePage({ state }: { state: TowingState }) {
             <span className="text-ink font-bold">{state.state}</span>
           </nav>
 
+          {/* Two H1 strategies, deliberately. The brand-voice default reads
+              "Proudly Serving <State> Towing Companies"; a state targeting a
+              comparison query sets h1Override so the H1 is the query itself.
+              Nothing else about the page changes, which is what makes the two
+              comparable in Search Console. */}
           <h1 className="font-display font-black text-4xl md:text-5xl lg:text-6xl text-ink tracking-tight mt-5 leading-[1.05]">
-            Proudly Serving{' '}
-            <span className="font-serif-accent italic text-lime bg-ink px-3 py-1 rounded-sm shadow-hard inline-block -rotate-1">
-              {state.state}
-            </span>{' '}
-            Towing Companies
+            {state.h1Override ?? (
+              <>
+                Proudly Serving{' '}
+                <span className="font-serif-accent italic text-lime bg-ink px-3 py-1 rounded-sm shadow-hard inline-block -rotate-1">
+                  {state.state}
+                </span>{' '}
+                Towing Companies
+              </>
+            )}
           </h1>
 
-          {/* The state's own paragraph. This is the single most important piece
-              of differentiation on the page — it is why this is a real landing
-              page and not a doorway page with a name swapped in. */}
+          {/* Renders directly under the H1, which makes it the passage a
+              retriever is most likely to lift and the first thing Google reads.
+              On the brand-voice pages it is the market paragraph; on a
+              comparison page it is the lede that answers the query outright. */}
           <p className="font-sans text-lg md:text-xl text-stone leading-relaxed mt-6">
             {state.landscape}
           </p>
@@ -144,6 +154,65 @@ export default function TowingStatePage({ state }: { state: TowingState }) {
           </p>
         </div>
       </section>
+
+      {/* The evaluation framework, on the pages that target a comparison query.
+          Placed here — straight after the bridge, before the market sections —
+          because someone who typed "best <x> agency" wants to compare, and a
+          page that makes them scroll past three market sections first has
+          answered a different question than the one they asked.
+
+          Position follows from presence, so no ordering flag is needed. */}
+      {state.buyersGuide && (
+        <section className="bg-paper border-b-1.5 border-ink px-6 md:px-12 py-14">
+          <div className="max-w-4xl mx-auto">
+            <h2 className="font-display font-extrabold text-2xl md:text-3xl text-ink tracking-tight leading-tight">
+              {state.buyersGuide.heading}
+            </h2>
+            <p className="font-sans text-stone leading-relaxed mt-4 text-base md:text-lg">
+              {state.buyersGuide.intro}
+            </p>
+
+            <ol className="mt-10 space-y-6">
+              {state.buyersGuide.criteria.map((c, i) => (
+                <li
+                  key={c.question}
+                  className="border-1.5 border-ink rounded-2xl bg-cream p-5 md:p-7 shadow-hard"
+                >
+                  <div className="flex items-baseline gap-3">
+                    <span className="font-mono text-xs font-bold text-stone shrink-0">
+                      {String(i + 1).padStart(2, '0')}
+                    </span>
+                    <h3 className="font-display font-bold text-lg md:text-xl text-ink tracking-tight">
+                      {c.question}
+                    </h3>
+                  </div>
+
+                  <p className="font-sans text-stone text-sm md:text-base leading-relaxed mt-3">
+                    <span className="font-mono text-[10px] uppercase tracking-widest text-ink">
+                      A good answer:
+                    </span>{' '}
+                    {c.goodAnswer}
+                  </p>
+
+                  {/* Answering the same question about ourselves is what stops
+                      this being a neutral listicle with no commercial point. */}
+                  <p className="font-sans text-ink text-sm md:text-base leading-relaxed mt-3 border-l-4 border-lime pl-4">
+                    <span className="font-mono text-[10px] uppercase tracking-widest text-stone">
+                      Ours:
+                    </span>{' '}
+                    {c.ours}
+                  </p>
+                </li>
+              ))}
+            </ol>
+
+            <div className="flex flex-wrap gap-3 mt-10">
+              <CallLink label="Ask us these questions" source={`${state.slug}-buyers-guide`} />
+              <AuditLink label="Free visibility check" />
+            </div>
+          </div>
+        </section>
+      )}
 
       <div className="bg-cream px-6 md:px-12 py-14">
         <div className="max-w-4xl mx-auto space-y-8">

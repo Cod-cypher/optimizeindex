@@ -389,8 +389,46 @@ async function checkTowing() {
     const telLinks = $(`a[href="tel:${CONTACT_PHONE}"]`).length;
     check(telLinks > 0, `${label} has no tap-to-call link`);
 
+    // Every state page targets a comparison query, so every state page owes
+    // the reader an evaluation framework. A page that names the query and then
+    // only sells is the thing this whole approach is trying not to be.
+    const isState = route.path !== TOWING_BASE;
+    const hasGuide = /How to Choose an AI Agency for a Towing Company in /.test(html);
+    if (isState) check(hasGuide, `${label} has no buyer's-guide section`);
+
+    // Unsupported superlative self-claims. The pages are allowed to name the
+    // "best" query as their topic; they are not allowed to answer it with
+    // themselves. Anything here is a claim we cannot substantiate.
+    const bodyText = $('main').text().replace(/\s+/g, ' ');
+    for (const phrase of [
+      '#1 ai',
+      'officially the best',
+      'no other agency',
+      'we are the best',
+      "we're the best",
+      'guaranteed ranking',
+      'guaranteed results',
+      'number one ai',
+    ]) {
+      check(
+        !bodyText.toLowerCase().includes(phrase),
+        `${label} contains an unsupported self-claim: "${phrase}"`,
+      );
+    }
+
+    // H1 must match the title's leading clause wherever a route sets one, or
+    // the page promises the searcher one thing and delivers another.
+    const h1 = $('h1').text().replace(/\s+/g, ' ').trim();
+    const titleLead = (route.title || '').split('|')[0].trim();
+    if (isState) {
+      check(
+        h1 === titleLead,
+        `${label} h1 "${h1}" does not match title lead "${titleLead}"`,
+      );
+    }
+
     bodies.set(route.path, shingles(main));
-    console.log(`  ${label} ${String(words).padStart(5)}w main  tel=${telLinks}`);
+    console.log(`  ${label} ${String(words).padStart(5)}w main  tel=${telLinks}  guide=${isState ? (hasGuide ? 'yes' : 'NO') : '-'}`);
   }
 
   // Pairwise similarity. Deliberately a review trigger rather than a hard SEO
