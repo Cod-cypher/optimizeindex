@@ -51,7 +51,7 @@ import type { Faq } from '../types';
  * which is exactly the kind of unearned freshness signal the rest of this
  * codebase refuses to fabricate.
  */
-export const TOWING_UPDATED = '2026-08-27';
+export const TOWING_UPDATED = '2026-08-28';
 
 /** Axis 1 — the job the operator is trying to win. */
 export type DemandIntent =
@@ -336,6 +336,8 @@ const HOW_AI_HELPS = {
     'Pennsylvania\'s value is in timing, so AI helps most with being findable by a driver stranded somewhere unfamiliar in bad weather, and with day-level call measurement. Being retrievable by an assistant matters more when the caller has no local knowledge, and tracking calls by day is what tells you whether you captured the specific days that produced the year\'s revenue.',
   indiana:
     'For an Indiana operator weighted toward freight, the useful AI work is entity clarity for corridor queries — stating tonnage, recovery equipment and which stretches of I-65, I-70, I-69 and I-80/94 you cover, in a form an assistant can quote to a dispatcher. On the consumer side we track calls per page. Fleet accounts have to be reported by you, because they never appear in analytics.',
+  washington:
+    'Washington gives an operator more verifiable material than most states, so the useful AI work is turning it into something a machine can quote: the truck classes you run, the corridors you cover, and one accurate profile per registered business rather than a consolidated one. Alongside that we track calls per page and per location across Seattle, Tacoma and Spokane, so the visibility work has a number attached to it.',
   michigan:
     'Michigan rewards verifiable legitimacy, so the AI work is making the business unambiguous to both Google and assistants: clear entity information, accurate profile data, and credentials surfaced where a customer can see them. Alongside that we track which pages and searches produce calls across Detroit and Grand Rapids, so the visibility work has a number attached.',
 };
@@ -1570,6 +1572,213 @@ const michigan: TowingState = {
   ],
 };
 
+/*
+   Washington's distinguishing fact is that the state defines both what an
+   operator is allowed to do and who the operator is allowed to be.
+
+   Registered Tow Truck Operator rules classify trucks by capability, and the
+   letter-of-appointment rules require separately-owned businesses to hold
+   distinct identities. That second one collides directly with how most
+   multi-location marketing advice tells operators to consolidate, and it maps
+   unusually cleanly onto Google's one-profile-per-location guidance — which is
+   why this page's profile section is the one no other state page has.
+*/
+const washington: TowingState = {
+  slug: 'washington',
+  state: 'Washington',
+  metros: ['Seattle', 'Tacoma', 'Spokane', 'Vancouver', 'Bellevue', 'Everett', 'Yakima'],
+  h1Override: 'Best AI Towing Agency in Washington',
+  titleOverride: 'Best AI Towing Agency in Washington',
+  landscape:
+    'Looking for the best AI towing agency in Washington? No independent ranking exists that can objectively declare one agency the best, so this page is written for Washington towing companies evaluating AI agencies and AI systems: what to ask, what to verify, and where AI genuinely helps a registered tow truck operator rather than where it is a label on a slide. OptimizeIndex works at the intersection of AI search visibility, local search and call attribution for towing businesses across Seattle, Tacoma, Spokane, Vancouver, Bellevue, Everett and Yakima.',
+  searchProblem:
+    'Washington is an unusually good fit for this kind of work, because the state has already done half of it. Registered Tow Truck Operator rules classify tow trucks by size, equipment and capability, and the letter-of-appointment rules require separately-owned towing businesses to carry a different identifiable name, address and telephone number. Your capability and your identity are both defined and on file. That is exactly the structured, verifiable material Google and AI assistants need in order to describe a business accurately — and most Washington operators have never put any of it on their own website.',
+  demand: ['emergency-roadside', 'heavy-duty', 'accident-recovery', 'private-property'],
+  services: ['ai-answers', 'google-business-profile', 'local-organic', 'reviews-reputation'],
+  buyersGuide: buyersGuideFor('Washington', {
+    specialisation:
+      'Towing is a vertical we build for specifically, and in Washington that means knowing what a class B recovery truck is before writing a page about one. Our published case studies are in e-commerce and B2B services, so ask us for towing-specific references before you weigh that claim.',
+    measurement:
+      'Washington operators often run more than one registered business, and the state requires those to stay separately identified. We track calls per page and per location rather than pooling them, because a blended number across businesses the state considers distinct tells you nothing about which one is working.',
+    stateRules:
+      'We work from the Registered Tow Truck Operator rules: trucks are classified by capability, letter-of-appointment applicants file a signed agreement listing maximum tow rates and must show two years of industry experience, and drivers taking patrol-initiated calls need a documented four-hour training course every five years. That is a competence floor worth stating publicly, and most operators never do.',
+  }),
+  sections: [
+    {
+      id: 'wa-identity',
+      service: 'google-business-profile',
+      question: 'How do Washington\'s operator identity rules affect your Google Business Profile?',
+      answer:
+        'Washington requires each separately-owned towing business to have a different identifiable name, address and telephone number, answered at the business location during normal business hours. That is close to what Google asks for too — so in Washington, compliance and profile accuracy point the same direction.',
+      detail: [
+        'This is the Washington-specific issue most likely to be handled badly, and it is handled badly for an understandable reason. Standard multi-location marketing advice says consolidate: one tracking number, one brand, one profile, one inbox. Washington\'s letter-of-appointment rules push the other way, requiring each business to operate independently rather than depending on another for any required operation, with its own identifiable name, address and phone answered at that location.',
+        'An operator who consolidates several registered businesses behind a single number is creating two problems at once. The state expects distinct, separately answered identities. Google separately asks businesses not to create more than one profile per location, and expects the phone number on a profile to reach that location. Consolidation puts you sideways to both.',
+        'The practical work is unglamorous: confirm each registered business has its own profile, its own number that actually rings at that address, and its own service area reflecting where that yard genuinely dispatches. Then track calls per location instead of pooling them, which is the only way to tell which of the businesses is actually producing work.',
+      ],
+      callCta: 'Talk through your Washington profiles',
+    },
+    {
+      id: 'wa-classes',
+      service: 'ai-answers',
+      demand: 'heavy-duty',
+      question: 'Why do Washington tow truck classes matter for how AI describes your business?',
+      answer:
+        'The Washington State Patrol classifies tow trucks — A, B, B-2, C, D, E, S and S-1 — by size, equipment and capability, with several of those treated as recovery trucks for patrol requests. That gives a Washington operator something most businesses lack: verifiable, structured capability language.',
+      detail: [
+        'AI assistants answer questions by retrieving passages they can quote, and vague capability copy gives them nothing to work with. "We handle all towing needs" is unquotable. "We operate class A and class B trucks, and class B-2 for heavy recovery" is specific, checkable and exactly the kind of statement a model can attach to a business.',
+        'The same applies to the dispatcher searching for heavy recovery on I-5 or I-90. They are trying to establish whether you can physically do the job, and a state-defined class answers that faster than a paragraph of adjectives. Publishing your classes is not marketing language, it is specification.',
+        'Note the limits worth stating honestly on your own site: several classes count as recovery trucks for patrol requests only under conditions — class D where the truck is factory-equipped with a boom or retractable boom, class E where it is factory-equipped with a side recovery system. Getting that right is the difference between a specification and a claim.',
+      ],
+      callCta: 'Get your capability pages reviewed',
+    },
+    {
+      id: 'wa-passes',
+      demand: 'heavy-duty',
+      service: 'local-organic',
+      question: 'How do Washington operators win mountain-pass and winter recovery work?',
+      answer:
+        'Snoqualmie Pass carries I-90 between North Bend and Ellensburg, and Washington requires every vehicle over 10,000 pounds to carry at least two extra tire chains regardless of whether chain-up is posted. Pass conditions create recovery demand that is geographic and seasonal at once.',
+      detail: [
+        'This is a different winter problem from a snowbelt city. Pass work concentrates on specific, named stretches of road, involves commercial vehicles subject to their own chain rules, and happens under conditions where response time and equipment class matter more than proximity. A dispatcher or driver searching in that situation is searching by route.',
+        'Content built around the corridors you genuinely cover — I-90 over Snoqualmie, I-5 through the western metros, I-82 and I-84 in the east — will match that behaviour better than pages built around city names. State the classes you run alongside the routes, and the page answers both halves of the question at once.',
+        'Washington also allows studded tires only from November 1 through March 31, and studs do not substitute for chains where chains are required. Knowing the rules your callers are subject to is part of sounding like an operator rather than an advertiser.',
+      ],
+      callCta: 'Talk about corridor coverage',
+    },
+    {
+      id: 'wa-metros',
+      service: 'google-business-profile',
+      demand: 'emergency-roadside',
+      question: 'What is different about competing in Seattle versus Spokane?',
+      answer:
+        'Google bases local results on relevance, distance and prominence. Around Seattle, Bellevue, Tacoma and Everett many operators sit a similar drive from the same call, so distance separates them less. Spokane, Vancouver and Yakima are thinner fields where profile fundamentals go further.',
+      detail: [
+        'The Cascades split Washington into two quite different markets, and treating them as one is a common mistake. Western Washington towing is a dense-metro visibility problem across the Seattle-Tacoma-Everett corridor. Eastern Washington is more spread out, with longer runs and a larger share of highway and agricultural work.',
+        'In the west, relevance is the factor with the most slack in it: correct primary category, individually listed services, an honest service area, truthful hours and real fleet photography. Google says businesses with complete and accurate information are more likely to appear in local results.',
+        'In Spokane, Vancouver and Yakima the same fundamentals tend to move things faster, because fewer competing profiles have had the work done. What we would not tell any Washington operator is that this produces a particular position — Google does not publish weightings, and the competitive set keeps moving.',
+      ],
+      callCta: 'Get your Washington profile reviewed',
+    },
+    {
+      id: 'wa-credentials',
+      service: 'reviews-reputation',
+      demand: 'accident-recovery',
+      question: 'What trust signals can a Washington towing company actually prove?',
+      answer:
+        'More than most states allow. Washington registration, truck classes, the two-years-experience requirement behind a letter of appointment, and documented driver training for patrol-initiated calls are all verifiable facts — and unlike reviews, they do not depend on customers choosing to write anything.',
+      detail: [
+        'This matters because the review side of a Washington towing business has the same structural problem it has everywhere: patrol-initiated and accident-scene tows involve customers who did not choose you and are having a bad day, while the consensual jobs that convert well are the thinner part of the mix.',
+        'Credentials are the counterweight that Washington happens to supply. An operator can state their registration, the classes they run, and that their patrol-call drivers hold current training — the state requires a minimum four-hour tow truck driver training course every five years for those drivers, documented in a file. Publishing that is not a claim, it is a fact with a record behind it.',
+        'The review work still matters and still runs the same way: request on consensual jobs at the moment the tow ends, reply to negatives calmly and factually, and do not ask for a review at the roadside of a collision. Google names review count among prominence signals and says more reviews and positive ratings can help local ranking — that is the honest ceiling on what anyone can promise.',
+      ],
+    },
+  ],
+  engagement: {
+    heading: 'How we would build a Washington towing company\'s search presence',
+    intro:
+      'Scope depends on how many registered businesses you run and how much of your work is pass and corridor recovery, but for a Washington operator this is the order we would work in. It leads with identity and capability, because the state has already defined both and almost nobody publishes them.',
+    steps: [
+      {
+        service: 'google-business-profile',
+        title: 'Profile and identity alignment across registered businesses',
+        what: 'One accurate profile per location, each with the name, address and phone that actually answers there, and calls tracked per location rather than pooled.',
+        why: 'Washington requires separately-owned towing businesses to keep distinct identifiable names, addresses and phone numbers. Consolidating them for marketing convenience puts you sideways to both the state and Google at once.',
+      },
+      {
+        service: 'ai-answers',
+        title: 'Capability pages built on your truck classes',
+        what: 'Pages stating the classes you operate and what each is equipped for, written so an assistant can quote the capability without inventing it.',
+        why: 'Washington classes trucks by size, equipment and capability. That is structured, verifiable language most businesses never get to use, and it is exactly what a retrieval system can attach to your business.',
+      },
+      {
+        demand: 'heavy-duty',
+        title: 'Corridor and mountain-pass pages',
+        what: 'Coverage stated by route — I-90 over Snoqualmie, I-5, I-82, I-84 — with equipment and response detail alongside.',
+        why: 'Pass and commercial recovery callers search by route and capability, not by town. Chain rules apply to vehicles over 10,000 pounds regardless of posting, so this caller is often commercial.',
+      },
+      {
+        service: 'local-organic',
+        title: 'Western and eastern market pages',
+        what: 'Separate pages for the Seattle-Tacoma-Everett corridor and for Spokane, Vancouver and Yakima.',
+        why: 'The Cascades split the state into two markets with different density, run lengths and work mix. One statewide page describes neither honestly.',
+      },
+      {
+        service: 'reviews-reputation',
+        title: 'Credential visibility and review acquisition',
+        what: 'Registration, classes and driver training surfaced on-site, plus post-tow review requests on the consensual jobs and calm factual replies on the rest.',
+        why: 'Patrol and accident work is a poor review source. Washington gives you provable credentials to carry the trust load that reviews cannot.',
+      },
+      {
+        service: 'ai-answers',
+        title: 'AI-search and entity visibility',
+        what: 'Content written so an extracted passage still names the business, the capability and the area, plus presence in the third-party sources assistants draw on.',
+        why: 'Assistants return named businesses assembled from what they can retrieve. Being retrievable is separate work from ranking.',
+      },
+      {
+        title: 'Call and lead measurement',
+        what: 'Tap-to-call and form conversions tracked per page, per section and per location, reported as impressions to clicks to calls, with booked tows from your dispatch records.',
+        why: 'With multiple registered businesses, per-location attribution is the only way to see which one the work is actually moving.',
+      },
+    ],
+  },
+  faqs: [
+    ...aiFaqs('Washington', HOW_AI_HELPS.washington),
+    {
+      question: 'What does Washington require to become a registered tow truck operator?',
+      answer:
+        'Washington licenses Registered Tow Truck Operators through the Department of Licensing. A letter of appointment additionally requires the application form, a signed letter of contractual agreement listing maximum tow rates, and at least two years of towing industry experience acquired within five years of the application date, unless a waiver is granted. Confirm current requirements against the Department of Licensing and the WAC before relying on this.',
+    },
+    {
+      question: 'What are the Washington tow truck classes?',
+      answer:
+        'The Washington State Patrol has established requirements for class A, B, B-2, C, D, E, S and S-1 tow trucks, based on the size, equipment and capabilities of the truck. Classes A, B, B-2, C, S-1, and class D or E where factory-equipped with a boom or side recovery system respectively, are treated as recovery trucks for patrol requests.',
+    },
+    {
+      question: 'Can one owner run several towing businesses in Washington?',
+      answer:
+        'The letter-of-appointment rules require each business to be operated independently, without depending on another for any required operation. Where an individual or entity owns more than one business, each must have a different identifiable name, address and telephone number, answered at the business location during normal business hours. That has direct consequences for how profiles and tracking numbers should be set up.',
+    },
+    {
+      question: 'What are the chain requirements on Snoqualmie Pass?',
+      answer:
+        'Snoqualmie Pass carries I-90 between North Bend and Ellensburg. All vehicles over 10,000 pounds must carry at least two extra tire chains regardless of whether chain-up requirements are posted. Studded tires are legal in Washington from November 1 through March 31 but do not count as chains where chains are required. Check WSDOT for current conditions.',
+    },
+    ...GBP_FAQS,
+  ],
+  sources: [
+    {
+      label: 'Washington State Department of Licensing - Registered tow truck operators (RTTO)',
+      url: 'https://dol.wa.gov/professional-licenses/registered-tow-truck-operators-rtto',
+      supports:
+        'Washington licenses Registered Tow Truck Operators, and the licensing process and branch requirements are administered by the Department of Licensing.',
+      checkedAt: '2026-08-28',
+    },
+    {
+      label: 'WAC 204-91A-060 - Application and qualifications for letter of appointment',
+      url: 'https://app.leg.wa.gov/WAC/default.aspx?cite=204-91A-060',
+      supports:
+        'Letter of appointment requires a signed letter of contractual agreement listing maximum tow rates and two years of towing industry experience within the previous five years; each business must operate independently, and businesses under common ownership must have a different identifiable name, address and telephone number answered at the business location during normal business hours.',
+      checkedAt: '2026-08-28',
+    },
+    {
+      label: 'Chapter 204-91A WAC - Registered tow truck operators',
+      url: 'https://app.leg.wa.gov/wac/default.aspx?cite=204-91A&full=true',
+      supports:
+        'Washington State Patrol tow truck classes A, B, B-2, C, D, E, S and S-1 defined by size, equipment and capability; which classes count as recovery trucks for patrol requests; and the minimum four-hour driver training course every five years for drivers responding to patrol-initiated calls.',
+      checkedAt: '2026-08-28',
+    },
+    {
+      label: 'WSDOT - Chain requirements for vehicles over 10,000 pounds',
+      url: 'https://wsdot.wa.gov/travel/commercial-vehicles/route-commercial-vehicle-restrictions/chain-requirements-vehicles-over-10000-pounds',
+      supports:
+        'Snoqualmie Pass on I-90 runs between North Bend and Ellensburg; vehicles over 10,000 pounds must carry at least two extra tire chains regardless of posted requirements; studded tires are legal November 1 to March 31 and do not substitute for chains.',
+      checkedAt: '2026-08-28',
+    },
+    GOOGLE_LOCAL_RANKING,
+    GOOGLE_REPRESENTING,
+  ],
+};
+
 export const TOWING_STATES: TowingState[] = [
   california,
   florida,
@@ -1577,6 +1786,7 @@ export const TOWING_STATES: TowingState[] = [
   pennsylvania,
   indiana,
   michigan,
+  washington,
 ];
 
 export function getTowingState(slug: string): TowingState | undefined {

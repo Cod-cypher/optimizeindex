@@ -229,6 +229,8 @@ const TOWING_STATE_DESCRIPTIONS: Record<string, string> = {
     'Most Indiana towing revenue comes from freight your analytics never sees. How to choose an AI agency for an Indiana towing company, and what to ask.',
   michigan:
     'Comparing AI agencies for your Michigan towing company? No agency can honestly call itself the best. Here is how to judge one, and what we do differently.',
+  washington:
+    'Washington already classifies your trucks and your business identity. How to choose an AI agency for a Washington towing company, and what to ask it.',
 };
 
 const towingRoutes: RouteMeta[] = [
