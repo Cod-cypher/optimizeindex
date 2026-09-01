@@ -23,7 +23,6 @@ import {
   AuditLink,
   CallLink,
   SectionBlock,
-  ProofLinks,
   SourceList,
   TowingLayout,
   UpdatedStamp,
@@ -278,10 +277,6 @@ export default function TowingStatePage({ state }: { state: TowingState }) {
           <div className="flex flex-wrap gap-3 mt-10">
             <CallLink label="Talk it through" source={`${state.slug}-engagement`} tone="dark" />
             <AuditLink label="Free visibility check" />
-          </div>
-
-          <div className="mt-8 pt-6 border-t border-cream/15">
-            <ProofLinks tone="dark" />
           </div>
         </div>
       </section>
