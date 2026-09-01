@@ -20,6 +20,7 @@ We build specifically for towing and recovery operators, across five states. Eac
 page covers what actually differs in that market rather than repeating the same
 copy with a state name swapped in.
 
+- [Proudly Serving](https://optimizeindex.com/proudly-serving): the states where we work with towing operators, each linking to a page on what differs there.
 - [Towing company marketing](https://optimizeindex.com/towing-companies): the national overview - Google Business Profile, reviews, direct calls versus motor-club dispatch, heavy-duty recovery, and AI answers.
 - [California](https://optimizeindex.com/towing-companies/california): the CHP Rotation Tow Program and why the CHP itself says it is not intended to be a main source of income; competing in dense Los Angeles, San Diego and San Jose map packs.
 - [Florida](https://optimizeindex.com/towing-companies/florida): counties set maximum non-consensual towing rates under Florida Statutes 125.0103, so operators compete on visibility rather than price; tourist and storm-season demand in Miami, Tampa, Orlando and Jacksonville.

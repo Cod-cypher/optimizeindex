@@ -16,7 +16,7 @@ import {
   SERVICE_LABELS,
   DEMAND_LABELS,
 } from '../content/towing';
-import { TOWING_BASE } from '../routes';
+import { PROUDLY_SERVING, TOWING_BASE } from '../routes';
 import {
   AuditLink,
   CallLink,
@@ -126,6 +126,19 @@ export default function TowingPillarPage() {
           <p className="font-sans text-stone leading-relaxed mt-3">
             Towing economics genuinely differ by state — who sets your rates, where the freight
             runs, whether winter or storm season drives the peak. These pages cover what changes.
+            See every market on the{' '}
+            <a
+              href={PROUDLY_SERVING}
+              onClick={(e) => {
+                e.preventDefault();
+                navigate(PROUDLY_SERVING);
+                window.scrollTo({ top: 0 });
+              }}
+              className="font-bold text-ink underline hover:text-lime focus-ring"
+            >
+              Proudly Serving page
+            </a>
+            .
           </p>
 
           <ul className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">

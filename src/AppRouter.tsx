@@ -20,8 +20,9 @@ import { useLocation } from 'react-router-dom';
 import App from './App';
 import TowingPillarPage from './pages/TowingPillarPage';
 import TowingStatePage from './pages/TowingStatePage';
+import ProudlyServingPage from './pages/ProudlyServingPage';
 import { getTowingState } from './content/towing';
-import { TOWING_BASE } from './routes';
+import { TOWING_BASE, PROUDLY_SERVING } from './routes';
 import type { PublicProposal } from '../shared/proposalTypes';
 
 const AdminApp = lazy(() => import('./admin/AdminApp'));
@@ -77,6 +78,7 @@ export default function AppRouter() {
     asserts no single-segment route collides with the proposal namespace).
   */
   const towingPath = location.pathname.replace(/\/+$/, '') || '/';
+  if (towingPath === PROUDLY_SERVING) return <ProudlyServingPage />;
   if (towingPath === TOWING_BASE) return <TowingPillarPage />;
   if (towingPath.startsWith(`${TOWING_BASE}/`)) {
     const state = getTowingState(towingPath.slice(TOWING_BASE.length + 1));

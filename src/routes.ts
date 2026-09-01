@@ -188,6 +188,14 @@ const caseStudyRoutes: RouteMeta[] = CASE_STUDIES.map((study) => ({
 export const TOWING_BASE = '/towing-companies';
 
 /**
+ * The service-area hub the footer points at.
+ *
+ * Single segment, so it automatically joins the reserved set in
+ * server/proposals/slug.ts and can never be taken by a proposal slug.
+ */
+export const PROUDLY_SERVING = '/proudly-serving';
+
+/**
  * `Service` narrowed by audience and, on the state pages, by area.
  *
  * areaServed is how this site expresses geographic relevance at all: there is
@@ -234,6 +242,31 @@ const TOWING_STATE_DESCRIPTIONS: Record<string, string> = {
 };
 
 const towingRoutes: RouteMeta[] = [
+  {
+    path: PROUDLY_SERVING,
+    title: 'Proudly Serving Towing Companies | OptimizeIndex',
+    description:
+      'The states where we work with towing and recovery operators, each with a page on what actually differs there — rate rules, truck classes, freight and weather.',
+    priority: 0.7,
+    jsonLd: [
+      breadcrumb([
+        { name: 'Home', path: '/' },
+        { name: 'Proudly Serving', path: PROUDLY_SERVING },
+      ]),
+      // Truthful: an ordered list of the state pages this hub links to. No
+      // ratings, no reviews, nothing that cannot be substantiated.
+      {
+        '@type': 'ItemList',
+        name: 'Towing markets served',
+        itemListElement: TOWING_STATES.map((s, i) => ({
+          '@type': 'ListItem',
+          position: i + 1,
+          name: `Best AI Towing Agency in ${s.state}`,
+          url: `${SITE_ORIGIN}${TOWING_BASE}/${s.slug}`,
+        })),
+      },
+    ],
+  },
   {
     path: TOWING_BASE,
     title: 'Towing Company Marketing & Lead Generation | OptimizeIndex',
