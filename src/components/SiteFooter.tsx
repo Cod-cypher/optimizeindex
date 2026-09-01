@@ -8,8 +8,8 @@
  * Self-contained, doing its own routing, so any page can render it.
  */
 
-import { Shield } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Shield, ChevronDown } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Logo from './Logo';
 import { GOALS } from '../data';
 import { TOWING_STATES } from '../content/towing';
@@ -26,15 +26,9 @@ const SERVICE_LINKS = [
   { label: 'CRO TESTING', href: '/audit?goal=profit&service=cro' },
 ];
 
-// Sitewide inbound links to the towing cluster. Without these the six pages are
-// orphans: nothing links to them, so they are crawled late and rank slowly.
-const TOWING_LINKS = [
-  { label: 'TOWING COMPANIES', href: TOWING_BASE },
-  ...TOWING_STATES.map((s) => ({
-    label: s.state.toUpperCase(),
-    href: `${TOWING_BASE}/${s.slug}`,
-  })),
-];
+/** One card in the Proudly Serving picker. */
+const stateCardClass =
+  'flex flex-col gap-0.5 border-1.5 border-ink rounded-xl px-3.5 py-3 transition-all focus-ring';
 
 const AGENCY_LINKS = [
   { label: 'CASE STUDIES', href: '/case-studies' },
@@ -45,6 +39,7 @@ const AGENCY_LINKS = [
 
 export default function SiteFooter() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const go = (href: string) => (e: React.MouseEvent) => {
     e.preventDefault();
@@ -56,7 +51,7 @@ export default function SiteFooter() {
 
   return (
     <footer className="defer-paint bg-cream border-t-2 border-ink pt-16 pb-8 px-6 md:px-12 select-none overflow-hidden relative">
-      <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-6 gap-8 relative z-10">
+      <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-5 gap-8 relative z-10">
         <div className="col-span-2 space-y-4 text-left">
           <Logo size={38} variant="light" />
           <p className="font-sans text-stone text-xs leading-relaxed max-w-sm">
@@ -81,21 +76,6 @@ export default function SiteFooter() {
               <li key={s.label}>
                 <a href={s.href} onClick={go(s.href)} className={linkClass}>
                   {s.label}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="text-left space-y-3">
-          <p className="font-mono text-xs font-bold uppercase tracking-wider text-ink border-b border-ink/10 pb-2">
-            PROUDLY SERVING
-          </p>
-          <ul className="space-y-2 font-mono text-[11px] text-stone uppercase">
-            {TOWING_LINKS.map((t) => (
-              <li key={t.href}>
-                <a href={t.href} onClick={go(t.href)} className={linkClass}>
-                  {t.label}
                 </a>
               </li>
             ))}
@@ -140,6 +120,97 @@ export default function SiteFooter() {
             ))}
           </ul>
         </div>
+      </div>
+
+      {/* Proudly Serving — one parent control instead of a column of states.
+          That column was at eight links and grew with every state we add.
+
+          Built on <details>/<summary> rather than a JS dropdown for a specific
+          reason: these are the sitewide internal links into the towing cluster,
+          and <details> keeps every anchor in the rendered HTML whether the panel
+          is open or not. A JS-mounted menu would drop them from the pre-rendered
+          pages, which is the thing making the cluster crawlable in the first
+          place. Same reasoning as FaqSection.
+
+          Expands inline rather than floating: the footer sets overflow-hidden,
+          so an absolutely positioned panel would be clipped. */}
+      <div className="max-w-7xl mx-auto mt-12 relative z-10">
+        <details className="group border-1.5 border-ink rounded-2xl bg-paper shadow-hard overflow-hidden">
+          <summary className="cursor-pointer list-none px-5 py-4 flex items-center justify-between gap-4 focus-ring hover:bg-cream transition-colors">
+            <span className="flex items-center gap-2.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-lime border border-ink shrink-0" />
+              <span className="font-mono text-xs font-bold uppercase tracking-wider text-ink">
+                Proudly Serving
+              </span>
+              <span className="font-mono text-[10px] uppercase tracking-wider text-stone">
+                {TOWING_STATES.length} states
+              </span>
+            </span>
+            {/* The chevron alone sits a long way from the label on a wide
+                screen, so the bar does not obviously read as expandable. The
+                hint carries the affordance; it swaps on open so the control
+                always describes what the next click does. */}
+            <span className="flex items-center gap-2 shrink-0">
+              <span className="hidden sm:inline font-mono text-[10px] uppercase tracking-wider text-stone">
+                <span className="group-open:hidden">Select a state</span>
+                <span className="hidden group-open:inline">Close</span>
+              </span>
+              <ChevronDown
+                className="w-4 h-4 text-ink transition-transform group-open:rotate-180"
+                aria-hidden="true"
+              />
+            </span>
+          </summary>
+
+          <div className="px-5 pb-5 pt-1 border-t border-ink/10">
+            <p className="font-sans text-stone text-xs leading-relaxed mt-3 mb-4 max-w-2xl">
+              We build for towing and recovery operators. Pick a state for what actually differs
+              there — who sets your rates, where the freight runs, and what an AI agency should be
+              measuring.
+            </p>
+
+            <ul className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+              <li className="col-span-2 md:col-span-1">
+                <a
+                  href={TOWING_BASE}
+                  onClick={go(TOWING_BASE)}
+                  className={`${stateCardClass} bg-ink text-lime hover:bg-forest`}
+                >
+                  <span className="font-mono text-[10px] uppercase tracking-wider opacity-70">
+                    Overview
+                  </span>
+                  <span className="font-display font-extrabold text-sm">All towing companies</span>
+                </a>
+              </li>
+
+              {TOWING_STATES.map((s) => {
+                const href = `${TOWING_BASE}/${s.slug}`;
+                // Marking where you already are; a picker that gives no sense of
+                // position is just a list.
+                const active = location.pathname.replace(/\/+$/, '') === href;
+                return (
+                  <li key={s.slug}>
+                    <a
+                      href={href}
+                      onClick={go(href)}
+                      aria-current={active ? 'page' : undefined}
+                      className={`${stateCardClass} ${
+                        active
+                          ? 'bg-lime text-ink'
+                          : 'bg-cream text-ink hover:bg-paper hover:shadow-hard'
+                      }`}
+                    >
+                      <span className="font-mono text-[10px] uppercase tracking-wider text-stone">
+                        {active ? 'You are here' : s.metros[0]}
+                      </span>
+                      <span className="font-display font-extrabold text-sm">{s.state}</span>
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </details>
       </div>
 
       {/* Oversized watermark bleeding off the bottom. It sits at 4% opacity
