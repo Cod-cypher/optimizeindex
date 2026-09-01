@@ -166,6 +166,50 @@ export function SourceList({ sources }: { sources: SourceRef[] }) {
   );
 }
 
+/**
+ * Links to the published case studies.
+ *
+ * These pages repeatedly tell a reader to demand attribution from a named
+ * tool, and the buyer's guide makes it a criterion — so not linking to the
+ * place we publish ours was both a credibility gap and an internal-linking
+ * one. A link-graph crawl found the two case studies had 2 inbound links each
+ * against 16 for every other route, and none at all from the towing cluster.
+ *
+ * The anchor text is descriptive rather than "click here", because this is the
+ * only in-content route these pages get.
+ */
+export function ProofLinks({ tone = 'light' }: { tone?: 'light' | 'dark' }) {
+  const navigate = useNavigate();
+  const dark = tone === 'dark';
+  const link = `font-bold underline focus-ring ${
+    dark ? 'text-lime hover:text-cream' : 'text-ink hover:text-lime'
+  }`;
+  const go = (href: string) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    navigate(href);
+    window.scrollTo({ top: 0 });
+  };
+
+  return (
+    <p className={`font-sans text-sm leading-relaxed ${dark ? 'text-cream/75' : 'text-stone'}`}>
+      We hold ourselves to the same criterion. Our published results name the tool behind every
+      figure —{' '}
+      <a href="/case-study/jade-title-services" onClick={go('/case-study/jade-title-services')} className={link}>
+        Jade Title Services, verified in GA4
+      </a>{' '}
+      and{' '}
+      <a href="/case-study/sujood-mats" onClick={go('/case-study/sujood-mats')} className={link}>
+        Sujood Mats, verified in Search Console
+      </a>
+      . Neither is a towing client yet, and we would rather say so than imply otherwise. See{' '}
+      <a href="/case-studies" onClick={go('/case-studies')} className={link}>
+        all case studies
+      </a>
+      .
+    </p>
+  );
+}
+
 /** Visible freshness. Undated content is discounted by LLM-backed search. */
 export function UpdatedStamp({ date }: { date: string }) {
   const pretty = new Date(`${date}T00:00:00Z`).toLocaleDateString('en-US', {

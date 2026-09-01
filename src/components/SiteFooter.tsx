@@ -174,6 +174,7 @@ export default function SiteFooter() {
                 <a
                   href={TOWING_BASE}
                   onClick={go(TOWING_BASE)}
+                  aria-label="Towing company marketing — all states"
                   className={`${stateCardClass} bg-ink text-lime hover:bg-forest`}
                 >
                   <span className="font-mono text-[10px] uppercase tracking-wider opacity-70">
@@ -194,6 +195,11 @@ export default function SiteFooter() {
                       href={href}
                       onClick={go(href)}
                       aria-current={active ? 'page' : undefined}
+                      // Without this the accessible name linearises as
+                      // "Los AngelesCalifornia" — two spans, no separator, and
+                      // the most-repeated anchor text on the site describing
+                      // the page badly. The label states what the page is.
+                      aria-label={`Best AI towing agency in ${s.state}`}
                       className={`${stateCardClass} ${
                         active
                           ? 'bg-lime text-ink'

@@ -20,6 +20,7 @@ import { TOWING_BASE } from '../routes';
 import {
   AuditLink,
   CallLink,
+  ProofLinks,
   SectionBlock,
   SourceList,
   TowingLayout,
@@ -85,6 +86,10 @@ export default function TowingPillarPage() {
             report it as one. Connecting the two properly needs call tracking with dynamic number
             insertion, which we will set up if the volume justifies it.
           </p>
+
+          <div className="mt-6 pt-5 border-t border-cream/15">
+            <ProofLinks tone="dark" />
+          </div>
         </div>
       </section>
 
