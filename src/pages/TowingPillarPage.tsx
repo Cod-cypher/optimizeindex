@@ -8,6 +8,7 @@
  */
 
 import { useNavigate } from 'react-router-dom';
+import { ArrowRight } from 'lucide-react';
 import FaqSection from '../components/FaqSection';
 import {
   TOWING_PILLAR,
@@ -154,15 +155,23 @@ export default function TowingPillarPage() {
                       window.scrollTo({ top: 0 });
                     }}
                     id={`towing-state-link-${s.slug}`}
-                    className="block border-1.5 border-ink rounded-xl bg-cream p-5 shadow-hard hover:shadow-hard-hover hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all focus-ring"
+                    aria-label={`Explore towing visibility in ${s.state}`}
+                    className="group block border-1.5 border-ink rounded-xl bg-cream p-5 shadow-hard hover:shadow-hard-hover hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all focus-ring"
                   >
-                    {/* Anchor text matches each state page's actual topic now
-                        that the cluster targets AI-agency comparison queries. */}
-                    <span className="font-display font-extrabold text-lg text-ink">
-                      Best AI towing agency in {s.state}
-                    </span>
+                    {/* Same card shape as the Proudly Serving hub: state name,
+                        metros, then the action line. Keeping the two consistent
+                        also keeps the anchor text into each state page varied
+                        rather than repeating one exact-match phrase sitewide. */}
+                    <span className="font-display font-extrabold text-lg text-ink">{s.state}</span>
                     <span className="block font-sans text-stone text-sm leading-relaxed mt-1.5">
                       {s.metros.slice(0, 4).join(', ')} and statewide.
+                    </span>
+                    <span className="flex items-center gap-1.5 font-mono text-[11px] font-bold uppercase text-ink mt-4 pt-3 border-t border-ink/10">
+                      Explore towing visibility in {s.state}
+                      <ArrowRight
+                        className="w-3.5 h-3.5 shrink-0 transition-transform group-hover:translate-x-0.5"
+                        aria-hidden="true"
+                      />
                     </span>
                   </a>
                 </li>

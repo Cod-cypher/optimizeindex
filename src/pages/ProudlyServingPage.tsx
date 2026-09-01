@@ -86,7 +86,11 @@ export default function ProudlyServingPage() {
                       href={href}
                       onClick={go(href)}
                       id={`proudly-serving-${s.slug}`}
-                      aria-label={`Best AI towing agency in ${s.state}`}
+                      // Matches the visible action line exactly. An aria-label
+                      // that says something different from the text a sighted
+                      // user reads fails WCAG 2.5.3, and the visible line is
+                      // now descriptive enough to be the accessible name.
+                      aria-label={`Explore towing visibility in ${s.state}`}
                       className="group h-full flex flex-col border-1.5 border-ink rounded-2xl bg-paper p-6 shadow-hard hover:shadow-hard-hover hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all focus-ring"
                     >
                       <span className="flex items-center gap-2.5">
@@ -105,7 +109,7 @@ export default function ProudlyServingPage() {
                       </span>
 
                       <span className="flex items-center gap-1.5 font-mono text-[11px] font-bold uppercase text-ink mt-5 pt-4 border-t border-ink/10">
-                        Best AI towing agency in {s.state}
+                        Explore towing visibility in {s.state}
                         <ArrowRight
                           className="w-3.5 h-3.5 shrink-0 transition-transform group-hover:translate-x-0.5"
                           aria-hidden="true"
