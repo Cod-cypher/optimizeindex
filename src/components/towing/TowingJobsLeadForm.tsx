@@ -55,6 +55,16 @@ function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value.trim());
 }
 
+/**
+ * Identical on every page it appears on. Nothing about it varies per article -
+ * not the steps, fields, order, validation, submit behaviour, styling, heading
+ * or supporting copy.
+ *
+ * It takes no props on purpose. An earlier version accepted heading/intro so
+ * each page could frame it differently, which meant a visitor met a different
+ * form on every page of the same cluster. Keeping it prop-less is the
+ * structural guarantee that cannot drift.
+ */
 export default function TowingJobsLeadForm() {
   const [step, setStep] = useState(1);
 
@@ -162,7 +172,10 @@ export default function TowingJobsLeadForm() {
     website: 'Not collected — towing jobs assessment',
     budget: `Capacity: ${capacity}`,
     comments: [
-      'Source: towing-jobs',
+      // Names the page the lead came from, so a lead is attributable to the
+      // article that produced it. submitLead() also records submittedFrom
+      // independently; this line is the human-readable half in the email.
+      `Source: ${typeof window !== 'undefined' ? window.location.pathname : '/towing-jobs'}`,
       `Wants more of: ${intents.join(', ')}`,
       `Capacity: ${capacity}`,
       `Phone: ${phone.trim()}`,

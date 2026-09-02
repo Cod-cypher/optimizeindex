@@ -74,6 +74,29 @@ export function AuditLink({ label, goal = 'revenue' }: { label: string; goal?: s
 }
 
 /**
+ * Renders **double-asterisk** spans as bold, everything else as plain text.
+ *
+ * Content lives in src/content as plain strings, so a label written as markdown
+ * used to render with the asterisks visible. This is deliberately the only
+ * markup supported - not a markdown parser, just the one convention the content
+ * files use for a run-in label. An unbalanced pair degrades to plain text
+ * rather than throwing.
+ */
+function withBold(text: string): React.ReactNode[] {
+  return text
+    .split('**')
+    .map((part, i) =>
+      i % 2 === 1 ? (
+        <strong key={i} className="font-bold text-ink">
+          {part}
+        </strong>
+      ) : (
+        part
+      ),
+    );
+}
+
+/**
  * One answer-first block.
  *
  * The heading is the question and the first paragraph is a complete answer to
@@ -111,7 +134,7 @@ export function SectionBlock({
 
       {section.detail?.map((para, i) => (
         <p key={i} className="font-sans text-stone text-sm md:text-base leading-relaxed mt-4">
-          {para}
+          {withBold(para)}
         </p>
       ))}
 

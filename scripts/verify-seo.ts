@@ -345,15 +345,17 @@ function jaccard(a: Set<string>, b: Set<string>): number {
 }
 
 async function checkTowing() {
-  // /towing-jobs is included explicitly. It is part of this vertical but sits
-  // at the root rather than under TOWING_BASE, so a path-prefix filter alone
-  // would let it escape every guardrail below — including the similarity pool,
-  // which is the one that matters most for a page this close in topic.
+  // /towing-jobs and its cluster are included explicitly. They are part of this
+  // vertical but sit at the root rather than under TOWING_BASE, so a single
+  // path-prefix filter would let them escape every guardrail below — including
+  // the similarity pool, which is the one that matters most for pages this
+  // close in topic to each other and to the pillar.
   const towingRoutes = ROUTES.filter(
     (r) =>
       r.path === TOWING_BASE ||
       r.path.startsWith(`${TOWING_BASE}/`) ||
-      r.path === TOWING_JOBS_PATH,
+      r.path === TOWING_JOBS_PATH ||
+      r.path.startsWith(`${TOWING_JOBS_PATH}/`),
   );
   if (towingRoutes.length === 0) return;
 
@@ -433,7 +435,10 @@ async function checkTowing() {
     // Every page that targets its H1 as the query owes the searcher the same
     // words it promised in the SERP. The pillar is exempt because its H1 and
     // title are independent by design — see the comment in TowingPillarPage.
-    const requiresH1Match = isState || route.path === TOWING_JOBS_PATH;
+    const requiresH1Match =
+      isState ||
+      route.path === TOWING_JOBS_PATH ||
+      route.path.startsWith(`${TOWING_JOBS_PATH}/`);
     if (requiresH1Match) {
       check(
         h1 === titleLead,

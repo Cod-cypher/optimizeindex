@@ -14,11 +14,13 @@
 
 import { Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ArrowRight } from 'lucide-react';
 import FaqSection from '../components/FaqSection';
 import TowingJobsLeadForm from '../components/towing/TowingJobsLeadForm';
 import { TOWING_JOBS, JOB_SOURCE_LABELS } from '../content/towingJobs';
 import { TOWING_STATES, TOWING_UPDATED } from '../content/towing';
-import { TOWING_BASE, PROUDLY_SERVING } from '../routes';
+import { TOWING_JOBS_CLUSTER } from '../content/towingJobsCluster';
+import { TOWING_BASE, PROUDLY_SERVING, TOWING_JOBS_PATH } from '../routes';
 import {
   AuditLink,
   CallLink,
@@ -27,6 +29,35 @@ import {
   TowingLayout,
   UpdatedStamp,
 } from './towingShared';
+
+/**
+ * Which pillar section hands off to which supporting page.
+ *
+ * Anchor text is varied per link rather than repeating one exact-match phrase,
+ * for the reason documented at TowingPillarPage.tsx:156-159.
+ */
+const CLUSTER_LINKS: Record<string, { lead: string; anchor: string; href: string }> = {
+  commercial: {
+    lead: 'This is the channel that is sold rather than searched, and it has its own process:',
+    anchor: 'winning commercial and fleet accounts',
+    href: '/towing-jobs/commercial-towing-accounts',
+  },
+  'direct-calls': {
+    lead: 'For what to actually configure, and what to count afterwards, see',
+    anchor: 'the cash-call playbook',
+    href: '/towing-jobs/more-direct-towing-calls',
+  },
+  'motor-club': {
+    lead: 'Weighing whether network dispatch earns its place on your board?',
+    anchor: 'We go through the trade-offs in detail',
+    href: '/towing-jobs/motor-club-towing',
+  },
+  'load-boards': {
+    lead: 'Paying a third party for calls is a different question again:',
+    anchor: 'whether bought towing leads are worth it',
+    href: '/towing-jobs/paid-towing-leads',
+  },
+};
 
 export default function TowingJobsPage() {
   const navigate = useNavigate();
@@ -218,6 +249,25 @@ export default function TowingJobsPage() {
             <Fragment key={section.id}>
               <SectionBlock section={section} />
 
+              {/* Hand-off to the supporting page that takes this channel
+                  further. Lives here rather than in the content file because
+                  section detail[] renders as plain text and cannot carry a
+                  link (towingShared.tsx:112-116). */}
+              {CLUSTER_LINKS[section.id] && (
+                <p className="font-sans text-stone leading-relaxed border-l-4 border-lime pl-4">
+                  {CLUSTER_LINKS[section.id].lead}{' '}
+                  <a
+                    href={CLUSTER_LINKS[section.id].href}
+                    onClick={go(CLUSTER_LINKS[section.id].href)}
+                    id={`pillar-to-${CLUSTER_LINKS[section.id].href.split('/').pop()}`}
+                    className="font-bold text-ink underline hover:text-lime focus-ring"
+                  >
+                    {CLUSTER_LINKS[section.id].anchor}
+                  </a>
+                  .
+                </p>
+              )}
+
               {/* The ladder belongs directly under the measurement answer —
                   the prose makes the argument, the table shows the gap. */}
               {section.id === 'measurement' && (
@@ -268,6 +318,55 @@ export default function TowingJobsPage() {
           {TOWING_JOBS.sources.length > 0 && <SourceList sources={TOWING_JOBS.sources} />}
         </div>
       </div>
+
+      {/* The hub block. This page stays the parent: it compares the channels in
+          breadth, and each card hands off to the page that takes one of them
+          further. Driven by TOWING_JOBS_CLUSTER so a new guide appears here the
+          moment it is added, rather than needing a second edit that gets
+          forgotten. */}
+      <section className="bg-paper border-y-1.5 border-ink px-6 md:px-12 py-14">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="font-display font-extrabold text-2xl md:text-3xl text-ink tracking-tight">
+            Go deeper on one channel
+          </h2>
+          <p className="font-sans text-stone leading-relaxed mt-3">
+            This page compares the six sources of towing work side by side. Each guide below takes
+            one of them and covers what to actually do — who to approach, what to configure, and
+            what to measure afterwards.
+          </p>
+
+          <ul className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+            {TOWING_JOBS_CLUSTER.map((c) => {
+              const href = `${TOWING_JOBS_PATH}/${c.slug}`;
+              return (
+                <li key={c.slug}>
+                  <a
+                    href={href}
+                    onClick={go(href)}
+                    id={`towing-jobs-hub-${c.slug}`}
+                    aria-label={`Read the guide: ${c.h1}`}
+                    className="group h-full flex flex-col border-1.5 border-ink rounded-xl bg-cream p-5 shadow-hard hover:shadow-hard-hover hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all focus-ring"
+                  >
+                    <span className="font-display font-extrabold text-lg text-ink leading-snug">
+                      {c.h1}
+                    </span>
+                    <span className="block flex-1 font-sans text-stone text-sm leading-relaxed mt-2">
+                      {c.description}
+                    </span>
+                    <span className="flex items-center gap-1.5 font-mono text-[11px] font-bold uppercase text-ink mt-4 pt-3 border-t border-ink/10">
+                      Read the guide
+                      <ArrowRight
+                        className="w-3.5 h-3.5 shrink-0 transition-transform group-hover:translate-x-0.5"
+                        aria-hidden="true"
+                      />
+                    </span>
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </section>
 
       <FaqSection
         heading="Getting more towing work, answered"

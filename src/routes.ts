@@ -20,6 +20,7 @@
 import { CASE_STUDIES, AUDIT_FAQS, QUOTE_FAQS } from './data';
 import { TOWING_PILLAR, TOWING_STATES, TOWING_UPDATED } from './content/towing';
 import { TOWING_JOBS } from './content/towingJobs';
+import { TOWING_JOBS_CLUSTER } from './content/towingJobsCluster';
 import type { Faq } from './types';
 
 export const SITE_ORIGIN = 'https://optimizeindex.com';
@@ -315,11 +316,57 @@ const towingRoutes: RouteMeta[] = [
         { name: 'Towing Jobs', path: TOWING_JOBS_PATH },
       ]),
       faqPage(TOWING_JOBS.faqs),
+      // The parent-child relationship, stated in structured data rather than
+      // left for a crawler to infer from URL nesting alone. Same pattern the
+      // Proudly Serving hub uses for the state pages. Truthful: an ordered
+      // list of guides that genuinely exist and are linked from this page.
+      {
+        '@type': 'ItemList',
+        name: 'Guides to each source of towing work',
+        itemListElement: TOWING_JOBS_CLUSTER.map((c, i) => ({
+          '@type': 'ListItem',
+          position: i + 1,
+          name: c.h1,
+          url: `${SITE_ORIGIN}${TOWING_JOBS_PATH}/${c.slug}`,
+        })),
+      },
       // Deliberately no JobPosting: there are no real openings behind this
       // page, and marking up jobs that do not exist would be both a Google
       // policy violation and the exact fabrication this vertical refuses.
     ],
   },
+  /*
+    Supporting pages beneath /towing-jobs.
+
+    Article rather than towingService: these are informational guides, and the
+    service offering they support is described on /towing-companies. No
+    JobPosting anywhere in this cluster — there are no real vacancies behind it.
+  */
+  ...TOWING_JOBS_CLUSTER.map((c) => ({
+    path: `${TOWING_JOBS_PATH}/${c.slug}`,
+    title: c.title,
+    description: c.description,
+    priority: 0.7,
+    jsonLd: [
+      {
+        '@type': 'Article',
+        headline: c.h1,
+        description: c.description,
+        inLanguage: 'en-US',
+        dateModified: TOWING_UPDATED,
+        author: { '@id': `${SITE_ORIGIN}/#organization` },
+        publisher: { '@id': `${SITE_ORIGIN}/#organization` },
+        mainEntityOfPage: `${SITE_ORIGIN}${TOWING_JOBS_PATH}/${c.slug}`,
+      },
+      breadcrumb([
+        { name: 'Home', path: '/' },
+        { name: 'Towing Companies', path: TOWING_BASE },
+        { name: 'Towing Jobs', path: TOWING_JOBS_PATH },
+        { name: c.h1, path: `${TOWING_JOBS_PATH}/${c.slug}` },
+      ]),
+      faqPage(c.faqs),
+    ],
+  })),
   ...TOWING_STATES.map((s) => ({
     path: `${TOWING_BASE}/${s.slug}`,
     // titleOverride is set only where the page targets a comparison query and

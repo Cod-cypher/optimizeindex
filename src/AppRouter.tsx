@@ -21,8 +21,10 @@ import App from './App';
 import TowingPillarPage from './pages/TowingPillarPage';
 import TowingStatePage from './pages/TowingStatePage';
 import TowingJobsPage from './pages/TowingJobsPage';
+import TowingJobsChildPage from './pages/TowingJobsChildPage';
 import ProudlyServingPage from './pages/ProudlyServingPage';
 import { getTowingState } from './content/towing';
+import { getTowingJobsChild } from './content/towingJobsCluster';
 import { TOWING_BASE, PROUDLY_SERVING, TOWING_JOBS_PATH } from './routes';
 import type { PublicProposal } from '../shared/proposalTypes';
 
@@ -81,6 +83,12 @@ export default function AppRouter() {
   const towingPath = location.pathname.replace(/\/+$/, '') || '/';
   if (towingPath === PROUDLY_SERVING) return <ProudlyServingPage />;
   if (towingPath === TOWING_JOBS_PATH) return <TowingJobsPage />;
+  if (towingPath.startsWith(`${TOWING_JOBS_PATH}/`)) {
+    const child = getTowingJobsChild(towingPath.slice(TOWING_JOBS_PATH.length + 1));
+    // An unknown slug falls through to App's not-found view, which the server
+    // has already answered with a real 404 status.
+    if (child) return <TowingJobsChildPage child={child} />;
+  }
   if (towingPath === TOWING_BASE) return <TowingPillarPage />;
   if (towingPath.startsWith(`${TOWING_BASE}/`)) {
     const state = getTowingState(towingPath.slice(TOWING_BASE.length + 1));
