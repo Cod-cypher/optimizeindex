@@ -18,7 +18,7 @@ import {
   TOWING_UPDATED,
   type TowingState,
 } from '../content/towing';
-import { TOWING_BASE } from '../routes';
+import { TOWING_BASE, TOWING_JOBS_PATH } from '../routes';
 import {
   AuditLink,
   CallLink,
@@ -320,6 +320,15 @@ export default function TowingStatePage({ state }: { state: TowingState }) {
               className="font-bold text-ink underline hover:text-lime focus-ring"
             >
               towing company marketing
+            </a>
+            , and{' '}
+            <a
+              href={TOWING_JOBS_PATH}
+              onClick={go(TOWING_JOBS_PATH)}
+              id="state-towing-jobs-link"
+              className="font-bold text-ink underline hover:text-lime focus-ring"
+            >
+              where towing work comes from
             </a>
             .
           </p>

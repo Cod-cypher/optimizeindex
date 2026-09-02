@@ -17,7 +17,7 @@ import {
   SERVICE_LABELS,
   DEMAND_LABELS,
 } from '../content/towing';
-import { PROUDLY_SERVING, TOWING_BASE } from '../routes';
+import { PROUDLY_SERVING, TOWING_BASE, TOWING_JOBS_PATH } from '../routes';
 import {
   AuditLink,
   CallLink,
@@ -105,6 +105,29 @@ export default function TowingPillarPage() {
               }
             />
           ))}
+
+          {/* Bridge into /towing-jobs. The direct-calls section above answers
+              the "change the mix" question in summary; that page is the long
+              version, organised by where the work originates rather than by
+              what we do about it. Placed in the component because section
+              detail[] renders as plain text and cannot carry a link. */}
+          <p className="font-sans text-stone leading-relaxed border-l-4 border-lime pl-4">
+            Working out which part of your board to grow first?{' '}
+            <a
+              href={TOWING_JOBS_PATH}
+              onClick={(e) => {
+                e.preventDefault();
+                navigate(TOWING_JOBS_PATH);
+                window.scrollTo({ top: 0 });
+              }}
+              id="pillar-towing-jobs-link"
+              className="font-bold text-ink underline hover:text-lime focus-ring"
+            >
+              Where towing jobs come from
+            </a>{' '}
+            breaks down all six channels — motor club, rotation, property, fleet, transport and
+            direct — and who sets the rate on each.
+          </p>
 
           {TOWING_PILLAR.sources && TOWING_PILLAR.sources.length > 0 && (
             <SourceList sources={TOWING_PILLAR.sources} />

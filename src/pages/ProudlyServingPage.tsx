@@ -19,7 +19,7 @@ import { MapPin, ArrowRight } from 'lucide-react';
 import SiteNav from '../components/SiteNav';
 import SiteFooter from '../components/SiteFooter';
 import { TOWING_STATES } from '../content/towing';
-import { TOWING_BASE } from '../routes';
+import { TOWING_BASE, TOWING_JOBS_PATH } from '../routes';
 import { AuditLink, CallLink } from './towingShared';
 
 export default function ProudlyServingPage() {
@@ -75,6 +75,18 @@ export default function ProudlyServingPage() {
               Towing economics genuinely differ by state — who sets your rates, how your trucks are
               classified, where the freight runs, and whether winter or storm season drives the
               peak. Each page covers what changes, and what an AI agency should be measuring there.
+            </p>
+            <p className="font-sans text-stone leading-relaxed mt-3 max-w-3xl">
+              Not sure visibility is your constraint yet? Start with{' '}
+              <a
+                href={TOWING_JOBS_PATH}
+                onClick={go(TOWING_JOBS_PATH)}
+                id="proudly-serving-towing-jobs-link"
+                className="font-bold text-ink underline hover:text-lime focus-ring"
+              >
+                the six channels towing work arrives through
+              </a>
+              , and which of them you actually price yourself.
             </p>
 
             <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-10">

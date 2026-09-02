@@ -19,6 +19,7 @@
 
 import { CASE_STUDIES, AUDIT_FAQS, QUOTE_FAQS } from './data';
 import { TOWING_PILLAR, TOWING_STATES, TOWING_UPDATED } from './content/towing';
+import { TOWING_JOBS } from './content/towingJobs';
 import type { Faq } from './types';
 
 export const SITE_ORIGIN = 'https://optimizeindex.com';
@@ -196,6 +197,22 @@ export const TOWING_BASE = '/towing-companies';
 export const PROUDLY_SERVING = '/proudly-serving';
 
 /**
+ * "Towing jobs" — the operator's other question.
+ *
+ * Every other page in this vertical targets agency-hiring intent. This one
+ * targets the query an operator types before they have decided they want an
+ * agency at all: where the work comes from and how to get more of it.
+ *
+ * Named _PATH because src/content/towingJobs.ts already exports TOWING_JOBS as
+ * the page's content object, which this file imports for faqPage().
+ *
+ * Top-level rather than nested under TOWING_BASE: the URL matches the query,
+ * and a single segment joins the reserved set in server/proposals/slug.ts
+ * automatically. The breadcrumb still places it under the pillar.
+ */
+export const TOWING_JOBS_PATH = '/towing-jobs';
+
+/**
  * `Service` narrowed by audience and, on the state pages, by area.
  *
  * areaServed is how this site expresses geographic relevance at all: there is
@@ -280,6 +297,27 @@ const towingRoutes: RouteMeta[] = [
         { name: 'Towing Companies', path: TOWING_BASE },
       ]),
       faqPage(TOWING_PILLAR.faqs),
+    ],
+  },
+  {
+    path: TOWING_JOBS_PATH,
+    title: 'How to Get More Towing Jobs | OptimizeIndex',
+    description:
+      'Where towing jobs come from — motor club, rotation, private property, fleet and direct calls — and how to shift the mix toward work you price yourself.',
+    priority: 0.8,
+    jsonLd: [
+      towingService(),
+      // Nested under the pillar even though the URL is top-level: the page is
+      // part of that topic, and the trail is what tells Google so.
+      breadcrumb([
+        { name: 'Home', path: '/' },
+        { name: 'Towing Companies', path: TOWING_BASE },
+        { name: 'Towing Jobs', path: TOWING_JOBS_PATH },
+      ]),
+      faqPage(TOWING_JOBS.faqs),
+      // Deliberately no JobPosting: there are no real openings behind this
+      // page, and marking up jobs that do not exist would be both a Google
+      // policy violation and the exact fabrication this vertical refuses.
     ],
   },
   ...TOWING_STATES.map((s) => ({

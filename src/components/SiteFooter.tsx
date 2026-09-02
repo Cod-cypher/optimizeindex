@@ -12,7 +12,7 @@ import { Shield } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Logo from './Logo';
 import { GOALS } from '../data';
-import { PROUDLY_SERVING, TOWING_BASE } from '../routes';
+import { PROUDLY_SERVING, TOWING_BASE, TOWING_JOBS_PATH } from '../routes';
 
 // The first two point at the services page rather than straight into the audit
 // form. Every entry here used to dead-end at /audit, which meant a column
@@ -98,6 +98,16 @@ export default function SiteFooter() {
             <li>
               <a href={TOWING_BASE} onClick={go(TOWING_BASE)} className={linkClass}>
                 Towing Companies
+              </a>
+            </li>
+            <li>
+              <a
+                href={TOWING_JOBS_PATH}
+                onClick={go(TOWING_JOBS_PATH)}
+                id="footer-towing-jobs"
+                className={linkClass}
+              >
+                Getting More Tow Work
               </a>
             </li>
           </ul>

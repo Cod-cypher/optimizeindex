@@ -28,7 +28,7 @@ import {
   robotsAllows,
   type ScanContext,
 } from '../server/audit/checks';
-import { ROUTES, SITE_ORIGIN, TOWING_BASE, CONTACT_PHONE } from '../src/routes';
+import { ROUTES, SITE_ORIGIN, TOWING_BASE, TOWING_JOBS_PATH, CONTACT_PHONE } from '../src/routes';
 import { isReservedSlug } from '../server/proposals/slug';
 
 const DIST = path.join(process.cwd(), 'dist', 'client');
@@ -345,8 +345,15 @@ function jaccard(a: Set<string>, b: Set<string>): number {
 }
 
 async function checkTowing() {
+  // /towing-jobs is included explicitly. It is part of this vertical but sits
+  // at the root rather than under TOWING_BASE, so a path-prefix filter alone
+  // would let it escape every guardrail below — including the similarity pool,
+  // which is the one that matters most for a page this close in topic.
   const towingRoutes = ROUTES.filter(
-    (r) => r.path === TOWING_BASE || r.path.startsWith(`${TOWING_BASE}/`),
+    (r) =>
+      r.path === TOWING_BASE ||
+      r.path.startsWith(`${TOWING_BASE}/`) ||
+      r.path === TOWING_JOBS_PATH,
   );
   if (towingRoutes.length === 0) return;
 
@@ -392,7 +399,10 @@ async function checkTowing() {
     // Every state page targets a comparison query, so every state page owes
     // the reader an evaluation framework. A page that names the query and then
     // only sells is the thing this whole approach is trying not to be.
-    const isState = route.path !== TOWING_BASE;
+    // Was `route.path !== TOWING_BASE`, which meant "not the pillar, therefore
+    // a state page". That stopped being true once /towing-jobs joined the pool,
+    // so the two things it was standing in for are now named separately.
+    const isState = route.path.startsWith(`${TOWING_BASE}/`);
     const hasGuide = /How to Choose an AI Agency for a Towing Company in /.test(html);
     if (isState) check(hasGuide, `${label} has no buyer's-guide section`);
 
@@ -420,7 +430,11 @@ async function checkTowing() {
     // the page promises the searcher one thing and delivers another.
     const h1 = $('h1').text().replace(/\s+/g, ' ').trim();
     const titleLead = (route.title || '').split('|')[0].trim();
-    if (isState) {
+    // Every page that targets its H1 as the query owes the searcher the same
+    // words it promised in the SERP. The pillar is exempt because its H1 and
+    // title are independent by design — see the comment in TowingPillarPage.
+    const requiresH1Match = isState || route.path === TOWING_JOBS_PATH;
+    if (requiresH1Match) {
       check(
         h1 === titleLead,
         `${label} h1 "${h1}" does not match title lead "${titleLead}"`,
