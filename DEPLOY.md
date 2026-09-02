@@ -35,6 +35,14 @@ localhost (faster, and lets you firewall port 5432 later):
 cat > .env << 'EOF'
 DATABASE_URL="postgresql://myappuser:strongpassword@localhost:5432/optimizeindex?schema=public"
 SESSION_SECRET="paste-the-output-of-the-command-below"
+
+# Outbound mail for lead notifications. See the note below.
+SMTP_HOST="mail.optimizeindex.com"
+SMTP_PORT="465"
+SMTP_SECURE="true"
+SMTP_USER="ali@optimizeindex.com"
+SMTP_PASS="the-mailbox-password"
+MAIL_FROM="leads@optimizeindex.com"
 EOF
 ```
 
@@ -48,6 +56,37 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 
 Rotating this value signs every admin out — that is how you force a logout
 everywhere.
+
+### Lead notification mail
+
+Leads are emailed through our own SMTP server. If `SMTP_HOST`, `SMTP_USER`,
+`SMTP_PASS` and `MAIL_FROM` are not all set, the server falls back to
+FormSubmit, which needs a one-time activation click per recipient address and
+is easy to miss — so check the boot log after starting:
+
+```
+[Mail] SMTP active: ali@optimizeindex.com@mail.optimizeindex.com:465 from leads@... -> ali@..., contact@...
+```
+
+If it instead says `SMTP NOT configured`, the environment did not load. Note
+that `.env` is gitignored, so these values do **not** arrive with `git pull` —
+they have to exist on the server.
+
+`SMTP_SECURE` is optional and defaults to true on port 465 (implicit TLS),
+false on 587 (STARTTLS). `MAIL_FROM` must be a mailbox the server is permitted
+to send as, or mail is rejected or filed as spam.
+
+Verify credentials without submitting a form — this connects and
+authenticates but sends nothing:
+
+```bash
+npm run mail:test
+npm run mail:test -- --send   # also delivers one test message
+```
+
+Recipients are set in `server.ts` (`LEAD_NOTIFY_OVERRIDES`): the towing
+assessment form goes to ali@ and contact@, everything else to the default
+inbox.
 
 Build and prepare the database client:
 

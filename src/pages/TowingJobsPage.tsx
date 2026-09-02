@@ -15,6 +15,7 @@
 import { Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
 import FaqSection from '../components/FaqSection';
+import TowingJobsLeadForm from '../components/towing/TowingJobsLeadForm';
 import { TOWING_JOBS, JOB_SOURCE_LABELS } from '../content/towingJobs';
 import { TOWING_STATES, TOWING_UPDATED } from '../content/towing';
 import { TOWING_BASE, PROUDLY_SERVING } from '../routes';
@@ -41,7 +42,11 @@ export default function TowingJobsPage() {
       {/* Hero */}
       <section className="bg-cream border-b-1.5 border-ink px-6 md:px-12 py-16 md:py-20 relative overflow-hidden">
         <div className="absolute inset-0 opacity-5 pointer-events-none bg-[linear-gradient(to_right,#000_1px,transparent_1px),linear-gradient(to_bottom,#000_1px,transparent_1px)] bg-[size:24px_24px]" />
-        <div className="max-w-4xl mx-auto relative z-10">
+        {/* Two columns on desktop, stacked on mobile. Widened from max-w-4xl
+            only here, to give the assessment form a real column beside the
+            copy; every section below keeps the original measure. */}
+        <div className="max-w-6xl mx-auto relative z-10 grid grid-cols-1 lg:grid-cols-[1.1fr_minmax(0,25rem)] gap-10 lg:gap-14 lg:items-start">
+          <div>
           {/* Breadcrumb, mirroring the BreadcrumbList JSON-LD in routes.ts. */}
           <nav aria-label="Breadcrumb" className="font-mono text-[11px] uppercase tracking-widest">
             <ol className="flex flex-wrap items-center gap-2 text-stone">
@@ -78,6 +83,11 @@ export default function TowingJobsPage() {
             {TOWING_JOBS.lede}
           </p>
 
+          <p className="font-sans text-base text-ink font-bold leading-relaxed mt-5 border-l-4 border-lime pl-4">
+            Find out where your next towing opportunities could come from — and whether more direct
+            customer calls are realistic in your market.
+          </p>
+
           <div className="flex flex-wrap gap-3 mt-8">
             <CallLink label="Call us" source="jobs-hero" />
             <AuditLink label="Free visibility check" />
@@ -86,13 +96,19 @@ export default function TowingJobsPage() {
           <div className="mt-6">
             <UpdatedStamp date={TOWING_UPDATED} />
           </div>
+          </div>
+
+          {/* The form is an addition to the hero, not a replacement for the
+              tap-to-call above it — towing is still a phone business, and the
+              existing CTAs keep their position. */}
+          <div>
+            <TowingJobsLeadForm />
+          </div>
         </div>
       </section>
 
-      {/* The mix. This is the page's argument in one screen: six channels, and
-          the "who sets the rate" and "what we can affect" columns doing the
-          work. The impact column is the one that has to stay honest — three of
-          the six are None, and saying so is what makes the High mean anything. */}
+      {/* The mix. This is the page's argument in one screen: six channels, with
+          the "who controls the rate" column doing the work. */}
       <section className="bg-forest border-b-1.5 border-ink px-6 md:px-12 py-14">
         <div className="max-w-4xl mx-auto">
           <h2 className="font-display font-extrabold text-2xl md:text-3xl text-cream tracking-tight leading-tight">
@@ -100,21 +116,21 @@ export default function TowingJobsPage() {
           </h2>
           <p className="font-sans text-cream/80 leading-relaxed mt-4 text-base md:text-lg">
             You apply for some, you sell your way into others, and exactly one is won by being
-            found. Only that last one leaves the price entirely in your hands — which is why it is
-            also the only one an agency can honestly claim to affect.
+            found. Direct consumer work, the first row below, is where the operator generally has the
+            most control over pricing, and the only one an agency can honestly claim to affect.
           </p>
 
           {/* Wide table, so it scrolls inside its own container rather than
               forcing the page body sideways on a phone. */}
           <div className="mt-8 overflow-x-auto border-1.5 border-cream/25 rounded-xl">
-            <table className="w-full min-w-[46rem] border-collapse text-left">
+            <table className="w-full min-w-[34rem] border-collapse text-left">
               <caption className="sr-only">
-                The six sources of towing work, how an operator gets into each, who controls the
-                rate, and how much OptimizeIndex can affect it.
+                The six sources of towing work, how an operator gets into each, and who controls
+                the rate.
               </caption>
               <thead>
                 <tr className="bg-ink/40">
-                  {['Source', 'How you get in', 'Who controls the rate', 'Our impact'].map((h) => (
+                  {['Source', 'How you get in', 'Who controls the rate'].map((h) => (
                     <th
                       key={h}
                       scope="col"
@@ -139,20 +155,6 @@ export default function TowingJobsPage() {
                     </td>
                     <td className="font-sans text-cream/75 text-sm px-4 py-4 align-top">
                       {entry.whoSetsRate}
-                    </td>
-                    <td className="px-4 py-4 align-top">
-                      <span
-                        className={`inline-block font-mono text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full border ${
-                          entry.ourImpact === 'High'
-                            ? 'bg-lime text-ink border-lime'
-                            : 'bg-transparent text-cream/60 border-cream/30'
-                        }`}
-                      >
-                        {entry.ourImpact}
-                      </span>
-                      <span className="block font-sans text-cream/60 text-xs leading-relaxed mt-2">
-                        {entry.ourImpactNote}
-                      </span>
                     </td>
                   </tr>
                 ))}

@@ -16,7 +16,8 @@
     "verify": "tsx scripts/verify-seo.ts",
     "indexnow": "tsx scripts/indexnow.ts",
     "images": "tsx scripts/optimize-images.ts",
-    "shots": "node scripts/shoot-audit.mjs"
+    "shots": "node scripts/shoot-audit.mjs",
+    "mail:test": "tsx scripts/mail-test.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
@@ -30,6 +31,7 @@
     "express": "^4.21.2",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
+    "nodemailer": "^9.1.1",
     "prisma": "^6.19.3",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
@@ -39,6 +41,7 @@
   "devDependencies": {
     "@types/express": "^4.17.21",
     "@types/node": "^22.14.0",
+    "@types/nodemailer": "^8.0.1",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.5",
     "autoprefixer": "^10.4.21",
@@ -49,7 +52,7 @@
     "vite": "^6.2.3"
   },
   "optionalDependencies": {
-    "sharp": "^0.35.3",
-    "puppeteer-core": "^25.8.0"
+    "puppeteer-core": "^25.8.0",
+    "sharp": "^0.35.3"
   }
 }

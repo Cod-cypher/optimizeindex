@@ -30,11 +30,118 @@ import {
   toPublicProposal,
 } from "./server/proposals/public";
 import { proposalAdminRoutes, UPLOAD_DIR } from "./server/proposals/routes";
-import { REDIRECTS } from "./src/routes";
+import nodemailer from "nodemailer";
+import { REDIRECTS, SITE_ORIGIN } from "./src/routes";
 import type { AuditCategory, AuditResult } from "./shared/auditTypes";
 
-// All inbound lead notifications are delivered to this inbox.
+// Default inbox for inbound lead notifications.
 const LEAD_NOTIFY_EMAIL = "vickigms1@gmail.com";
+
+// Lead types with their own notification recipients. The towing assessment
+// form on /towing-jobs goes straight to the team addresses.
+//
+// When SMTP is not configured the FormSubmit fallback applies, and that
+// requires a one-time activation per recipient address before it will deliver.
+const LEAD_NOTIFY_OVERRIDES: Record<string, string[]> = {
+  towing_jobs_assessment: ["ali@optimizeindex.com", "contact@optimizeindex.com"],
+};
+
+function notifyRecipients(type: string): string[] {
+  return LEAD_NOTIFY_OVERRIDES[type] ?? [LEAD_NOTIFY_EMAIL];
+}
+
+/* =========================================================================
+   Outbound mail
+
+   Primary path is SMTP through our own mail server. FormSubmit stays as a
+   fallback only for when SMTP is not configured, so a machine without
+   credentials still forwards leads somewhere rather than dropping them.
+
+   Everything is read from the environment. No host, address or credential is
+   hard-coded, and the password is never logged.
+   ========================================================================= */
+
+const SMTP_HOST = process.env.SMTP_HOST || "";
+const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
+const SMTP_USER = process.env.SMTP_USER || "";
+const SMTP_PASS = process.env.SMTP_PASS || "";
+/**
+ * Implicit TLS (port 465) versus STARTTLS (587).
+ *
+ * Defaults from the port rather than requiring the operator to know the
+ * distinction, which is the setting most often got wrong.
+ */
+const SMTP_SECURE = process.env.SMTP_SECURE
+  ? process.env.SMTP_SECURE === "true"
+  : SMTP_PORT === 465;
+/** Envelope sender. Must be a mailbox the server is allowed to send as. */
+const MAIL_FROM = process.env.MAIL_FROM || SMTP_USER;
+
+const smtpConfigured = Boolean(SMTP_HOST && SMTP_USER && SMTP_PASS && MAIL_FROM);
+
+let mailer: nodemailer.Transporter | null = null;
+
+function transport(): nodemailer.Transporter {
+  if (!mailer) {
+    mailer = nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: SMTP_PORT,
+      secure: SMTP_SECURE,
+      auth: { user: SMTP_USER, pass: SMTP_PASS },
+    });
+  }
+  return mailer;
+}
+
+/** Verifies the SMTP connection and credentials without sending anything. */
+export async function verifyMailer(): Promise<void> {
+  if (!smtpConfigured) throw new Error("SMTP is not configured");
+  await transport().verify();
+}
+
+/** The lead as a readable table, since that is what the old _template did. */
+function leadHtml(lead: LeadInput): string {
+  const esc = (v: unknown) =>
+    String(v ?? "").replace(/[&<>"]/g, (c) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] as string,
+    );
+  const rows = Object.entries(lead)
+    .filter(([, v]) => String(v ?? "").trim() !== "")
+    .map(
+      ([k, v]) =>
+        `<tr><td style="padding:6px 12px;border:1px solid #ddd;font-weight:600;vertical-align:top">${esc(k)}</td>` +
+        `<td style="padding:6px 12px;border:1px solid #ddd;white-space:pre-wrap">${esc(v)}</td></tr>`,
+    )
+    .join("");
+  return `<table style="border-collapse:collapse;font-family:system-ui,sans-serif;font-size:14px">${rows}</table>`;
+}
+
+function leadText(lead: LeadInput): string {
+  return Object.entries(lead)
+    .filter(([, v]) => String(v ?? "").trim() !== "")
+    .map(([k, v]) => `${k}: ${v}`)
+    .join("\n");
+}
+
+async function emailLeadViaSmtp(lead: LeadInput, recipients: string[]): Promise<boolean> {
+  const subject = `New OptimizeIndex lead: ${lead.company || lead.name || lead.website || "unknown"} (${lead.type})`;
+  try {
+    await transport().sendMail({
+      from: MAIL_FROM,
+      to: recipients.join(", "),
+      // So hitting reply in the inbox answers the prospect, not our own server.
+      replyTo: lead.email || undefined,
+      subject,
+      text: leadText(lead),
+      html: leadHtml(lead),
+    });
+    console.log(`[Leads] Emailed ${lead.type} lead to ${recipients.join(", ")} via SMTP`);
+    return true;
+  } catch (err) {
+    console.error("[Leads] SMTP send failed:", err);
+    return false;
+  }
+}
 // File-based backup so a lead is never lost even if the database is down.
 const LEADS_BACKUP_FILE = path.join(process.cwd(), "leads.json");
 
@@ -58,29 +165,74 @@ function backupLeadToFile(lead: LeadInput) {
 }
 
 // Forward the lead to email via FormSubmit (https://formsubmit.co).
-// NOTE: the very first submission triggers a one-time activation email to
-// LEAD_NOTIFY_EMAIL — click the link inside it once and all future leads
-// arrive automatically. Returns whether the forward succeeded.
+//
+// One request per recipient rather than a _cc, so each address is activated
+// and fails independently — a bounce on one does not silently drop the other.
+// Returns true if at least one address was reached, which is what the caller
+// records as emailForwarded.
 async function emailLead(lead: LeadInput): Promise<boolean> {
-  try {
-    const res = await fetch(`https://formsubmit.co/ajax/${LEAD_NOTIFY_EMAIL}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({
-        _subject: `New OptimizeIndex lead: ${lead.company || lead.website || "unknown"} (${lead.type})`,
-        _template: "table",
-        ...lead,
-      }),
-    });
-    if (!res.ok) {
-      console.error(`[Leads] Email forward failed with status ${res.status}`);
-      return false;
-    }
-    return true;
-  } catch (err) {
-    console.error("[Leads] Email forward failed:", err);
-    return false;
-  }
+  const recipients = notifyRecipients(String(lead.type || ""));
+
+  // Own mail server first. One message with every recipient on it, rather than
+  // one message each, so a reply thread stays a single conversation.
+  if (smtpConfigured) return emailLeadViaSmtp(lead, recipients);
+
+  console.warn(
+    "[Leads] SMTP not configured (SMTP_HOST/SMTP_USER/SMTP_PASS/MAIL_FROM) - falling back to FormSubmit",
+  );
+
+  const results = await Promise.all(
+    recipients.map(async (to) => {
+      try {
+        const res = await fetch(`https://formsubmit.co/ajax/${to}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            // Required. FormSubmit rejects any request without an Origin or
+            // Referer with {"success":"false"} and the misleading message
+            // "open this page through a web server" - which is what a
+            // server-to-server fetch looks like to it, since Node sends
+            // neither header. Without these, no lead email is ever delivered.
+            Origin: SITE_ORIGIN,
+            Referer: `${SITE_ORIGIN}/`,
+          },
+          body: JSON.stringify({
+            _subject: `New OptimizeIndex lead: ${lead.company || lead.name || lead.website || "unknown"} (${lead.type})`,
+            _template: "table",
+            ...lead,
+          }),
+        });
+
+        if (!res.ok) {
+          console.error(`[Leads] Email forward to ${to} failed with status ${res.status}`);
+          return false;
+        }
+
+        // FormSubmit answers 200 even when it refuses to send - an unactivated
+        // address, a missing Origin, a rate limit. Checking res.ok alone
+        // recorded those as delivered, so leads were silently never emailed.
+        // The body is the only place the real outcome appears.
+        const body = (await res.json().catch(() => null)) as
+          | { success?: string | boolean; message?: string }
+          | null;
+        const sent = body !== null && String(body.success) === "true";
+
+        if (!sent) {
+          console.error(
+            `[Leads] Email forward to ${to} was refused by FormSubmit: ${body?.message ?? "no message"}`,
+          );
+          return false;
+        }
+        return true;
+      } catch (err) {
+        console.error(`[Leads] Email forward to ${to} failed:`, err);
+        return false;
+      }
+    }),
+  );
+
+  return results.some(Boolean);
 }
 
 function clientIp(req: express.Request): string {
@@ -1038,6 +1190,14 @@ async function startServer() {
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`[OptimizeIndex Server] Server running on http://localhost:${PORT}`);
+    // Say which mail path is live at boot. The failure this prevents is a
+    // process started before .env was filled in: it silently falls back to
+    // FormSubmit and nobody finds out until a lead does not arrive.
+    console.log(
+      smtpConfigured
+        ? `[Mail] SMTP active: ${SMTP_USER}@${SMTP_HOST}:${SMTP_PORT} from ${MAIL_FROM} -> ${Object.values(LEAD_NOTIFY_OVERRIDES).flat().join(", ")}`
+        : "[Mail] SMTP NOT configured - leads fall back to FormSubmit",
+    );
   });
 }
 

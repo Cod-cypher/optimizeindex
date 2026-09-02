@@ -49,6 +49,18 @@
     animation: portal-blink 1.3s ease-in-out infinite;
   }
 
+  /* Step transition for the /towing-jobs assessment form. Short and slight:
+     the form swaps one step for another in place, and the movement is only
+     there to signal that something changed. Disabled under reduced-motion
+     below, where the content still swaps instantly. */
+  @keyframes oi-step-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .oi-step {
+    animation: oi-step-in 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
   /* Reduced motion: hold a static, clearly-filled bar rather than removing the
      indicator entirely — the point is to show that something is happening. */
   @media (prefers-reduced-motion: reduce) {
@@ -450,7 +462,8 @@ html, body {
    starburst — both animate indefinitely, which WCAG 2.2.2 asks to be stoppable. */
 @media (prefers-reduced-motion: reduce) {
   .animate-marquee,
-  .animate-marquee-fast {
+  .animate-marquee-fast,
+  .oi-step {
     animation: none;
   }
   *, *::before, *::after {

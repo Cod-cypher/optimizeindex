@@ -78,15 +78,6 @@ export interface JobSourceEntry {
   howIn: string;
   /** Short form of howIn, for the comparison table. */
   entry: string;
-  /**
-   * What OptimizeIndex can actually affect on this channel.
-   *
-   * The most important field on this page and the one most open to being
-   * quietly inflated. "Low" means low: we are not going to imply indirect
-   * influence over a rate schedule published by a state agency.
-   */
-  ourImpact: 'High' | 'Indirect' | 'Low' | 'None';
-  ourImpactNote: string;
 }
 
 /** One row of the "which problem do you actually have" block. */
@@ -154,17 +145,25 @@ const WA_RTTO: SourceRef = {
 
 /* -------------------------------------------------------------------------
    The mix
+
+   direct-consumer leads the table deliberately: it is the row the page is
+   really about, and the one an operator is most able to act on.
 ------------------------------------------------------------------------- */
 
 const MIX: JobSourceEntry[] = [
+  {
+    source: 'direct-consumer',
+    what: 'Someone with a problem searches, finds you, and calls you — no network, no rotation, no broker between you and the customer.',
+    whoSetsRate: 'You do.',
+    howIn: 'Be findable and credible at the moment of the breakdown. This is the one that is a visibility problem.',
+    entry: 'Be found and chosen',
+  },
   {
     source: 'motor-club',
     what: 'Calls dispatched to you by a roadside assistance network or motor club — AAA, Agero, Quest, Honk, Urgently and similar — after a member contacts them rather than you.',
     whoSetsRate: 'The network, through the schedule you accept to join it.',
     howIn: 'Apply to each network and meet its coverage, response-time and insurance terms.',
     entry: 'Apply and qualify',
-    ourImpact: 'None',
-    ourImpactNote: 'Marketing has no bearing on whether a network accepts you or what it pays.',
   },
   {
     source: 'police-rotation',
@@ -172,8 +171,6 @@ const MIX: JobSourceEntry[] = [
     whoSetsRate: 'The agency, typically through a published schedule or agreement.',
     howIn: 'Apply to the agency, then hold the equipment, storage, insurance and background standards it requires.',
     entry: 'Apply and meet agency requirements',
-    ourImpact: 'None',
-    ourImpactNote: 'Admission is a compliance decision made by the agency. Nobody markets their way onto a rotation list.',
   },
   {
     source: 'private-property',
@@ -181,8 +178,6 @@ const MIX: JobSourceEntry[] = [
     whoSetsRate: 'Often capped or constrained by state or local rules; otherwise agreed with the property.',
     howIn: 'Sign the property, then carry the signage, notice and record-keeping your state requires.',
     entry: 'Contract with the property',
-    ourImpact: 'Low',
-    ourImpactNote: 'Won by direct sales. A credible web presence can support the pitch, but it does not make it.',
   },
   {
     source: 'fleet-commercial',
@@ -190,8 +185,6 @@ const MIX: JobSourceEntry[] = [
     whoSetsRate: 'Negotiated between you and the account.',
     howIn: 'Sold. A dispatcher or fleet manager evaluates you before the first call.',
     entry: 'Sell capability and coverage',
-    ourImpact: 'Indirect',
-    ourImpactNote: 'The relationship is sold, not searched. But buyers do research vendors, so equipment and coverage pages can support a decision already in motion.',
   },
   {
     source: 'dealer-transport',
@@ -199,17 +192,6 @@ const MIX: JobSourceEntry[] = [
     whoSetsRate: 'The poster or broker, bid on an open marketplace.',
     howIn: 'Join the load boards the segment uses and bid, or build direct dealer relationships.',
     entry: 'Relationships and/or marketplaces',
-    ourImpact: 'Low',
-    ourImpactNote: 'You do not get found on a load board — you log in and bid. Direct dealer relationships are sold.',
-  },
-  {
-    source: 'direct-consumer',
-    what: 'Someone with a problem searches, finds you, and calls you — no network, no rotation, no broker between you and the customer.',
-    whoSetsRate: 'You do.',
-    howIn: 'Be findable and credible at the moment of the breakdown. This is the one that is a visibility problem.',
-    entry: 'Be found and chosen',
-    ourImpact: 'High',
-    ourImpactNote: 'The only channel where being easier to find and easier to trust changes whether you are considered at all.',
   },
 ];
 
