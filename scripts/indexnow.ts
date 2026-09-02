@@ -19,6 +19,10 @@
  * is not a failed deploy.
  */
 
+// Loads .env, so INDEXNOW_KEY can live there rather than being passed inline
+// on every run. DEPLOY.md documents putting it in .env; without this the script
+// silently reported "not set" and did nothing, which looked like success.
+import 'dotenv/config';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { ROUTES, SITE_ORIGIN } from '../src/routes';
