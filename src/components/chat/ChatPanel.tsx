@@ -151,9 +151,21 @@ export default function ChatPanel({
           <h2 id="oi-chat-title" className="font-display font-extrabold text-base text-ink leading-tight">
             {live && session?.agentLabel ? `${session.agentLabel} is here` : CHAT_PANEL_TITLE}
           </h2>
-          <p className="font-mono text-[10px] uppercase tracking-wider text-stone mt-0.5">
-            {live ? 'Live · a person is typing' : 'Assistant · not a person'}
-          </p>
+          {/*
+            Only rendered once a human has joined. The assistant deliberately
+            has no subtitle: the "Assistant · not a person" line that used to
+            sit here was removed on request.
+
+            Note for anyone restoring it — this was the widget's only standing
+            bot disclosure, and the greeting does not carry one either. What
+            remains is that the assistant says so plainly when asked, which is
+            enforced by CHAT_RULES in src/content/chat.ts and must stay.
+          */}
+          {live && (
+            <p className="font-mono text-[10px] uppercase tracking-wider text-stone mt-0.5">
+              Live · a person is typing
+            </p>
+          )}
         </div>
         <button
           type="button"
