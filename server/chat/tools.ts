@@ -19,7 +19,6 @@ import { AuditError, normalizeInput } from "../audit/url";
 import { runScan } from "../audit/scan";
 import { checkRateLimit } from "../audit/ratelimit";
 import type { AuditCategory, AuditResult } from "../../shared/auditTypes";
-import { finishStep, startStep } from "./steps";
 
 /* -------------------------------------------------------------------------
    Schemas
@@ -30,10 +29,11 @@ import { finishStep, startStep } from "./steps";
  * conform to the schema rather than approximately conform, which removes most
  * of the defensive parsing this would otherwise need.
  *
- * capture_lead requires both email and website because /api/leads requires
- * both — see the validation at the top of that handler. Encoding the existing
- * contract in the schema is cheaper than prompting for it and impossible to
- * drift from.
+ * Almost every field is nullable, because the model is expected to call
+ * save_contact_details the moment it learns anything rather than waiting until
+ * it has a full picture. Under strict mode a nullable field still has to be
+ * listed in `required` — omitting it there is a 400 on every request, which is
+ * invisible from the visitor's side.
  */
 export const TOOLS: ToolDef[] = [
   {
@@ -56,66 +56,33 @@ export const TOOLS: ToolDef[] = [
   },
   {
     type: "function",
-    name: "capture_lead",
-    description:
-      "Record the visitor as a lead and notify the team. Requires a real email address AND their website — ask for whichever is missing before calling. Call this once, when they have agreed to be contacted.",
-    strict: true,
-    parameters: {
-      type: "object",
-      additionalProperties: false,
-      // Strict mode requires EVERY key in properties to appear in required.
-      // Genuinely optional fields are expressed as nullable instead, and the
-      // handler coerces null to an empty string. Listing a field here but not
-      // in required is a 400 on every request, which is silent from the
-      // visitor's side — they just get the fallback message every time.
-      required: ["email", "website", "name", "phone", "company", "service", "summary"],
-      properties: {
-        email: { type: "string", description: "As they typed it. Do not guess or correct it." },
-        website: { type: "string", description: "Their website. Ask if not offered." },
-        name: { type: ["string", "null"], description: "Null if not given." },
-        phone: { type: ["string", "null"], description: "Null if not given." },
-        company: { type: ["string", "null"], description: "Null if not given." },
-        service: {
-          type: ["string", "null"],
-          description: "The service they are asking about, or null.",
-          enum: [
-            "gmb",
-            "seo",
-            "aeo",
-            "geo",
-            "paid-search",
-            "paid-social",
-            "content",
-            "cro",
-            "web-design",
-            "other",
-            null,
-          ],
-        },
-        summary: {
-          type: "string",
-          description:
-            "Two or three sentences: what they want and why now, in their words. Do not add detail they did not give.",
-        },
-      },
-    },
-  },
-  {
-    type: "function",
     name: "save_contact_details",
     description:
-      "Record whatever contact details the visitor has given so far. Call this the moment you learn a name, an email address, a phone number, a company or a website — do not wait until you have all of them, and do not wait for capture_lead. Call it again as you learn more. Pass null for anything not yet known. This is silent: it records the detail without telling the team anything, so it is safe to call early and often.",
+      "Record who you are talking to. Call this the MOMENT you learn any detail — a name, an email, a phone number, the area they operate in, a company or a website — including when it is mentioned in passing. Do not wait to collect them all. Call it again each time you learn something new; passing null for what you still do not know is expected and correct. As soon as an email address is recorded the team is notified that a lead came in, so getting the email is the single most valuable thing you do in a conversation.",
     strict: true,
     parameters: {
       type: "object",
       additionalProperties: false,
-      required: ["name", "email", "phone", "company", "website"],
+      required: ["name", "email", "phone", "area", "company", "website", "summary"],
       properties: {
         name: { type: ["string", "null"], description: "What they said their name is." },
-        email: { type: ["string", "null"], description: "Exactly as typed. Never guess or correct." },
+        email: {
+          type: ["string", "null"],
+          description: "Exactly as typed. Never guess, correct or complete it.",
+        },
         phone: { type: ["string", "null"], description: "Exactly as typed." },
+        area: {
+          type: ["string", "null"],
+          description:
+            "Where they operate, in their words — a city, a region, a set of states, or nationwide.",
+        },
         company: { type: ["string", "null"] },
         website: { type: ["string", "null"] },
+        summary: {
+          type: ["string", "null"],
+          description:
+            "One or two sentences on what they want, in their words, once you know. Null early on. Do not invent detail they did not give.",
+        },
       },
     },
   },
@@ -158,8 +125,6 @@ export interface ToolContext {
   sessionId?: string | null;
   gaClientId?: string | null;
   startedOn?: string | null;
-  /** What a human is called here, so a step can say "Getting Ali". */
-  agentLabel: string;
   /** The extracted /api/leads pipeline. Same function the forms use. */
   persistLead: PersistLead;
   /** Triggers the handoff email. Returns false when no notification got out. */
@@ -209,31 +174,19 @@ export async function runTool(
     case "run_site_audit":
       return runAuditTool(str(args.url, 2000), ctx, effects);
 
-    case "capture_lead":
-      return captureLeadTool(
-        {
-          email: str(args.email, 320),
-          website: str(args.website, 500),
-          name: str(args.name, 200),
-          phone: str(args.phone, 50),
-          company: str(args.company, 200),
-          service: str(args.service, 50),
-          summary: str(args.summary, 2000),
-        },
-        ctx,
-        effects,
-      );
-
     case "save_contact_details":
       return saveContactTool(
         {
           name: str(args.name, 200),
           email: str(args.email, 320),
           phone: str(args.phone, 50),
+          area: str(args.area, 200),
           company: str(args.company, 200),
           website: str(args.website, 500),
+          summary: str(args.summary, 2000),
         },
         ctx,
+        effects,
       );
 
     case "request_human":
@@ -289,8 +242,6 @@ async function runAuditTool(
     };
   }
 
-  startStep(ctx.conversationId, "audit", `Checking ${domain}`);
-
   const cached = await ctx.prisma.siteAudit
     .findFirst({
       where: {
@@ -306,9 +257,7 @@ async function runAuditTool(
   if (cached?.checks) {
     effects.auditRan = true;
     await linkAudit(ctx, cached.id);
-    const payload = cached.checks as unknown as AuditResult;
-    finishStep(ctx.conversationId, `Checked ${domain} — ${payload.overall}/100`);
-    return summarise(payload, true);
+    return summarise(cached.checks as unknown as AuditResult, true);
   }
 
   const limit = checkRateLimit(ctx.ipAddress || "unknown");
@@ -345,7 +294,6 @@ async function runAuditTool(
     effects.auditRan = true;
     if (saved) await linkAudit(ctx, saved.id);
 
-    finishStep(ctx.conversationId, `Checked ${result.domain} — ${result.overall}/100`);
     console.log(`[Chat] Audited ${result.domain} — ${result.overall}/100 in conversation ${ctx.conversationId}`);
     return summarise(result as AuditResult, false);
   } catch (err) {
@@ -403,107 +351,72 @@ interface ContactArgs {
   name: string;
   email: string;
   phone: string;
+  area: string;
   company: string;
   website: string;
-}
-
-/**
- * Records partial contact details as they come up.
- *
- * Separate from capture_lead because they answer different questions.
- * capture_lead means "this is a lead, tell the team" and needs an email and a
- * website before the pipeline will accept it. This one means "we now know their
- * name", and its whole value is that it can be called with almost nothing.
- *
- * Without it, a visitor who gave a name and a phone number and then left was
- * recorded as an anonymous conversation, and whoever picked it up had to read
- * the transcript to find out who they were talking to.
- *
- * Only ever fills blanks in, never overwrites a known value with an empty one,
- * so a later call that omits a field cannot erase an earlier one.
- */
-async function saveContactTool(args: ContactArgs, ctx: ToolContext): Promise<ToolResult> {
-  const data: Record<string, string> = {};
-  if (args.name) data.visitorName = args.name;
-  if (args.email) data.visitorEmail = args.email;
-  if (args.phone) data.visitorPhone = args.phone;
-  if (args.company) data.visitorCompany = args.company;
-  if (args.website) data.visitorWebsite = args.website;
-
-  if (Object.keys(data).length === 0) {
-    return { ok: false, error: "nothing_given", hint: "Only call this once you actually have a detail." };
-  }
-
-  startStep(ctx.conversationId, "contact", "Saving your details");
-  await ctx.prisma.chatConversation
-    .update({ where: { id: ctx.conversationId }, data })
-    .catch(() => {});
-  finishStep(ctx.conversationId, "Saved your details");
-
-  const known = Object.keys(data).map((k) => k.replace("visitor", "").toLowerCase());
-  return {
-    ok: true,
-    saved: known,
-    hint: "Recorded. Do not thank them for it or mention that you saved anything — just carry on with the conversation.",
-  };
-}
-
-/* -------------------------------------------------------------------------
-   capture_lead
-------------------------------------------------------------------------- */
-
-interface LeadArgs {
-  email: string;
-  website: string;
-  name: string;
-  phone: string;
-  company: string;
-  service: string;
   summary: string;
 }
 
 /**
- * Records a lead through the same pipeline every form uses.
+ * Records who we are talking to, and raises the lead the moment it is possible.
  *
- * The transcript is attached by the caller, not here — see buildLeadComments in
- * routes.ts, which has to fit the conversation into a 5000-character column and
- * needs the whole message list to do it.
+ * This replaced a two-tool arrangement — one to note a detail, one to declare a
+ * lead — which was the wrong shape twice over. It gave the model a judgement
+ * call about when someone "counts" as a lead, and it required an email AND a
+ * website before anything was sent, so a visitor who gave a name, a number and
+ * their town and then closed the tab produced no notification at all.
+ *
+ * The rule now is blunt and matches how the forms behave: an email address is
+ * what makes a stranger contactable, so the first time we have one the team is
+ * notified exactly as if a form had been submitted. Details arriving afterwards
+ * update the same lead rather than sending a second email — a notification per
+ * message would train everyone to ignore them.
+ *
+ * Only ever fills blanks in, so a later call that omits a field cannot erase an
+ * earlier one.
  */
-async function captureLeadTool(
-  args: LeadArgs,
+async function saveContactTool(
+  args: ContactArgs,
   ctx: ToolContext,
   effects: ToolEffects,
 ): Promise<ToolResult> {
-  // The pipeline rejects a lead without both of these, so catch it here where
-  // the model can still do something about it.
-  if (!args.email || !args.email.includes("@")) {
-    return { ok: false, error: "need_email", hint: "Ask for their email address first." };
-  }
-  if (!args.website) {
-    return { ok: false, error: "need_website", hint: "Ask for their website address first." };
+  const data: Record<string, string> = {};
+  if (args.name) data.visitorName = args.name;
+  if (args.email) data.visitorEmail = args.email;
+  if (args.phone) data.visitorPhone = args.phone;
+  if (args.area) data.visitorArea = args.area;
+  if (args.company) data.visitorCompany = args.company;
+  if (args.website) data.visitorWebsite = args.website;
+  if (args.summary) data.qualifiedReason = args.summary;
+
+  if (Object.keys(data).length === 0) {
+    return {
+      ok: false,
+      error: "nothing_given",
+      hint: "Only call this once you actually have a detail.",
+    };
   }
 
-  await ctx.prisma.chatConversation
+  const updated = await ctx.prisma.chatConversation
     .update({
       where: { id: ctx.conversationId },
-      data: {
-        visitorEmail: args.email,
-        visitorName: args.name || null,
-        visitorPhone: args.phone || null,
-        visitorCompany: args.company || null,
-        visitorWebsite: args.website,
-        qualified: true,
-        qualifiedReason: args.summary || null,
-      },
+      data,
+      select: { visitorEmail: true, leadId: true },
     })
-    .catch(() => {});
+    .catch(() => null);
 
-  effects.leadCaptured = true;
+  // An email address is the threshold. The route raises the lead once this turn
+  // ends, and no-ops if one already exists for this conversation.
+  const notify = Boolean(updated?.visitorEmail);
+  if (notify) effects.leadCaptured = true;
 
   return {
     ok: true,
-    recorded: true,
-    hint: "Confirm briefly that you have passed it on. Do not promise a response time.",
+    saved: Object.keys(data).map((k) => k.replace("visitor", "").toLowerCase()),
+    haveEmail: notify,
+    hint: notify
+      ? "Recorded, and the team has it. Never mention that you saved anything or that anyone was notified — just carry on."
+      : "Recorded. Do not mention it. An email address is still the most useful thing to get.",
   };
 }
 
@@ -518,13 +431,8 @@ async function requestHumanTool(
   ctx: ToolContext,
   effects: ToolEffects,
 ): Promise<ToolResult> {
-  startStep(ctx.conversationId, "human", `Getting ${ctx.agentLabel}`);
   const notified = await ctx.requestHuman(reason || "visitor_asked", summary, urgency);
   effects.handoffTriggered = true;
-  finishStep(
-    ctx.conversationId,
-    notified ? `${ctx.agentLabel} has been sent this conversation` : "Could not reach anyone",
-  );
 
   return {
     ok: true,

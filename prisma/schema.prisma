@@ -468,6 +468,11 @@ model ChatConversation {
   visitorPhone    String?
   visitorCompany  String?
   visitorWebsite  String?
+  /// Where they operate, in their own words — "Austin", "north Georgia",
+  /// "nationwide". Free text rather than a structured location because that is
+  /// how people answer the question, and a service area is the fact that
+  /// decides whether we can help before anything else about them matters.
+  visitorArea     String?
   qualified       Boolean @default(false)
   qualifiedReason String?
 

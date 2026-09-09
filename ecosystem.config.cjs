@@ -11,7 +11,6 @@ module.exports = {
       //   - the audit rate limiter      (server/audit/ratelimit.ts)
       //   - the chat rate limiters      (server/chat/ratelimit.ts)
       //   - the monthly OpenAI token counter cache (server/chat/store.ts)
-      //   - the in-flight turn steps      (server/chat/steps.ts)
       // The first two only cost CPU if they are loosened. The chat two cost
       // money. Before raising this, move the token counter and the handoff
       // email debounce into Postgres, then the three limiters behind one

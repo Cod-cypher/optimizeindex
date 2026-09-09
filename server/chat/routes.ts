@@ -33,7 +33,6 @@ import type {
   ChatStartResponse,
 } from "../../shared/chatTypes";
 import { asksForHuman, runTurn } from "./engine";
-import { beginTurn, endTurn, getSteps } from "./steps";
 import { hasApiKey } from "./openai";
 import { checkChatRate } from "./ratelimit";
 import {
@@ -162,8 +161,7 @@ export function chatRoutes(prisma: PrismaClient, deps: ChatDeps): express.Router
           handoffReason: reason,
           agentTokenId: jti,
           agentTokenExpiresAt: expiresAt,
-          agentLabel: agentLabel(),
-        },
+          },
       })
       .catch(() => null);
     if (!updated) return false;
@@ -198,10 +196,39 @@ export function chatRoutes(prisma: PrismaClient, deps: ChatDeps): express.Router
     return sent;
   }
 
-  /** Captures the lead once the model has confirmed it, with the transcript attached. */
+  /**
+   * Raises the lead, with the transcript attached.
+   *
+   * Fires as soon as there is an email address — the same threshold a form has,
+   * because an email is what makes a stranger contactable and everything else
+   * is enrichment. Waiting for a website meant a visitor who gave their name,
+   * number and town and then closed the tab produced no notification at all.
+   *
+   * Runs at most once per conversation, guarded by leadId. Details that arrive
+   * later update the existing Lead row instead, so nobody gets a second email
+   * for the same person — a notification per message is how notifications stop
+   * being read.
+   */
   async function captureLead(conversation: ChatConversation): Promise<void> {
     const fresh = await getConversation(prisma, conversation.id);
-    if (!fresh || !fresh.visitorEmail || !fresh.visitorWebsite || fresh.leadId) return;
+    if (!fresh || !fresh.visitorEmail) return;
+
+    // Already raised. Top the row up with anything learned since and stop.
+    if (fresh.leadId) {
+      await prisma.lead
+        .update({
+          where: { id: fresh.leadId },
+          data: {
+            ...(fresh.visitorName ? { name: fresh.visitorName } : {}),
+            ...(fresh.visitorPhone ? { phone: fresh.visitorPhone } : {}),
+            ...(fresh.visitorCompany ? { company: fresh.visitorCompany } : {}),
+            ...(fresh.visitorWebsite ? { website: fresh.visitorWebsite } : {}),
+            ...(fresh.auditId ? { auditId: fresh.auditId } : {}),
+          },
+        })
+        .catch(() => {});
+      return;
+    }
 
     const messages = await fullTranscript(prisma, fresh.id);
     const audit = fresh.auditId
@@ -218,13 +245,21 @@ export function chatRoutes(prisma: PrismaClient, deps: ChatDeps): express.Router
       email: fresh.visitorEmail,
       phone: fresh.visitorPhone || "",
       company: fresh.visitorCompany || "",
-      website: fresh.visitorWebsite,
+      // /api/leads rejects a lead with no website, and a chat lead often has
+      // not given one yet. Same approach the towing assessment form takes: say
+      // plainly that it was not collected rather than invent a value or lose
+      // the lead over a field the visitor was never asked for.
+      website: fresh.visitorWebsite || "Not collected — site chat",
       competitor: "",
       goal: "",
       service: "",
-      budget: "",
+      // No budget field in a chat, so this carries the service area instead —
+      // the fact that most often decides whether we can help at all.
+      budget: fresh.visitorArea ? `Area: ${fresh.visitorArea}` : "",
       comments: buildLeadComments({
         summary: fresh.qualifiedReason || "Captured in the site chat.",
+        area: fresh.visitorArea,
+        phone: fresh.visitorPhone,
         startedOn: fresh.startedOn,
         joinLink: link,
         auditLine: audit ? `Audit: ${audit.domain} scored ${audit.overallScore ?? "n/a"}/100` : null,
@@ -401,18 +436,11 @@ export function chatRoutes(prisma: PrismaClient, deps: ChatDeps): express.Router
         sessionId: conversation.sessionId,
         gaClientId: conversation.gaClientId,
         startedOn: conversation.startedOn,
-        agentLabel: agentLabel(),
         persistLead: deps.persistLead,
         requestHuman: (reason, summary, _urgency) => triggerHandoff(id, reason, summary),
       };
 
-      beginTurn(id);
-      let turn;
-      try {
-        turn = await runTurn(prisma, conversation, ctx);
-      } finally {
-        endTurn(id);
-      }
+      const turn = await runTurn(prisma, conversation, ctx);
 
       // When the regex already answered, a second "I'll get Ali" from the model
       // would be a duplicate. Only append if it said something else.
@@ -466,7 +494,6 @@ export function chatRoutes(prisma: PrismaClient, deps: ChatDeps): express.Router
     }
 
     const messages = await messagesAfter(prisma, id, after);
-    const steps = getSteps(id);
     res.json({
       messages,
       cursor: cursorOf(messages, after),
@@ -474,7 +501,6 @@ export function chatRoutes(prisma: PrismaClient, deps: ChatDeps): express.Router
       ...(conversation.agentLabel && conversation.agentJoinedAt
         ? { agentLabel: conversation.agentLabel }
         : {}),
-      ...(steps.length ? { steps } : {}),
     } satisfies ChatPollResponse);
   });
 
@@ -587,6 +613,7 @@ export function chatAgentRoutes(prisma: PrismaClient, deps: ChatDeps): express.R
       visitorPhone: conversation.visitorPhone || undefined,
       visitorCompany: conversation.visitorCompany || undefined,
       visitorWebsite: conversation.visitorWebsite || undefined,
+      visitorArea: conversation.visitorArea || undefined,
       startedOn: conversation.startedOn || undefined,
       handoffReason: conversation.handoffReason || undefined,
       auditScore: audit?.overallScore ?? null,

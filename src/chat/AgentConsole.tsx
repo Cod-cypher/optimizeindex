@@ -225,6 +225,7 @@ export default function AgentConsole({ context }: Props) {
               href={`tel:${view.visitorPhone.replace(/[^\d+]/g, '')}`}
             />
           )}
+          {view?.visitorArea && <Fact label="Area" value={view.visitorArea} />}
           {view?.visitorWebsite && <Fact label="Site" value={view.visitorWebsite} />}
           {view?.startedOn && <Fact label="Page" value={view.startedOn} />}
           {view?.auditDomain && (

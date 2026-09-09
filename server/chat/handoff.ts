@@ -103,6 +103,7 @@ export function handoffFacts(
     Email: conversation.visitorEmail || "",
     Phone: conversation.visitorPhone || "",
     Company: conversation.visitorCompany || "",
+    Area: conversation.visitorArea || "",
     Website: conversation.visitorWebsite || "",
     Page: conversation.startedOn || "",
     Audit: audit ? `${audit.domain} scored ${audit.score ?? "n/a"}/100` : "",
@@ -180,14 +181,22 @@ export function emailTranscript(rows: ChatMessage[]): string {
  */
 export function buildLeadComments(input: {
   summary: string;
+  area?: string | null;
+  phone?: string | null;
   startedOn: string | null;
   joinLink: string | null;
   auditLine: string | null;
   messages: ChatMessage[];
 }): string {
+  // Area and phone are repeated at the top even though they have their own
+  // columns, because the notification email renders this field as the body and
+  // whoever reads it on a phone should not have to scroll a transcript to find
+  // out where the person is or how to ring them.
   const header = [
     input.summary,
     "",
+    input.phone ? `Phone: ${input.phone}` : "",
+    input.area ? `Area: ${input.area}` : "",
     input.joinLink ? `Live chat: ${input.joinLink}` : "",
     input.startedOn ? `Started on ${input.startedOn}` : "",
     input.auditLine || "",

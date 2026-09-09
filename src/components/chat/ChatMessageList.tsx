@@ -10,17 +10,16 @@
  */
 
 import { useEffect, useRef } from 'react';
-import type { ChatMessageDTO, TurnStep } from '../../../shared/chatTypes';
+import type { ChatMessageDTO } from '../../../shared/chatTypes';
 import MessageText from './MessageText';
 
 interface Props {
   messages: ChatMessageDTO[];
   starting: boolean;
   awaitingReply: boolean;
-  steps: TurnStep[];
 }
 
-export default function ChatMessageList({ messages, starting, awaitingReply, steps }: Props) {
+export default function ChatMessageList({ messages, starting, awaitingReply }: Props) {
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -55,89 +54,10 @@ export default function ChatMessageList({ messages, starting, awaitingReply, ste
         )}
       </div>
 
-      {awaitingReply &&
-        (steps.length > 0 ? <StepStack steps={steps} /> : <TypingIndicator />)}
+      {awaitingReply && <TypingIndicator />}
 
       <div ref={endRef} />
     </div>
-  );
-}
-
-/**
- * What the assistant is doing, while it does it.
- *
- * A turn that runs the site audit takes fifteen seconds. Three dots for fifteen
- * seconds reads as a hang — the visitor sends the message again, or leaves.
- * Naming the work turns the same wait into something that looks deliberate, and
- * the finished lines double as a receipt: "Checked example.com — 62/100" is
- * itself a useful thing to have seen.
- *
- * Announced once as a whole via role="status" rather than per line, so a screen
- * reader is told what is happening without narrating every tick.
- */
-function StepStack({ steps }: { steps: TurnStep[] }) {
-  return (
-    <div className="flex justify-start">
-      <div className="max-w-[85%] px-3 py-2.5 border-1.5 border-ink bg-paper rounded-2xl rounded-bl-sm">
-        <span className="sr-only" role="status">
-          {steps[steps.length - 1]?.label}
-        </span>
-
-        <ol className="space-y-1.5" aria-hidden="true">
-          {steps.map((step) => (
-            <li
-              key={step.id}
-              className={[
-                'flex items-center gap-2 font-mono text-[11px] leading-tight transition-opacity',
-                step.state === 'done' ? 'text-stone' : 'text-ink',
-              ].join(' ')}
-            >
-              <StepMark state={step.state} />
-              <span className={step.state === 'done' ? 'line-through decoration-stone/40' : ''}>
-                {step.label}
-              </span>
-            </li>
-          ))}
-        </ol>
-      </div>
-    </div>
-  );
-}
-
-/**
- * A spinner while running, a tick once done.
- *
- * The spin is a CSS animation, so index.css's global prefers-reduced-motion
- * block flattens it to a static ring automatically — the shape still reads as
- * "in progress" next to a ticked line above it, so nothing is lost.
- */
-function StepMark({ state }: { state: TurnStep['state'] }) {
-  if (state === 'done') {
-    return (
-      <svg viewBox="0 0 16 16" className="h-3 w-3 shrink-0 text-ink" fill="none" aria-hidden="true">
-        <circle cx="8" cy="8" r="7" className="fill-lime stroke-ink" strokeWidth="1.5" />
-        <path
-          d="M4.5 8.2l2.2 2.2 4.8-4.8"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    );
-  }
-
-  return (
-    <svg viewBox="0 0 16 16" className="h-3 w-3 shrink-0 animate-spin text-ink" aria-hidden="true">
-      <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.5" fill="none" opacity="0.2" />
-      <path
-        d="M8 1.5a6.5 6.5 0 0 1 6.5 6.5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        fill="none"
-      />
-    </svg>
   );
 }
 
