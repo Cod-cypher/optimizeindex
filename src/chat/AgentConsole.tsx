@@ -258,8 +258,18 @@ export default function AgentConsole({ context }: Props) {
   }
 
   return (
-    <div className="min-h-dvh flex flex-col bg-cream text-ink font-sans">
-      <header className="border-b-1.5 border-ink bg-paper px-4 py-3">
+    /*
+      h-dvh, not min-h-dvh.
+
+      With a minimum height the column grows to fit its content, so a long
+      transcript pushed the page past the viewport: the whole console scrolled,
+      the composer at the bottom disappeared below the fold, and <main>'s own
+      overflow-y-auto never engaged because it was never constrained. Pinning
+      the height to the viewport and hiding overflow on the shell is what makes
+      the middle section the only thing that scrolls.
+    */
+    <div className="h-dvh overflow-hidden flex flex-col bg-cream text-ink font-sans">
+      <header className="shrink-0 border-b-1.5 border-ink bg-paper px-4 py-3">
         <p className="font-mono text-[10px] uppercase tracking-wider text-stone">Live chat</p>
         <h1 className="font-display font-extrabold text-lg leading-tight">
           {view?.visitorName || view?.visitorCompany || 'A visitor'}
@@ -311,7 +321,7 @@ export default function AgentConsole({ context }: Props) {
         </p>
       )}
 
-      <main className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+      <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-4 space-y-3">
         {messages.map((m) =>
           m.kind === 'notice' ? (
             <p key={m.id} className="text-center font-mono text-[10px] uppercase tracking-wider text-stone py-1">
@@ -342,7 +352,7 @@ export default function AgentConsole({ context }: Props) {
         <div ref={endRef} />
       </main>
 
-      <footer className="border-t-1.5 border-ink bg-paper p-3">
+      <footer className="shrink-0 border-t-1.5 border-ink bg-paper p-3">
         {!joined ? (
           <>
             {/*

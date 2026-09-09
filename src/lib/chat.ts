@@ -133,8 +133,20 @@ export async function closeChat(id: string, token: string): Promise<void> {
    Polling
 ------------------------------------------------------------------------- */
 
-/** A hidden tab still checks, just rarely. See the note below. */
-const HIDDEN_MS = 30_000;
+/** A hidden tab with nothing happening. Cheap background heartbeat. */
+const HIDDEN_IDLE_MS = 30_000;
+
+/**
+ * A hidden tab while a person is actually typing to them.
+ *
+ * Browsers throttle timers in background tabs — roughly one per second, and
+ * after a few minutes hidden, closer to one per minute. There is no way to opt
+ * out of that from a page, so the interval we ask for is a floor and not a
+ * promise. Asking for five seconds rather than thirty is what makes the
+ * difference between "heard it a moment later" and "heard it when I came back
+ * to the tab", which is the complaint this exists to fix.
+ */
+const HIDDEN_LIVE_MS = 5_000;
 
 /**
  * How long to wait before the next poll.
@@ -161,7 +173,12 @@ export function pollInterval(state: {
     // Exponential, capped at a minute. Enough to ride out a deploy.
     return Math.min(60_000, 5_000 * 2 ** (state.errorStreak - 2));
   }
-  if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return HIDDEN_MS;
+  if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+    // A hidden tab in a live conversation is the case that matters most: a
+    // person is typing to someone who is looking at something else, and the
+    // whole point of the chime is to bring them back.
+    return state.status === 'LIVE' || state.awaitingReply ? HIDDEN_LIVE_MS : HIDDEN_IDLE_MS;
+  }
   if (state.status === 'LIVE' || state.awaitingReply) return 2_000;
   if (state.panelOpen) return 5_000;
   return 20_000;

@@ -57,7 +57,17 @@ export default function ChatWidget() {
   const [open, setOpen] = useState(false);
   const [session, setSession] = useState<ChatSession | null>(null);
   const [messages, setMessages] = useState<ChatMessageDTO[]>([]);
-  const [cursor, setCursor] = useState(0);
+  /**
+   * The poll cursor, in a ref rather than state.
+   *
+   * As state it was a dependency of the polling effect, so every message tore
+   * the timer down and started the wait again from zero. On a visible tab that
+   * is merely wasteful; on a hidden one, where the browser has already
+   * stretched the interval to conserve power, it is the difference between
+   * hearing a reply and not hearing it until you come back to the tab.
+   * Nothing renders from the cursor, so state was the wrong tool.
+   */
+  const cursorRef = useRef(0);
   const [unread, setUnread] = useState(0);
   const [starting, setStarting] = useState(false);
   const [awaitingReply, setAwaitingReply] = useState(false);
@@ -80,7 +90,7 @@ export default function ChatWidget() {
       if (incoming.length === 0) return;
 
       setMessages((prev) => mergeMessages(prev, incoming));
-      setCursor((prev) => (nextCursor > prev ? nextCursor : prev));
+      if (nextCursor > cursorRef.current) cursorRef.current = nextCursor;
 
       // Anything the visitor did not send themselves. Their own optimistic echo
       // is a VISITOR row and is filtered out here along with the real one.
@@ -130,7 +140,7 @@ export default function ChatWidget() {
           agentLabel: data.agentLabel,
         });
         setMessages(data.messages);
-        setCursor(data.cursor);
+        cursorRef.current = data.cursor;
         if (stored.wasOpen) setOpen(true);
         else setUnread(0);
       } catch {
@@ -154,7 +164,7 @@ export default function ChatWidget() {
 
     const tick = async () => {
       try {
-        const data = await pollChat(session.id, session.token, cursor);
+        const data = await pollChat(session.id, session.token, cursorRef.current);
         if (cancelled) return;
         errorStreak.current = 0;
 
@@ -200,7 +210,7 @@ export default function ChatWidget() {
       window.clearTimeout(timer);
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [session, cursor, open, awaitingReply]);
+  }, [session, open, awaitingReply, ingest]);
 
   // Mirror the unread count into the tab title, so a backgrounded tab shows
   // "(2) OptimizeIndex | …" without the widget being visible at all.
@@ -225,11 +235,11 @@ export default function ChatWidget() {
     writePersisted({
       id: session.id,
       token: session.token,
-      cursor,
+      cursor: cursorRef.current,
       openedAt: Date.now(),
       wasOpen: open,
     });
-  }, [session, cursor, open]);
+  }, [session, open]);
 
   /* --- open ------------------------------------------------------------ */
 
@@ -253,7 +263,7 @@ export default function ChatWidget() {
         notice: data.notice,
       });
       setMessages(data.messages);
-      setCursor(data.cursor);
+      cursorRef.current = data.cursor;
       trackEvent('chat_open', data.mode);
     } catch {
       // Falls back to the contact form, which posts to /api/leads and has its
