@@ -410,3 +410,133 @@ model SavedTemplate {
   @@index([createdAt])
   @@index([authorId])
 }
+
+/// Lifecycle of a chat conversation.
+///
+/// HANDOFF_PENDING is deliberately distinct from LIVE: the bot keeps answering
+/// while Ali's email sits unread, because a visitor who waits in silence leaves.
+/// LIVE mutes the bot — two voices answering one question is worse than a pause.
+enum ChatStatus {
+  ACTIVE
+  HANDOFF_PENDING
+  LIVE
+  CLOSED
+}
+
+enum ChatRole {
+  VISITOR
+  ASSISTANT
+  AGENT
+  SYSTEM
+}
+
+/// One conversation in the site's chat widget.
+///
+/// A row is written the moment the widget is opened, before any model call, so
+/// an abandoned "hi" costs one row and no money. The domains and questions
+/// people bring here are lead intelligence in their own right, the same
+/// reasoning that makes SiteAudit worth writing for visitors who never convert.
+///
+/// Named ChatConversation, never ChatSession: `Session` in this schema is the
+/// analytics visit model, and a second thing called a session in the same
+/// namespace is a bug waiting to be written.
+model ChatConversation {
+  id            String     @id @default(cuid())
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  lastMessageAt DateTime   @default(now())
+  status        ChatStatus @default(ACTIVE)
+
+  // Journey linkage, from src/lib/tracker.ts (oi_vid / oi_sid). Deliberately
+  // not foreign keys: the Visitor row may never exist if an ad blocker ate the
+  // analytics beacon, and a chat must not fail because of that.
+  visitorId  String?
+  sessionId  String?
+  gaClientId String?
+
+  startedOn String? // path the widget was opened on
+  referrer  String?
+  userAgent String?
+  ipAddress String?
+  country   String?
+
+  // What the assistant extracted during the conversation. Held here rather than
+  // on Lead because it is partial until capture_lead fires — a name with no
+  // email yet is not a lead, but it is worth keeping.
+  visitorName     String?
+  visitorEmail    String?
+  visitorPhone    String?
+  visitorCompany  String?
+  visitorWebsite  String?
+  qualified       Boolean @default(false)
+  qualifiedReason String?
+
+  // Human handoff
+  handoffRequestedAt DateTime?
+  handoffReason      String? // visitor_asked | qualified_lead | out_of_scope | complaint | pricing
+  handoffEmailSentAt DateTime?
+  agentJoinedAt      DateTime?
+  agentLabel         String?
+
+  /// Nonce embedded in the emailed join link. Nulling it revokes every
+  /// outstanding link for this conversation without rotating SESSION_SECRET
+  /// (which would also sign every admin out).
+  agentTokenId        String?   @unique
+  agentTokenExpiresAt DateTime?
+  agentFirstSeenAt    DateTime?
+  agentIpAddress      String?
+
+  /// Set when capture_lead fired. Lead is the pipeline record; this is the join
+  /// back to the transcript that produced it.
+  leadId String?
+  /// Set when run_site_audit fired, joining to the SiteAudit row.
+  auditId String?
+
+  closedAt     DateTime?
+  closedReason String?
+
+  // Cost accounting. Summed per calendar month against CHAT_MONTHLY_TOKEN_CAP,
+  // which is the backstop against a runaway bill.
+  promptTokens     Int @default(0)
+  completionTokens Int @default(0)
+  turnCount        Int @default(0)
+
+  messages ChatMessage[]
+
+  @@index([status, lastMessageAt])
+  @@index([visitorId])
+  @@index([createdAt])
+}
+
+/// One message in a conversation, from the visitor, the model, Ali, or the
+/// system ("Ali joined the conversation").
+model ChatMessage {
+  id             String           @id @default(cuid())
+  conversationId String
+  conversation   ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime         @default(now())
+
+  /// Polling cursor. GLOBAL and monotonic rather than per-conversation, because
+  /// a per-conversation counter is a read-modify-write and two writers race here
+  /// routinely — the model's reply lands while Ali is typing. Postgres owns the
+  /// sequence, so neither writer has to coordinate. Monotonic globally implies
+  /// monotonic within a conversation, which is all the cursor needs.
+  seq Int @unique @default(autoincrement())
+
+  role    ChatRole
+  content String
+  /// message | notice. A notice renders as centred grey text, not a bubble.
+  kind    String   @default("message")
+  /// What the bubble is labelled with — "Ali", "OptimizeIndex".
+  authorLabel String?
+
+  // Set on the assistant turn that triggered a tool. Kept for debugging what
+  // the model actually asked for when a lead looks wrong.
+  toolName String?
+  toolArgs Json?
+
+  /// Grounding and context rows the model sees but the visitor never does.
+  hidden Boolean @default(false)
+
+  @@index([conversationId, seq])
+}
