@@ -398,9 +398,9 @@ export const ROUTES: RouteMeta[] = [
   },
   {
     path: '/services',
-    title: 'SEO, GEO & Paid Search Services | OptimizeIndex',
+    title: 'AI Search & Growth Services | OptimizeIndex',
     description:
-      'Growth services across organic search, AI answer engines, paid media and conversion optimization — every engagement measured in revenue, not vanity metrics.',
+      'Get found by customers and by the AI assistants they ask — profile, content, website and conversion work, measured in revenue rather than vanity metrics.',
     priority: 0.9,
     jsonLd: [breadcrumb([{ name: 'Home', path: '/' }, { name: 'Services', path: '/services' }])],
   },
