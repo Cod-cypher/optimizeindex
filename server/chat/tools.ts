@@ -39,7 +39,7 @@ export const TOOLS: ToolDef[] = [
     type: "function",
     name: "run_site_audit",
     description:
-      "Run the free automated audit on a website and get its scores and worst findings. Ask the visitor's permission before calling this — it fetches their site. Only call it once per conversation unless they give a different address.",
+      "Run the free automated audit on a website and get its scores and worst findings. Ask the visitor's permission before calling this — it fetches their site. Only call it once per conversation unless they give a different address. This runs here and now and takes about fifteen seconds; do not describe it as taking 24 hours. The 24-hour turnaround mentioned on the site is the written fix plan a person sends afterwards, which is a separate thing.",
     strict: true,
     parameters: {
       type: "object",
