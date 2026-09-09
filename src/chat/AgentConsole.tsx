@@ -51,7 +51,19 @@ const QUICK_REPLIES = [
 export default function AgentConsole({ context }: Props) {
   const [view, setView] = useState<ChatAgentViewResponse | null>(null);
   const [messages, setMessages] = useState<ChatMessageDTO[]>([]);
-  const [cursor, setCursor] = useState(0);
+  /**
+   * The poll cursor, held in a ref rather than state.
+   *
+   * It was state, and the polling effect listed it as a dependency — so every
+   * message tore the effect down and built it back up, cancelling the pending
+   * timer and starting a fresh 2s wait. With messages arriving steadily that
+   * means the poll keeps getting pushed back, and since the poll IS the
+   * heartbeat the server uses to decide the agent is still here, a busy
+   * conversation was the one most at risk of being handed back to the
+   * assistant. Nothing re-renders on a cursor change, so a ref is the honest
+   * type for it.
+   */
+  const cursorRef = useRef(0);
   const [joined, setJoined] = useState(context.joined);
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
@@ -83,7 +95,7 @@ export default function AgentConsole({ context }: Props) {
     const data = (await res.json()) as ChatAgentViewResponse;
     setView(data);
     setMessages(data.messages);
-    setCursor(data.cursor);
+    cursorRef.current = data.cursor;
     setJoined(data.joined);
   }, [id]);
 
@@ -99,7 +111,7 @@ export default function AgentConsole({ context }: Props) {
 
     const tick = async () => {
       try {
-        const query = new URLSearchParams({ after: String(cursor) });
+        const query = new URLSearchParams({ after: String(cursorRef.current) });
         const res = await fetch(`/api/chat/agent/${encodeURIComponent(id)}/messages?${query}`, {
           credentials: 'same-origin',
         });
@@ -107,7 +119,7 @@ export default function AgentConsole({ context }: Props) {
           const data = (await res.json()) as { messages: ChatMessageDTO[]; cursor: number };
           if (!cancelled && data.messages.length > 0) {
             setMessages((prev) => mergeMessages(prev, data.messages));
-            setCursor(data.cursor);
+            cursorRef.current = data.cursor;
 
             // Only the visitor's own messages. The assistant's replies and the
             // agent's own echo are not things to be alerted about.
@@ -130,7 +142,7 @@ export default function AgentConsole({ context }: Props) {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [id, cursor]);
+  }, [id]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: 'end' });
@@ -205,11 +217,11 @@ export default function AgentConsole({ context }: Props) {
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, cursor }),
+        body: JSON.stringify({ text, cursor: cursorRef.current }),
       });
       const data = (await res.json()) as { messages: ChatMessageDTO[]; cursor: number };
       setMessages((prev) => mergeMessages(prev, data.messages || []));
-      if (data.cursor > cursor) setCursor(data.cursor);
+      if (data.cursor > cursorRef.current) cursorRef.current = data.cursor;
     } catch {
       setError('That did not send.');
     } finally {

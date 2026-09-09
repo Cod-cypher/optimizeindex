@@ -215,26 +215,23 @@ export const CHAT_CAP_REACHED =
 
 export const CHAT_CLOSED_NOTICE = 'This conversation has been closed.';
 
-/** Shown when a human joins, as a centred notice rather than a bubble. */
-export function chatAgentJoinedNotice(name: string): string {
-  return `${name} joined the conversation.`;
-}
-
-export function chatAgentLeftNotice(name: string): string {
-  return `${name} left. The assistant is answering again.`;
-}
-
 /**
- * Shown when a human stops responding rather than actually leaving — the tab
- * closed, the laptop slept, the phone lost signal.
+ * The label on every message from "our side", whoever actually wrote it.
  *
- * Worded so it does not read as being abandoned. From the visitor's side the
- * difference between "he left" and "he vanished" matters, and only one of them
- * is worth saying out loud.
+ * A human agent's messages carry this too. From the visitor's point of view
+ * they are talking to OptimizeIndex, and being told mid-conversation that the
+ * thing answering has quietly changed is information they cannot act on and did
+ * not ask for — it mostly reads as "you were being fobbed off until now".
+ *
+ * There used to be joined/left/stepped-away notices here. They were removed for
+ * the same reason: each one announced a transition the visitor has no use for,
+ * and together they made the seam between the assistant and a person the most
+ * visible thing in the transcript.
+ *
+ * What is NOT hidden: the assistant still says plainly that it is a bot when
+ * asked. Not flagging every handover is different from lying about what you are.
  */
-export function chatAgentDroppedNotice(name: string): string {
-  return `${name} stepped away. The assistant is answering again in the meantime.`;
-}
+export const CHAT_SIDE_LABEL = 'OptimizeIndex';
 
 /* -------------------------------------------------------------------------
    The audit tool

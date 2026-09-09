@@ -24,9 +24,7 @@ import {
   CHAT_HANDOFF_UNAVAILABLE,
   CHAT_OFFLINE_NOTICE,
   CHAT_SEND_FAILED,
-  chatAgentDroppedNotice,
-  chatAgentJoinedNotice,
-  chatAgentLeftNotice,
+  CHAT_SIDE_LABEL,
 } from "../../src/content/chat";
 import type {
   ChatAgentViewResponse,
@@ -401,7 +399,7 @@ export function chatRoutes(prisma: PrismaClient, deps: ChatDeps): express.Router
         conversationId: conversation.id,
         role: "ASSISTANT",
         content: CHAT_GREETING,
-        authorLabel: "OptimizeIndex",
+        authorLabel: CHAT_SIDE_LABEL,
       });
 
       const messages = [toMessageDTO(greeting)];
@@ -494,16 +492,23 @@ export function chatRoutes(prisma: PrismaClient, deps: ChatDeps): express.Router
       if (conversation.status === "LIVE" && !agentPresent(id)) {
         console.log(`[Chat] Agent gone from conversation ${id} - assistant resuming`);
         clearAgentSeen(id);
+
+        // Clearing handoffEmailSentAt is what lets the notification below
+        // through: triggerHandoff suppresses a second email inside a 15-minute
+        // window, and the agent almost certainly joined inside that window. The
+        // visitor is still here and still waiting, so this is exactly the case
+        // that debounce must not swallow.
         await prisma.chatConversation
-          .update({ where: { id }, data: { status: "ACTIVE", agentJoinedAt: null } })
+          .update({
+            where: { id },
+            data: { status: "ACTIVE", agentJoinedAt: null, handoffEmailSentAt: null },
+          })
           .catch(() => {});
-        await appendMessage(prisma, {
-          conversationId: id,
-          role: "SYSTEM",
-          content: chatAgentDroppedNotice(conversation.agentLabel || agentLabel()),
-          kind: "notice",
-        });
         conversation.status = "ACTIVE";
+
+        // No notice in the transcript. The visitor is not told a person
+        // arrived, so telling them one left would be announcing half a fact.
+        void triggerHandoff(id, "visitor_asked", `Still waiting — they sent: ${text.slice(0, 200)}`);
       }
 
       if (conversation.status === "LIVE") {
@@ -518,7 +523,7 @@ export function chatRoutes(prisma: PrismaClient, deps: ChatDeps): express.Router
           conversationId: id,
           role: "ASSISTANT",
           content: availability.notice || CHAT_CAP_REACHED,
-          authorLabel: "OptimizeIndex",
+          authorLabel: CHAT_SIDE_LABEL,
         });
         const messages = await messagesAfter(prisma, id, after);
         res.json({ messages, cursor: cursorOf(messages, after), status: conversation.status });
@@ -534,7 +539,7 @@ export function chatRoutes(prisma: PrismaClient, deps: ChatDeps): express.Router
           conversationId: id,
           role: "ASSISTANT",
           content: notified ? CHAT_HANDOFF_ACK : CHAT_HANDOFF_UNAVAILABLE,
-          authorLabel: "OptimizeIndex",
+          authorLabel: CHAT_SIDE_LABEL,
         });
         forcedHandoff = true;
       }
@@ -561,7 +566,7 @@ export function chatRoutes(prisma: PrismaClient, deps: ChatDeps): express.Router
           conversationId: id,
           role: "ASSISTANT",
           content: turn.text,
-          authorLabel: "OptimizeIndex",
+          authorLabel: CHAT_SIDE_LABEL,
         });
       }
 
@@ -763,12 +768,9 @@ export function chatAgentRoutes(prisma: PrismaClient, deps: ChatDeps): express.R
           data: { status: "LIVE", agentJoinedAt: new Date(), agentLabel: label },
         })
         .catch(() => {});
-      await appendMessage(prisma, {
-        conversationId: id,
-        role: "SYSTEM",
-        content: chatAgentJoinedNotice(label),
-        kind: "notice",
-      });
+      // Deliberately silent. Announcing "Ali joined" tells the visitor the
+      // thing answering has changed, which is not information they can act on
+      // and mostly reads as "you were being fobbed off until now".
     }
 
     const messages = await messagesAfter(prisma, id, Number(req.query.after) || 0);
@@ -796,8 +798,11 @@ export function chatAgentRoutes(prisma: PrismaClient, deps: ChatDeps): express.R
     await appendMessage(prisma, {
       conversationId: id,
       role: "AGENT",
+      // The agency, not the person. The role stays AGENT so the transcript,
+      // the admin inbox and the link-rendering rules can still tell who wrote
+      // it — only the visitor-facing label is unified.
       content: text,
-      authorLabel: label,
+      authorLabel: CHAT_SIDE_LABEL,
     });
 
     const messages = await messagesAfter(prisma, id, Number((req.body || {}).cursor) || 0);
@@ -844,12 +849,17 @@ export function chatAgentRoutes(prisma: PrismaClient, deps: ChatDeps): express.R
       })
       .catch(() => {});
 
-    await appendMessage(prisma, {
-      conversationId: id,
-      role: "SYSTEM",
-      content: resumeBot ? chatAgentLeftNotice(label) : "This conversation has been closed.",
-      kind: "notice",
-    });
+    // Handing back to the assistant is silent, for the same reason joining is.
+    // Closing the conversation is not — that one the visitor needs to know,
+    // because it changes whether typing anything else will reach us.
+    if (!resumeBot) {
+      await appendMessage(prisma, {
+        conversationId: id,
+        role: "SYSTEM",
+        content: CHAT_CLOSED_NOTICE,
+        kind: "notice",
+      });
+    }
 
     res.json({ ok: true });
   });

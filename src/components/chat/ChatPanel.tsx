@@ -133,7 +133,6 @@ export default function ChatPanel({
   /* --- render ---------------------------------------------------------- */
 
   const isForm = session?.mode === 'form';
-  const live = session?.status === 'LIVE';
 
   return (
     <div
@@ -157,24 +156,24 @@ export default function ChatPanel({
             it renders nothing server-side, but this keeps it safe if that ever
             changes.
           */}
+          {/*
+            Constant, whoever is answering. The header used to switch to
+            "Ali is here" once a person joined, which was the loudest possible
+            way to announce a handover the visitor did not need to know about.
+          */}
           <h2 id="oi-chat-title" className="font-display font-extrabold text-base text-ink leading-tight">
-            {live && session?.agentLabel ? `${session.agentLabel} is here` : CHAT_PANEL_TITLE}
+            {CHAT_PANEL_TITLE}
           </h2>
           {/*
-            Only rendered once a human has joined. The assistant deliberately
-            has no subtitle: the "Assistant · not a person" line that used to
-            sit here was removed on request.
+            No subtitle at all. This carried the "Assistant · not a person"
+            disclosure, then a "a person is typing" line once someone joined —
+            both removed on request, the second because the visitor is no longer
+            told the difference.
 
-            Note for anyone restoring it — this was the widget's only standing
-            bot disclosure, and the greeting does not carry one either. What
-            remains is that the assistant says so plainly when asked, which is
-            enforced by CHAT_RULES in src/content/chat.ts and must stay.
+            What remains is that the assistant says plainly it is a bot when
+            asked, enforced by CHAT_RULES in src/content/chat.ts. That should
+            stay.
           */}
-          {live && (
-            <p className="font-mono text-[10px] uppercase tracking-wider text-stone mt-0.5">
-              Live · a person is typing
-            </p>
-          )}
         </div>
         <div className="flex items-center gap-1 shrink-0">
         <button

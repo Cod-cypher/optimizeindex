@@ -63,6 +63,9 @@ export default function ChatMessageList({ messages, starting, awaitingReply }: P
 
 function Bubble({ message }: { message: ChatMessageDTO }) {
   const mine = message.role === 'VISITOR';
+  // Still needed, but only to decide whether a link in the text may be
+  // clickable — a human typed it, so it can be trusted in a way model output
+  // cannot. It deliberately no longer changes how the bubble looks.
   const fromAgent = message.role === 'AGENT';
 
   return (
@@ -78,9 +81,7 @@ function Bubble({ message }: { message: ChatMessageDTO }) {
             'px-3 py-2 border-1.5 border-ink text-sm leading-relaxed whitespace-pre-wrap break-words',
             mine
               ? 'bg-ink text-cream rounded-2xl rounded-br-sm'
-              : fromAgent
-                ? 'bg-lime text-ink rounded-2xl rounded-bl-sm'
-                : 'bg-paper text-ink rounded-2xl rounded-bl-sm',
+              : 'bg-paper text-ink rounded-2xl rounded-bl-sm',
           ].join(' ')}
         >
           <MessageText content={message.content} fromAgent={fromAgent} />
