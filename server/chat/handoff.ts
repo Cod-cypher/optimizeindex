@@ -26,8 +26,29 @@ export interface HandoffMail {
   replyTo?: string;
 }
 
+/**
+ * Where a join link points.
+ *
+ * SITE_ORIGIN is a hardcoded https://optimizeindex.com, which is correct in
+ * production and wrong everywhere else: a handoff triggered against a dev
+ * server would email a link to the live site, where the conversation does not
+ * exist and the route may not even be deployed yet. That produces a plain 404
+ * and looks like the feature is broken when it is only pointed at the wrong
+ * machine.
+ *
+ * PUBLIC_ORIGIN overrides it explicitly. Otherwise production uses SITE_ORIGIN
+ * and anything else assumes the local server, so end-to-end testing of the
+ * handoff works on a laptop without touching production.
+ */
+export function chatOrigin(): string {
+  const explicit = process.env.PUBLIC_ORIGIN;
+  if (explicit) return explicit.endsWith("/") ? explicit.slice(0, -1) : explicit;
+  if (process.env.NODE_ENV === "production") return SITE_ORIGIN;
+  return `http://localhost:${process.env.PORT || 3001}`;
+}
+
 export function joinUrl(token: string): string {
-  return `${SITE_ORIGIN}/chat/join/${token}`;
+  return `${chatOrigin()}/chat/join/${token}`;
 }
 
 function speaker(row: ChatMessage): string {
