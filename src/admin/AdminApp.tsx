@@ -13,6 +13,7 @@ import Starburst from '../components/Starburst';
 import { Banner, Button, Card, Eyebrow, Heading, PortalLoader } from '../portal/ui';
 import { setUnauthorizedHandler } from './api';
 import ProposalList from './ProposalList';
+import ChatInbox from './ChatInbox';
 import ProposalEditor from './ProposalEditor';
 
 export interface AdminUser {
@@ -213,9 +214,11 @@ function AdminShell({ user, onSignedOut }: { user: AdminUser; onSignedOut: () =>
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Two screens, so the path is parsed directly rather than through nested
-  // routes: /admin is the list, /admin/p/<id> is the editor.
+  // Three screens, so the path is parsed directly rather than through nested
+  // routes: /admin is the list, /admin/p/<id> is the editor, /admin/chats is
+  // the chat inbox.
   const editingId = /^\/admin\/p\/([^/]+)$/.exec(location.pathname)?.[1] ?? null;
+  const onChats = location.pathname === '/admin/chats';
 
   async function signOut() {
     await fetch('/api/admin/logout', { method: 'POST', credentials: 'same-origin' });
@@ -238,6 +241,28 @@ function AdminShell({ user, onSignedOut }: { user: AdminUser; onSignedOut: () =>
           </button>
 
           <div className="flex items-center gap-4">
+            <nav className="flex items-center gap-1">
+              <button
+                onClick={() => navigate('/admin')}
+                aria-current={!onChats ? 'page' : undefined}
+                className={[
+                  'font-mono text-[10px] font-bold uppercase tracking-wider px-3 py-2 rounded-full transition-colors cursor-pointer focus-ring',
+                  !onChats ? 'bg-ink text-cream' : 'text-stone hover:text-ink',
+                ].join(' ')}
+              >
+                Proposals
+              </button>
+              <button
+                onClick={() => navigate('/admin/chats')}
+                aria-current={onChats ? 'page' : undefined}
+                className={[
+                  'font-mono text-[10px] font-bold uppercase tracking-wider px-3 py-2 rounded-full transition-colors cursor-pointer focus-ring',
+                  onChats ? 'bg-ink text-cream' : 'text-stone hover:text-ink',
+                ].join(' ')}
+              >
+                Chats
+              </button>
+            </nav>
             <span className="hidden sm:inline font-mono text-[11px] uppercase tracking-wider text-stone">
               {user.name || user.email}
             </span>
@@ -252,7 +277,9 @@ function AdminShell({ user, onSignedOut }: { user: AdminUser; onSignedOut: () =>
       </header>
 
       <main className="max-w-7xl mx-auto px-6 md:px-12 py-10 md:py-14">
-        {editingId ? (
+        {onChats ? (
+          <ChatInbox />
+        ) : editingId ? (
           <ProposalEditor id={editingId} onBack={() => navigate('/admin')} />
         ) : (
           <ProposalList onOpen={(id) => navigate(`/admin/p/${id}`)} />

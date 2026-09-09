@@ -1232,6 +1232,60 @@ async function startServer() {
     return true;
   }
 
+  /**
+   * The console for a signed-in admin.
+   *
+   * The emailed join link is the fast path from a phone; this is the one that
+   * needs no email at all. Authorised by the admin session cookie rather than a
+   * bearer token, so there is nothing sensitive in this URL and it is safe to
+   * link to from the admin inbox.
+   */
+  async function serveAgentConsole(
+    req: express.Request,
+    res: express.Response,
+    shell: string | null,
+  ): Promise<boolean> {
+    if (!shell) return false;
+
+    setPrivateHeaders(res);
+
+    const uid = verifySession(readCookie(req, SESSION_COOKIE));
+    if (!uid) {
+      // Not signed in. Send them to the admin login rather than explaining.
+      res.redirect(302, "/admin");
+      return true;
+    }
+
+    const user = await prisma.adminUser
+      .findUnique({ where: { id: uid }, select: { isActive: true, name: true } })
+      .catch(() => null);
+    if (!user?.isActive) {
+      res.redirect(302, "/admin");
+      return true;
+    }
+
+    const conversation = await prisma.chatConversation
+      .findUnique({ where: { id: String(req.params.id || "") } })
+      .catch(() => null);
+    if (!conversation) return false;
+
+    const context = {
+      conversationId: conversation.id,
+      agentLabel: user.name || process.env.CHAT_AGENT_LABEL || "Ali",
+      joined: Boolean(conversation.agentJoinedAt),
+      summary: conversation.qualifiedReason || undefined,
+      visitorEmail: conversation.visitorEmail || undefined,
+      visitorWebsite: conversation.visitorWebsite || undefined,
+      startedOn: conversation.startedOn || undefined,
+    };
+
+    res
+      .status(200)
+      .type("html")
+      .send(injectShell(shell, serializeForScriptTag(context), "__CHAT_AGENT__"));
+    return true;
+  }
+
   // Vite Middleware integration for SPA routing
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
@@ -1277,6 +1331,15 @@ async function startServer() {
     app.get("/chat/join/:token", async (req, res, next) => {
       try {
         const handled = await serveJoinLink(req, res, await devShell(req.originalUrl));
+        if (!handled) next();
+      } catch (err) {
+        next(err);
+      }
+    });
+
+    app.get("/chat/agent/:id", async (req, res, next) => {
+      try {
+        const handled = await serveAgentConsole(req, res, await devShell(req.originalUrl));
         if (!handled) next();
       } catch (err) {
         next(err);
@@ -1357,6 +1420,15 @@ async function startServer() {
     app.get("/chat/join/:token", async (req, res, next) => {
       try {
         const handled = await serveJoinLink(req, res, readShell());
+        if (!handled) next();
+      } catch (err) {
+        next(err);
+      }
+    });
+
+    app.get("/chat/agent/:id", async (req, res, next) => {
+      try {
+        const handled = await serveAgentConsole(req, res, readShell());
         if (!handled) next();
       } catch (err) {
         next(err);
