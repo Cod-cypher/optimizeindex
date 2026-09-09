@@ -178,6 +178,80 @@ npm run build
 pm2 restart optimizeindex
 ```
 
+## Chat widget
+
+The assistant in the bottom-right corner. Three things it needs that a
+`git pull` does not bring with it.
+
+**`OPENAI_API_KEY` must be added to the server's `.env`.** Same trap as the SMTP
+credentials above: `.env` is gitignored, so the key exists on your machine and
+not on the server. Without it the widget still appears and still works — it
+degrades to a contact form that posts to `/api/leads` — which means a missing
+key looks like a design choice rather than a misconfiguration. The boot log is
+how you tell:
+
+```
+[Chat] Assistant active: model=gpt-5.6-luna, handoff -> ali@optimizeindex.com
+[Chat] OPENAI_API_KEY not set - widget runs in form mode
+```
+
+Optional overrides, all with working defaults: `OPENAI_MODEL`,
+`OPENAI_REASONING_EFFORT`, `CHAT_ENABLED` (set `false` as a kill switch),
+`CHAT_HANDOFF_EMAIL`, `CHAT_AGENT_LABEL`, `CHAT_MONTHLY_TOKEN_CAP`,
+`CHAT_MAX_TURNS`. See `.env.example`.
+
+**The nginx change must be applied by hand — do NOT copy the file.** The repo's
+`deploy/nginx-optimizeindex.conf` gained a `location /chat/join/` block, but
+copying it over would wipe the `listen 443` block certbot wrote, exactly as
+described in the warning on step 4. Add this by hand to
+`/etc/nginx/sites-available/optimizeindex.conf`, **above** the `location /`
+block, inside the SSL server block:
+
+```nginx
+location /chat/join/ {
+    access_log off;
+    proxy_pass http://127.0.0.1:3002;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+Then `nginx -t && systemctl reload nginx`.
+
+`access_log off` is the point of the block, not an optimisation. The join link
+that lets a person enter a live conversation carries a bearer token **in the URL
+path**, and nginx's default log format writes the full path — so without this,
+every join link sits in `/var/log/nginx/access.log` in plaintext, readable by
+anyone with server access and swept up by any log shipper.
+
+Verify it after reloading:
+
+```bash
+curl -s https://optimizeindex.com/chat/join/notarealtoken > /dev/null
+tail -5 /var/log/nginx/access.log | grep -c notarealtoken   # expect 0
+```
+
+**Migrations.** `20260910000000_chat_area` and `20260910120000_chat_started_email`
+ship with this. Both add a single nullable column and neither touches an
+existing table, so they are safe to apply while the site is serving. Until they
+are applied the widget stays in form mode, because the generated Prisma client
+asks for columns the database does not have.
+
+### Checking it works
+
+```bash
+pm2 logs optimizeindex --lines 30 | grep '\[Chat\]'
+```
+
+Then open the site, send one message, and confirm an email arrives at
+`ali@optimizeindex.com` with a working join link. A chat-started notification
+goes out on the **first message of every conversation**, so this is also the
+thing to watch if the inbox starts feeling noisy — the guard is
+`startedEmailSentAt`, one per conversation, never one per message.
+
 ## What `npm run build` does now
 
 The site is **pre-rendered**, not a bare SPA. `npm run build` runs four steps:
