@@ -65,6 +65,40 @@ export default function ChatWidget() {
   const launcherRef = useRef<HTMLButtonElement>(null);
   const errorStreak = useRef(0);
 
+  /**
+   * The single way a message enters the widget.
+   *
+   * Both paths land here, and that is the point. An assistant reply arrives on
+   * the *send response*, not the poll — the POST returns the answer and
+   * advances the cursor, so the next poll correctly finds nothing new. Putting
+   * the chime and the unread count only in the poll meant they fired for a
+   * human agent's out-of-band message and never for the ordinary case of the
+   * assistant answering, which is every message most visitors will ever get.
+   */
+  const ingest = useCallback(
+    (incoming: ChatMessageDTO[], nextCursor: number) => {
+      if (incoming.length === 0) return;
+
+      setMessages((prev) => mergeMessages(prev, incoming));
+      setCursor((prev) => (nextCursor > prev ? nextCursor : prev));
+
+      // Anything the visitor did not send themselves. Their own optimistic echo
+      // is a VISITOR row and is filtered out here along with the real one.
+      const inbound = incoming.filter((m) => m.role !== 'VISITOR');
+      if (inbound.length === 0) return;
+
+      setAwaitingReply(false);
+      playIncoming();
+
+      // An open panel on a backgrounded tab is still unread. Counting only on
+      // !open would leave someone who tabbed away with no badge and no reason
+      // to come back.
+      const unseen = !open || document.visibilityState === 'hidden';
+      if (unseen) setUnread((n) => n + inbound.length);
+    },
+    [open],
+  );
+
   useEffect(() => {
     setReady(true);
   }, []);
@@ -124,27 +158,7 @@ export default function ChatWidget() {
         if (cancelled) return;
         errorStreak.current = 0;
 
-        if (data.messages.length > 0) {
-          setMessages((prev) => mergeMessages(prev, data.messages));
-          setCursor(data.cursor);
-
-          // Only what someone else said. The visitor's own message is stored
-          // before the model is called, so a poll landing mid-reply returns
-          // that echo first — clearing the indicator on any message at all
-          // made the dots vanish and the answer arrive seconds later, which
-          // reads as the bot having given up.
-          const inbound = data.messages.filter((m) => m.role !== 'VISITOR');
-          if (inbound.length > 0) {
-            setAwaitingReply(false);
-            playIncoming();
-
-            // An open panel on a backgrounded tab is still unread. Counting
-            // only on !open would leave someone who tabbed away with no badge
-            // and no reason to come back.
-            const unseen = !open || document.visibilityState === 'hidden';
-            if (unseen) setUnread((n) => n + inbound.length);
-          }
-        }
+        ingest(data.messages, data.cursor);
 
         if (data.status !== session.status || data.agentLabel !== session.agentLabel) {
           setSession((s) => (s ? { ...s, status: data.status, agentLabel: data.agentLabel } : s));
@@ -296,10 +310,7 @@ export default function ChatWidget() {
             starting={starting}
             awaitingReply={awaitingReply}
             onClose={handleClose}
-            onSent={(sent, nextCursor) => {
-              setMessages((prev) => mergeMessages(prev, sent));
-              if (nextCursor > cursor) setCursor(nextCursor);
-            }}
+            onSent={ingest}
             onAwaiting={setAwaitingReply}
             onStatus={(status, agentLabel) =>
               setSession((s) => (s ? { ...s, status, agentLabel } : s))

@@ -97,18 +97,38 @@ function note(ctx: AudioContext, frequency: number, startAt: number, duration: n
   osc.stop(startAt + duration + 0.02);
 }
 
+function chime(ctx: AudioContext): void {
+  const now = ctx.currentTime;
+  note(ctx, 660, now, 0.11, 0.045);
+  note(ctx, 880, now + 0.09, 0.16, 0.04);
+}
+
 /**
  * A rising two-note chime. Deliberately quiet and short — this fires on a
  * message someone is already expecting, not on an alarm.
+ *
+ * A suspended context is resumed and then played, rather than skipped. resume()
+ * is asynchronous, so a context unlocked by a click a moment earlier can still
+ * be mid-resume when the first message lands — and the earlier version returned
+ * silently in exactly that window, which is the first chime of the
+ * conversation. Scheduling against a suspended context is not an option either:
+ * its currentTime does not advance, so the notes would be queued at a timestamp
+ * that never arrives.
  */
 export function playIncoming(): void {
   if (isMuted()) return;
   const ctx = context();
-  if (!ctx || ctx.state !== 'running') return;
+  if (!ctx) return;
 
-  const now = ctx.currentTime;
-  note(ctx, 660, now, 0.11, 0.045);
-  note(ctx, 880, now + 0.09, 0.16, 0.04);
+  if (ctx.state === 'suspended') {
+    void ctx
+      .resume()
+      .then(() => chime(ctx))
+      .catch(() => {});
+    return;
+  }
+  if (ctx.state !== 'running') return;
+  chime(ctx);
 }
 
 /* -------------------------------------------------------------------------
