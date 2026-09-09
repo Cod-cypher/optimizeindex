@@ -41,6 +41,10 @@ function buildReserved(): Set<string> {
     "fonts",
     "uploads",
     "p",
+    // The chat widget's agent console. A proposal slug here would shadow
+    // the join link and lock an agent out of a live conversation.
+    "chat",
+    "agent",
     // Files published from public/
     "robots.txt",
     "sitemap.xml",
