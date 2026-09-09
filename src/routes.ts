@@ -406,7 +406,7 @@ export const ROUTES: RouteMeta[] = [
   },
   {
     path: '/case-studies',
-    title: 'SEO Case Studies & Client Results | OptimizeIndex',
+    title: 'AI Case Studies & Client Results | OptimizeIndex',
     description:
       'Real client results with real attribution — how we grew organic visibility and lead volume for local and B2B businesses, verified in GA4 and Search Console.',
     priority: 0.9,
@@ -418,7 +418,7 @@ export const ROUTES: RouteMeta[] = [
   ...towingRoutes,
   {
     path: '/audit',
-    title: 'Free 15-Point SEO & AI Search Audit | OptimizeIndex',
+    title: 'Get a Free AI Audit | OptimizeIndex',
     description:
       'Get a free 15-point audit of your search footprint — technical SEO, content, speed and AI search readiness — with a prioritized fix plan within 24 hours.',
     priority: 0.9,
@@ -429,7 +429,7 @@ export const ROUTES: RouteMeta[] = [
   },
   {
     path: '/quote',
-    title: 'Get a Free SEO & Growth Quote | OptimizeIndex',
+    title: 'Get a Free AI Quote | OptimizeIndex',
     description:
       "Tell us your growth goal and we'll send back a custom proposal with scope, timeline and projected impact. No contracts, 15-day money-back guarantee.",
     priority: 0.9,
