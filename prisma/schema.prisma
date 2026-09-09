@@ -476,6 +476,12 @@ model ChatConversation {
   qualified       Boolean @default(false)
   qualifiedReason String?
 
+  /// When the "someone started a chat" email went out. Deliberately separate
+  /// from handoffEmailSentAt: that one is debounced, and a visitor who later
+  /// actually asks for a person must not have their request swallowed because
+  /// an opening notification happened to go out four minutes earlier.
+  startedEmailSentAt DateTime?
+
   // Human handoff
   handoffRequestedAt DateTime?
   handoffReason      String? // visitor_asked | qualified_lead | out_of_scope | complaint | pricing

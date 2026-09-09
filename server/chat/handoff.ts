@@ -98,7 +98,10 @@ export function handoffFacts(
   );
 
   return {
-    Reason: reasonLabel(conversation.handoffReason),
+    // Only when one was actually requested. The renderers drop empty values, so
+    // an opening "chat started" notice simply has no Reason row rather than
+    // claiming the visitor asked for someone when they have not.
+    Reason: conversation.handoffReason ? reasonLabel(conversation.handoffReason) : "",
     Name: conversation.visitorName || "",
     Email: conversation.visitorEmail || "",
     Phone: conversation.visitorPhone || "",
@@ -110,6 +113,19 @@ export function handoffFacts(
     Started: `${started} UTC`,
     Duration: `${minutes} min, ${conversation.turnCount} assistant replies`,
   };
+}
+
+/**
+ * Subject for the opening notification.
+ *
+ * Deliberately does not read as an escalation. These arrive for every
+ * conversation, most of which resolve themselves, and if they look identical to
+ * "this person wants you now" then both stop being read.
+ */
+export function chatStartedSubject(conversation: ChatConversation): string {
+  const who = conversation.visitorCompany || conversation.visitorName || "Someone";
+  const where = conversation.startedOn ? ` on ${conversation.startedOn}` : "";
+  return `Chat started: ${who}${where}`;
 }
 
 export function handoffSubject(conversation: ChatConversation): string {

@@ -49,6 +49,7 @@ import {
 import {
   buildLeadComments,
   emailTranscript,
+  chatStartedSubject,
   handoffFacts,
   handoffSubject,
   joinBlockHtml,
@@ -123,8 +124,79 @@ async function assistantAvailable(prisma: PrismaClient): Promise<{ ok: boolean; 
    Visitor API
 ========================================================================= */
 
+/** The conversation's join nonce, if it still has an unexpired one. */
+function liveTokenId(conversation: ChatConversation): string | null {
+  if (!conversation.agentTokenId) return null;
+  if (!conversation.agentTokenExpiresAt) return null;
+  if (conversation.agentTokenExpiresAt.getTime() <= Date.now()) return null;
+  return conversation.agentTokenId;
+}
+
 export function chatRoutes(prisma: PrismaClient, deps: ChatDeps): express.Router {
   const router = express.Router();
+
+  /**
+   * Tells the team a conversation has started, on the visitor's first message.
+   *
+   * Separate from triggerHandoff in every way that matters. It does not change
+   * the conversation status, so the assistant carries on exactly as before and
+   * the admin inbox's "wants a person" filter keeps meaning what it says. It is
+   * not debounced on a timer, because it can only ever fire once per
+   * conversation — startedEmailSentAt is the guard, and it is set before the
+   * mail is attempted so a slow SMTP call cannot let a second message through
+   * behind it.
+   *
+   * It carries the same join link as a real handoff would, so Ali can drop into
+   * any conversation from his inbox without waiting to be asked. The point is
+   * that he sees them all, not that every visitor gets escalated.
+   *
+   * The cost of this is one email per conversation, including one-word ones
+   * that go nowhere. That is the deliberate trade: a missed live visitor is
+   * worth more than an inbox that stays tidy.
+   */
+  async function notifyChatStarted(conversationId: string, firstMessage: string): Promise<void> {
+    const conversation = await getConversation(prisma, conversationId);
+    if (!conversation || conversation.startedEmailSentAt) return;
+    if (!deps.smtpConfigured) return;
+
+    const jti = liveTokenId(conversation) || newAgentTokenId();
+
+    // Claim it first. Two messages sent in quick succession would otherwise
+    // both pass the check above while the first was still talking to SMTP.
+    const claimed = await prisma.chatConversation
+      .update({
+        where: { id: conversationId, startedEmailSentAt: null },
+        data: {
+          startedEmailSentAt: new Date(),
+          agentTokenId: jti,
+          agentTokenExpiresAt: new Date(Date.now() + AGENT_TTL_MS),
+          agentLabel: agentLabel(),
+        },
+      })
+      .catch(() => null);
+    if (!claimed) return;
+
+    const url = joinUrl(signAgentToken(conversationId, jti));
+    const facts = handoffFacts(claimed, null);
+
+    // No summary line: the transcript below it is the first message, and
+    // printing the same sentence twice in a short email looks like a bug.
+    const sent = await deps.sendMail({
+      subject: chatStartedSubject(claimed),
+      html: renderHandoffHtml(facts, url, "", `Visitor: ${firstMessage}`),
+      text: renderHandoffText(facts, url, "", `Visitor: ${firstMessage}`),
+    });
+
+    if (!sent) {
+      // Let a later message try again rather than losing the notification to a
+      // transient SMTP failure.
+      await prisma.chatConversation
+        .update({ where: { id: conversationId }, data: { startedEmailSentAt: null } })
+        .catch(() => {});
+      return;
+    }
+    console.log(`[Chat] Chat-started email sent for conversation ${conversationId}`);
+  }
 
   /**
    * Triggers a handoff: mints a join link, stores its nonce, emails it.
@@ -147,9 +219,17 @@ export function chatRoutes(prisma: PrismaClient, deps: ChatDeps): express.Router
       Date.now() - conversation.handoffEmailSentAt.getTime() < HANDOFF_DEBOUNCE_MS;
     if (recentlySent) return true;
 
-    // A fresh nonce each time invalidates any previously emailed link, so the
-    // most recent email is always the live one.
-    const jti = newAgentTokenId();
+    // Reuse a live nonce rather than minting a fresh one.
+    //
+    // This used to rotate every time, on the reasoning that the newest email
+    // should be the only working link. That stopped being right once a
+    // conversation could produce two emails — an opening "someone started a
+    // chat" and a later "they want a person". Rotating would quietly break the
+    // link in the first email the moment the second was sent, and both go to
+    // the same inbox, so the only thing it achieved was Ali tapping a dead
+    // link. Revocation is still available and still instant, through the admin
+    // inbox.
+    const jti = liveTokenId(conversation) || newAgentTokenId();
     const expiresAt = new Date(Date.now() + AGENT_TTL_MS);
 
     const updated = await prisma.chatConversation
@@ -391,6 +471,14 @@ export function chatRoutes(prisma: PrismaClient, deps: ChatDeps): express.Router
 
     try {
       await appendMessage(prisma, { conversationId: id, role: "VISITOR", content: text });
+
+      // Deliberately not awaited. The notification must not sit between the
+      // visitor pressing send and the assistant answering — a slow SMTP server
+      // would otherwise show up as the widget hanging. It guards itself against
+      // running twice, so letting it finish on its own is safe.
+      void notifyChatStarted(id, text).catch((err) =>
+        console.error("[Chat] Chat-started notification failed:", err),
+      );
 
       // A human is in the room. The bot stays quiet — two voices answering one
       // question is worse than a pause.
