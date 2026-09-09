@@ -391,7 +391,7 @@ const towingRoutes: RouteMeta[] = [
 export const ROUTES: RouteMeta[] = [
   {
     path: '/',
-    title: 'Get Found on Google | OptimizeIndex SEO Agency',
+    title: 'Get Found on Google | OptimizeIndex AI Agency',
     description:
       'We get local and trade businesses found on Google, Google Maps and AI assistants. Free instant website check, no contracts and no jargon.',
     priority: 1.0,
