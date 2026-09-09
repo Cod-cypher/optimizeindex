@@ -16,11 +16,10 @@ import type { ChatMessageDTO } from '../../../shared/chatTypes';
 import {
   CHAT_INPUT_PLACEHOLDER,
   CHAT_PANEL_TITLE,
-  CHAT_RECONNECTING,
   CHAT_SEND_FAILED,
 } from '../../content/chat';
 import { trackEvent } from '../../lib/tracker';
-import { sendChatMessage } from '../../lib/chat';
+import { optimisticId, sendChatMessage } from '../../lib/chat';
 import type { ChatSession } from './ChatWidget';
 import ChatMessageList from './ChatMessageList';
 import ChatForm from './ChatForm';
@@ -93,7 +92,7 @@ export default function ChatPanel({
     // Show it immediately. The server echoes it back with a real id and seq,
     // and mergeMessages drops this optimistic copy on arrival.
     const optimistic: ChatMessageDTO = {
-      id: `local-${Date.now()}`,
+      id: optimisticId(),
       seq: Number.MAX_SAFE_INTEGER,
       role: 'VISITOR',
       content: text,

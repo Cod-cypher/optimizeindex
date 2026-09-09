@@ -158,14 +158,43 @@ export function pollInterval(state: {
   return 20_000;
 }
 
-/** Merges new messages in, dropping anything already present. */
+/** Ids given to messages shown before the server has confirmed them. */
+export const OPTIMISTIC_PREFIX = 'local-';
+
+export function optimisticId(): string {
+  return `${OPTIMISTIC_PREFIX}${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+/**
+ * Merges new messages in.
+ *
+ * Two kinds of duplicate to worry about. The first is the same row arriving
+ * twice — the send response and a poll that overlapped it — which the id set
+ * handles.
+ *
+ * The second is subtler and was worth writing this comment for: a message the
+ * visitor sent is rendered immediately with a made-up id so the input clears
+ * without waiting for a round trip, and the server then echoes the real row
+ * back with a cuid. Deduplicating on id alone would leave both, and the visitor
+ * would watch their own message appear twice. So an optimistic entry is dropped
+ * as soon as a real VISITOR message with the same text arrives.
+ */
 export function mergeMessages(
   existing: ChatMessageDTO[],
   incoming: ChatMessageDTO[],
 ): ChatMessageDTO[] {
   if (incoming.length === 0) return existing;
+
   const seen = new Set(existing.map((m) => m.id));
   const added = incoming.filter((m) => !seen.has(m.id));
   if (added.length === 0) return existing;
-  return [...existing, ...added].sort((a, b) => a.seq - b.seq);
+
+  const confirmed = new Set(
+    added.filter((m) => m.role === 'VISITOR').map((m) => m.content),
+  );
+  const kept = existing.filter(
+    (m) => !(m.id.startsWith(OPTIMISTIC_PREFIX) && confirmed.has(m.content)),
+  );
+
+  return [...kept, ...added].sort((a, b) => a.seq - b.seq);
 }
