@@ -16,6 +16,7 @@
  */
 
 import { lazy, Suspense } from 'react';
+import type { Location } from 'react-router-dom';
 import { useLocation } from 'react-router-dom';
 import App from './App';
 import TowingPillarPage from './pages/TowingPillarPage';
@@ -28,8 +29,12 @@ import { getTowingJobsChild } from './content/towingJobsCluster';
 import { TOWING_BASE, PROUDLY_SERVING, TOWING_JOBS_PATH } from './routes';
 import type { PublicProposal } from '../shared/proposalTypes';
 
+import ChatWidget from './components/chat/ChatWidget';
+import type { ChatAgentContext } from '../shared/chatTypes';
+
 const AdminApp = lazy(() => import('./admin/AdminApp'));
 const ProposalPage = lazy(() => import('./proposal/ProposalPage'));
+const AgentConsole = lazy(() => import('./chat/AgentConsole'));
 
 /**
  * A deliberately plain placeholder.
@@ -55,9 +60,19 @@ function injectedProposal(): PublicProposal | undefined {
   return window.__PROPOSAL__;
 }
 
-export default function AppRouter() {
-  const location = useLocation();
-
+/**
+ * The page for a URL. Extracted from AppRouter unchanged, so that the chat
+ * widget can be rendered as a sibling of whatever this returns rather than
+ * inside it.
+ *
+ * That sibling relationship is not cosmetic. Both App.tsx and TowingLayout wrap
+ * their content in a <main>, and scripts/verify-seo.ts measures the towing
+ * pages' word count and their pairwise 5-gram similarity from $('main').text().
+ * Anything the widget rendered inside <main> would land in every towing page
+ * identically and push them toward the 85% similarity threshold that fails the
+ * build.
+ */
+function renderView(location: Location) {
   if (location.pathname === '/admin' || location.pathname.startsWith('/admin/')) {
     return (
       <Suspense fallback={<Loading />}>
@@ -117,4 +132,51 @@ export default function AppRouter() {
   // recognise — in which case it already responded 404 and App.tsx's own
   // not-found view renders the body.
   return <App />;
+}
+
+/**
+ * Whether the chat widget belongs on this page.
+ *
+ * Off in the admin app and on proposal pages: both are private, per-recipient
+ * surfaces where a public support widget would be noise, and the proposal page
+ * already owns the bottom-right corner with its mobile CTA bar.
+ */
+function chatAllowed(pathname: string): boolean {
+  if (pathname === '/admin' || pathname.startsWith('/admin/')) return false;
+  if (typeof window !== 'undefined') {
+    if (window.__PROPOSAL__ !== undefined) return false;
+    if (window.__CHAT_AGENT__ !== undefined) return false;
+  }
+  return true;
+}
+
+/** The agent console, when the server injected a join context. */
+function injectedAgentContext(): ChatAgentContext | undefined {
+  if (typeof window === 'undefined') return undefined;
+  return window.__CHAT_AGENT__;
+}
+
+export default function AppRouter() {
+  const location = useLocation();
+
+  /*
+    The fourth app this site serves: one live conversation, opened from a link
+    in an email. Like the proposal payload, it is a page-load global, so the
+    path check keeps it from re-rendering after client-side navigation.
+  */
+  const agentContext = injectedAgentContext();
+  if (agentContext) {
+    return (
+      <Suspense fallback={<Loading />}>
+        <AgentConsole context={agentContext} />
+      </Suspense>
+    );
+  }
+
+  return (
+    <>
+      {renderView(location)}
+      {chatAllowed(location.pathname) && <ChatWidget />}
+    </>
+  );
 }

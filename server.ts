@@ -33,6 +33,16 @@ import { proposalAdminRoutes, UPLOAD_DIR } from "./server/proposals/routes";
 import nodemailer from "nodemailer";
 import { REDIRECTS, SITE_ORIGIN } from "./src/routes";
 import type { AuditCategory, AuditResult } from "./shared/auditTypes";
+import {
+  chatAdminRoutes,
+  chatAgentRoutes,
+  chatRoutes,
+  setAgentCookie,
+  type ChatDeps,
+} from "./server/chat/routes";
+import { pruneOldChats } from "./server/chat/store";
+import { verifyAgentToken } from "./server/chat/tokens";
+import { hasApiKey, modelName } from "./server/chat/openai";
 
 // Default inbox for inbound lead notifications.
 const LEAD_NOTIFY_EMAIL = "vickigms1@gmail.com";
@@ -44,6 +54,7 @@ const LEAD_NOTIFY_EMAIL = "vickigms1@gmail.com";
 // requires a one-time activation per recipient address before it will deliver.
 const LEAD_NOTIFY_OVERRIDES: Record<string, string[]> = {
   towing_jobs_assessment: ["ali@optimizeindex.com", "contact@optimizeindex.com"],
+  chat_widget: ["ali@optimizeindex.com", "contact@optimizeindex.com"],
 };
 
 function notifyRecipients(type: string): string[] {
@@ -651,16 +662,20 @@ async function startServer() {
     }
   });
 
-  app.post("/api/leads", async (req, res) => {
-    const body = req.body || {};
-    if (!body.email || !body.website) {
-      res.status(400).json({ error: "email and website are required" });
-      return;
-    }
-
+  /**
+   * Builds the stored shape of a lead from a request body.
+   *
+   * Every field is clamped here rather than at the database, because the columns
+   * are unbounded text and a 2 MB "comments" would otherwise be written verbatim.
+   * The key list is closed: anything not named here is dropped, which is why a
+   * new question on a form has to be folded into an existing field (see the
+   * header of src/components/towing/TowingJobsLeadForm.tsx) rather than sent as
+   * a new key that would silently vanish.
+   */
+  function buildLeadData(body: Record<string, unknown>, req: express.Request) {
     const str = (v: unknown, max = 2000) => String(v ?? "").slice(0, max);
 
-    const leadData = {
+    return {
       type: str(body.type) || "unknown",
       name: str(body.name, 200),
       email: str(body.email, 320),
@@ -690,7 +705,21 @@ async function startServer() {
       userAgent: str(req.headers["user-agent"], 500),
       ipAddress: str(clientIp(req), 100),
     };
+  }
 
+  type LeadData = ReturnType<typeof buildLeadData>;
+
+  /**
+   * Delivers a lead through all three channels, in order of how much we would
+   * regret losing it: the notification email, the database, and — only if the
+   * database write failed — a file on disk.
+   *
+   * Extracted from the /api/leads handler so the chat widget captures a lead
+   * through the identical path (server/chat/tools.ts). Sharing the function is
+   * what makes "a chat lead is a lead" true structurally, rather than true
+   * because two implementations happen to agree today.
+   */
+  async function persistLead(leadData: LeadData): Promise<{ id: string | null; emailForwarded: boolean }> {
     // 1. Email forward (primary notification channel)
     const emailForwarded = await emailLead({ ...leadData, createdAt: new Date().toISOString() });
 
@@ -737,9 +766,78 @@ async function startServer() {
       console.log(`[Leads] Saved ${leadData.type} lead from ${leadData.email} (file backup)`);
     }
 
+    return { id: dbId, emailForwarded };
+  }
+
+  app.post("/api/leads", async (req, res) => {
+    const body = req.body || {};
+    if (!body.email || !body.website) {
+      res.status(400).json({ error: "email and website are required" });
+      return;
+    }
+
+    const { id: dbId } = await persistLead(buildLeadData(body, req));
+
     // The lead was captured via at least one channel — report success to the visitor.
     res.json({ ok: true, id: dbId || "backup" });
   });
+
+  /* -----------------------------------------------------------------------
+     CHAT WIDGET
+
+     The assistant, and the live handoff to a person. Mounted under /api so the
+     canonical-host middleware above skips it — a POST redirected to add a
+     trailing slash would arrive as a GET with no body.
+  ----------------------------------------------------------------------- */
+
+  /**
+   * Sends the handoff notification.
+   *
+   * Deliberately not routed through notifyRecipients()/LEAD_NOTIFY_OVERRIDES:
+   * that map is about which addresses hear about a *lead*. This is one
+   * recipient, it is time-critical, and it carries a bearer token, so it gets
+   * its own address and never a CC.
+   */
+  const CHAT_HANDOFF_EMAIL = process.env.CHAT_HANDOFF_EMAIL || "ali@optimizeindex.com";
+
+  async function sendHandoffMail(msg: {
+    subject: string;
+    html: string;
+    text: string;
+    replyTo?: string;
+  }): Promise<boolean> {
+    if (!smtpConfigured) {
+      console.error("[Chat] SMTP not configured - handoff email dropped");
+      return false;
+    }
+    try {
+      await transport().sendMail({
+        from: MAIL_FROM,
+        to: CHAT_HANDOFF_EMAIL,
+        subject: msg.subject,
+        text: msg.text,
+        html: msg.html,
+        ...(msg.replyTo ? { replyTo: msg.replyTo } : {}),
+      });
+      console.log(`[Chat] Handoff email sent to ${CHAT_HANDOFF_EMAIL}`);
+      return true;
+    } catch (err) {
+      console.error("[Chat] Handoff email failed:", err);
+      return false;
+    }
+  }
+
+  const chatDeps: ChatDeps = {
+    persistLead,
+    sendMail: sendHandoffMail,
+    smtpConfigured,
+    setPrivateHeaders,
+    clientIp,
+    clientCountry,
+  };
+
+  app.use("/api/chat/agent", chatAgentRoutes(prisma, chatDeps));
+  app.use("/api/chat", chatRoutes(prisma, chatDeps));
 
   /* =======================================================================
      Proposal portal
@@ -827,6 +925,7 @@ async function startServer() {
 
   // --- Admin proposal API -----------------------------------------------
 
+  app.use("/api/admin", requireAdmin(prisma), chatAdminRoutes(prisma));
   app.use("/api/admin", requireAdmin(prisma), proposalAdminRoutes(prisma));
 
   /**
@@ -1020,14 +1119,14 @@ async function startServer() {
    * escapes it — a company name containing "</script>" would otherwise close
    * the tag and turn the rest of the payload into markup.
    */
-  function injectShell(html: string, payload: string | null): string {
+  function injectShell(html: string, payload: string | null, varName = "__PROPOSAL__"): string {
     // The built shell carries its own robots meta, as a safety net for the case
     // where app-shell.html is fetched directly. The dev template does not, so
     // it is added here only when absent rather than unconditionally.
     const robots = /<meta[^>]+name="robots"/i.test(html)
       ? ""
       : '<meta name="robots" content="noindex, nofollow" />';
-    const script = payload ? `<script>window.__PROPOSAL__ = ${payload};</script>` : "";
+    const script = payload ? `<script>window.${varName} = ${payload};</script>` : "";
     return html.replace("</head>", `${robots}${script}</head>`);
   }
 
@@ -1042,6 +1141,149 @@ async function startServer() {
     res.setHeader("X-Robots-Tag", "noindex, nofollow");
     res.setHeader("Cache-Control", "private, no-store");
     res.setHeader("Referrer-Policy", "no-referrer");
+  }
+
+  /**
+   * Resolves a join link into the agent console.
+   *
+   * MUST be safe to fetch. Mail clients prefetch and scan links, so this route
+   * only authenticates and hands over the shell — it deliberately does NOT mark
+   * the agent as having joined. That is a separate POST behind a button in the
+   * console. The same hazard is why ProposalView.confirmed exists.
+   *
+   * The token is in the path, which makes the link tappable from a phone and
+   * also makes it the most-logged string in the stack. nginx has an
+   * `access_log off` block for /chat/join/ (see deploy/nginx-optimizeindex.conf)
+   * and nothing here may log the token — log the fingerprint if you need a
+   * correlation handle.
+   */
+  async function serveJoinLink(
+    req: express.Request,
+    res: express.Response,
+    shell: string | null,
+  ): Promise<boolean> {
+    if (!shell) return false;
+
+    const token = String(req.params.token || "");
+    const claims = verifyAgentToken(token);
+    setPrivateHeaders(res);
+
+    const deny = (why: string) => {
+      console.log(`[Chat] Join link rejected (${why})`);
+      res
+        .status(403)
+        .type("html")
+        .send(
+          injectShell(
+            shell.replace(
+              "</head>",
+              "<style>body{font:16px/1.6 system-ui,sans-serif;padding:15vh 24px;text-align:center;color:#141210;background:#F6F1E6}</style></head>",
+            ),
+            null,
+          ).replace(
+            /<div id="root"[^>]*>/,
+            '<div id="root"><h1 style="font-size:20px">This link has expired</h1>' +
+              "<p>Join links last 48 hours. Ask for a fresh one, or open the chat from the admin area.</p>",
+          ),
+        );
+      return true;
+    };
+
+    if (!claims) return deny("bad signature or expired");
+
+    const conversation = await prisma.chatConversation
+      .findUnique({ where: { id: claims.cid } })
+      .catch(() => null);
+
+    if (!conversation) return deny("no such conversation");
+    if (conversation.agentTokenId !== claims.jti) return deny("revoked");
+    if (!conversation.agentTokenExpiresAt || conversation.agentTokenExpiresAt.getTime() < Date.now()) {
+      return deny("expired in database");
+    }
+    if (conversation.status === "CLOSED") return deny("conversation closed");
+
+    // Audit trail for who opened the link, without recording the token itself.
+    await prisma.chatConversation
+      .update({
+        where: { id: conversation.id },
+        data: {
+          agentFirstSeenAt: conversation.agentFirstSeenAt || new Date(),
+          agentIpAddress: clientIp(req).slice(0, 100),
+        },
+      })
+      .catch(() => {});
+
+    setAgentCookie(res, token);
+
+    const context = {
+      conversationId: conversation.id,
+      agentLabel: conversation.agentLabel || process.env.CHAT_AGENT_LABEL || "Ali",
+      joined: Boolean(conversation.agentJoinedAt),
+      summary: conversation.qualifiedReason || undefined,
+      visitorEmail: conversation.visitorEmail || undefined,
+      visitorWebsite: conversation.visitorWebsite || undefined,
+      startedOn: conversation.startedOn || undefined,
+    };
+
+    res
+      .status(200)
+      .type("html")
+      .send(injectShell(shell, serializeForScriptTag(context), "__CHAT_AGENT__"));
+    return true;
+  }
+
+  /**
+   * The console for a signed-in admin.
+   *
+   * The emailed join link is the fast path from a phone; this is the one that
+   * needs no email at all. Authorised by the admin session cookie rather than a
+   * bearer token, so there is nothing sensitive in this URL and it is safe to
+   * link to from the admin inbox.
+   */
+  async function serveAgentConsole(
+    req: express.Request,
+    res: express.Response,
+    shell: string | null,
+  ): Promise<boolean> {
+    if (!shell) return false;
+
+    setPrivateHeaders(res);
+
+    const uid = verifySession(readCookie(req, SESSION_COOKIE));
+    if (!uid) {
+      // Not signed in. Send them to the admin login rather than explaining.
+      res.redirect(302, "/admin");
+      return true;
+    }
+
+    const user = await prisma.adminUser
+      .findUnique({ where: { id: uid }, select: { isActive: true, name: true } })
+      .catch(() => null);
+    if (!user?.isActive) {
+      res.redirect(302, "/admin");
+      return true;
+    }
+
+    const conversation = await prisma.chatConversation
+      .findUnique({ where: { id: String(req.params.id || "") } })
+      .catch(() => null);
+    if (!conversation) return false;
+
+    const context = {
+      conversationId: conversation.id,
+      agentLabel: user.name || process.env.CHAT_AGENT_LABEL || "Ali",
+      joined: Boolean(conversation.agentJoinedAt),
+      summary: conversation.qualifiedReason || undefined,
+      visitorEmail: conversation.visitorEmail || undefined,
+      visitorWebsite: conversation.visitorWebsite || undefined,
+      startedOn: conversation.startedOn || undefined,
+    };
+
+    res
+      .status(200)
+      .type("html")
+      .send(injectShell(shell, serializeForScriptTag(context), "__CHAT_AGENT__"));
+    return true;
   }
 
   // Vite Middleware integration for SPA routing
@@ -1081,6 +1323,24 @@ async function startServer() {
         setPrivateHeaders(res);
         const payload = serializeForScriptTag(toPublicProposal(proposal));
         res.status(200).type("html").send(injectShell(await devShell(req.originalUrl), payload));
+      } catch (err) {
+        next(err);
+      }
+    });
+
+    app.get("/chat/join/:token", async (req, res, next) => {
+      try {
+        const handled = await serveJoinLink(req, res, await devShell(req.originalUrl));
+        if (!handled) next();
+      } catch (err) {
+        next(err);
+      }
+    });
+
+    app.get("/chat/agent/:id", async (req, res, next) => {
+      try {
+        const handled = await serveAgentConsole(req, res, await devShell(req.originalUrl));
+        if (!handled) next();
       } catch (err) {
         next(err);
       }
@@ -1157,6 +1417,24 @@ async function startServer() {
       res.status(200).type("html").send(injectShell(shell, null));
     });
 
+    app.get("/chat/join/:token", async (req, res, next) => {
+      try {
+        const handled = await serveJoinLink(req, res, readShell());
+        if (!handled) next();
+      } catch (err) {
+        next(err);
+      }
+    });
+
+    app.get("/chat/agent/:id", async (req, res, next) => {
+      try {
+        const handled = await serveAgentConsole(req, res, readShell());
+        if (!handled) next();
+      } catch (err) {
+        next(err);
+      }
+    });
+
     app.get("*", async (req, res) => {
       const page = pageFor(req.path);
       if (page) {
@@ -1198,6 +1476,21 @@ async function startServer() {
         ? `[Mail] SMTP active: ${SMTP_USER}@${SMTP_HOST}:${SMTP_PORT} from ${MAIL_FROM} -> ${Object.values(LEAD_NOTIFY_OVERRIDES).flat().join(", ")}`
         : "[Mail] SMTP NOT configured - leads fall back to FormSubmit",
     );
+    // Same reasoning as the mail line: a chat widget that silently degraded to
+    // a contact form because the key was missing looks like a design choice
+    // rather than a misconfiguration, so say which mode is live.
+    console.log(
+      process.env.CHAT_ENABLED === "false"
+        ? "[Chat] Disabled by CHAT_ENABLED - widget runs in form mode"
+        : hasApiKey()
+          ? `[Chat] Assistant active: model=${modelName()}, handoff -> ${CHAT_HANDOFF_EMAIL}`
+          : "[Chat] OPENAI_API_KEY not set - widget runs in form mode",
+    );
+
+    // Retention. Runs at boot and every six hours; best-effort, and it logs
+    // rather than throws, so a bad sweep cannot take the server down.
+    void pruneOldChats(prisma);
+    setInterval(() => void pruneOldChats(prisma), 6 * 60 * 60 * 1000).unref();
   });
 }
 

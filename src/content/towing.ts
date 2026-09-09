@@ -1392,11 +1392,12 @@ const michigan: TowingState = {
       service: 'ai-answers',
       question: 'What does an AI agency actually do for a towing company?',
       answer:
-        'For a towing company, useful AI work is narrow: make the business findable and quotable by assistants, use AI to speed up the content and review-response workload, and keep the Google Business Profile and call handling accurate. It is not a chatbot on your website.',
+        'For a towing company, useful AI work is narrow: make the business findable and quotable by assistants, use AI to speed up the content and review-response workload, and keep the Google Business Profile and call handling accurate. A chatbot that answers in place of your dispatcher is not on that list.',
       detail: [
         'The honest version of AI marketing for a towing company has two halves. The first is being retrievable — assistants answer "who should I call for a tow in Detroit" with named businesses assembled from sources they can reach, so the work is making clear, specific, quotable information exist about your operation, on your site and in the third-party places models draw from.',
         'The second is throughput. Review replies, service pages, corridor pages and Google Business Profile posts are all work that a small operator never gets to. AI makes that volume achievable, but it does not make it correct — a reply written without knowing Michigan\'s dispute process is worse than no reply.',
-        'What it is not: a chat widget, a "we use AI" badge, or a monthly report with a language model summarising your rankings. If an agency cannot say which specific task the AI performs and how you would tell whether it worked, the AI is decoration.',
+        'What it is not: a chat widget that deflects callers instead of routing them, a "we use AI" badge, or a monthly report with a language model summarising your rankings. If an agency cannot say which specific task the AI performs and how you would tell whether it worked, the AI is decoration.',
+        'We run one on this site, so the distinction is worth stating plainly. Ours answers questions from published pages, runs the same automated site check the homepage offers, and its main job is to get a person into the conversation quickly. It does not take tow requests, quote a price, or stand between a caller and a human. For a towing operator the calculation is different again: your callers have a vehicle in a live situation and want a phone answered, which is why we would not build you one.',
       ],
       callCta: 'Ask us what we would actually automate',
     },
