@@ -78,18 +78,48 @@ export function unlockAudio(): void {
   if (ctx && ctx.state === 'suspended') void ctx.resume().catch(() => {});
 }
 
+/* -------------------------------------------------------------------------
+   Tuning
+
+   Kept as named constants because "make it more aggressive" is a knob that
+   gets turned more than once, and the alternative is hunting magic numbers
+   through the oscillator code.
+------------------------------------------------------------------------- */
+
+/**
+ * Triangle rather than sine. A sine is a single harmonic — pure, soft, and
+ * easily lost under music or a noisy room. A triangle carries odd harmonics,
+ * which is what makes it cut through, without the buzz of a square wave.
+ */
+const WAVE: OscillatorType = 'triangle';
+
+/** Peak gain per note. Was 0.045; this is roughly three times as loud. */
+const PEAK = 0.13;
+
+/** Seconds from silence to full. Short enough to read as a hit, not a swell. */
+const ATTACK = 0.004;
+
+/** A bright ascending triad — G5, B5, E6. Rising reads as "arrived". */
+const NOTES = [784, 988, 1319];
+
+/** Gap between note onsets. Tight, so it lands as one event rather than three. */
+const SPACING = 0.062;
+
+const DURATION = 0.13;
+
 function note(ctx: AudioContext, frequency: number, startAt: number, duration: number, peak: number) {
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
 
-  osc.type = 'sine';
+  osc.type = WAVE;
   osc.frequency.value = frequency;
 
   // Ramped rather than switched. A gain that jumps to full produces an audible
   // click at the start of the note, which is the difference between a chime and
-  // a glitch.
+  // a glitch. The attack is deliberately near the edge of that — fast enough to
+  // have some snap, slow enough not to pop.
   gain.gain.setValueAtTime(0.0001, startAt);
-  gain.gain.exponentialRampToValueAtTime(peak, startAt + 0.012);
+  gain.gain.exponentialRampToValueAtTime(peak, startAt + ATTACK);
   gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
 
   osc.connect(gain).connect(ctx.destination);
@@ -99,13 +129,23 @@ function note(ctx: AudioContext, frequency: number, startAt: number, duration: n
 
 function chime(ctx: AudioContext): void {
   const now = ctx.currentTime;
-  note(ctx, 660, now, 0.11, 0.045);
-  note(ctx, 880, now + 0.09, 0.16, 0.04);
+
+  NOTES.forEach((frequency, i) => {
+    const at = now + i * SPACING;
+    // The last note rings slightly longer, so the sound resolves rather than
+    // being cut off mid-flight.
+    const duration = i === NOTES.length - 1 ? DURATION * 1.6 : DURATION;
+    note(ctx, frequency, at, duration, PEAK);
+  });
 }
 
 /**
- * A rising two-note chime. Deliberately quiet and short — this fires on a
- * message someone is already expecting, not on an alarm.
+ * A rising three-note alert. Loud enough and bright enough to be noticed from
+ * another tab, which is the whole reason it exists — a sound nobody hears over
+ * their music is the same as no sound.
+ *
+ * The mute toggle in the panel header is the counterweight. Tune it through the
+ * constants above rather than here.
  *
  * A suspended context is resumed and then played, rather than skipped. resume()
  * is asynchronous, so a context unlocked by a click a moment earlier can still
