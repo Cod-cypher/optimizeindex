@@ -224,6 +224,18 @@ export function chatAgentLeftNotice(name: string): string {
   return `${name} left. The assistant is answering again.`;
 }
 
+/**
+ * Shown when a human stops responding rather than actually leaving — the tab
+ * closed, the laptop slept, the phone lost signal.
+ *
+ * Worded so it does not read as being abandoned. From the visitor's side the
+ * difference between "he left" and "he vanished" matters, and only one of them
+ * is worth saying out loud.
+ */
+export function chatAgentDroppedNotice(name: string): string {
+  return `${name} stepped away. The assistant is answering again in the meantime.`;
+}
+
 /* -------------------------------------------------------------------------
    The audit tool
 ------------------------------------------------------------------------- */

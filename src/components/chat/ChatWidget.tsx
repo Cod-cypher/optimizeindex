@@ -26,6 +26,7 @@ import { MessageCircle } from 'lucide-react';
 import type { ChatMessageDTO, ChatMode } from '../../../shared/chatTypes';
 import { CHAT_LAUNCHER_LABEL } from '../../content/chat';
 import { trackEvent } from '../../lib/tracker';
+import { playIncoming, setTabBadge, unlockAudio } from '../../lib/chatNotify';
 import {
   clearPersisted,
   mergeMessages,
@@ -135,7 +136,13 @@ export default function ChatWidget() {
           const inbound = data.messages.filter((m) => m.role !== 'VISITOR');
           if (inbound.length > 0) {
             setAwaitingReply(false);
-            if (!open) setUnread((n) => n + inbound.length);
+            playIncoming();
+
+            // An open panel on a backgrounded tab is still unread. Counting
+            // only on !open would leave someone who tabbed away with no badge
+            // and no reason to come back.
+            const unseen = !open || document.visibilityState === 'hidden';
+            if (unseen) setUnread((n) => n + inbound.length);
           }
         }
 
@@ -164,8 +171,8 @@ export default function ChatWidget() {
     });
     if (delay !== null) timer = window.setTimeout(tick, delay);
 
-    // A hidden tab stops polling entirely; coming back fetches immediately
-    // rather than waiting out the interval.
+    // A hidden tab still polls, but slowly. Coming back fetches immediately
+    // rather than waiting out the remaining interval.
     const onVisibility = () => {
       if (document.visibilityState === 'visible') {
         window.clearTimeout(timer);
@@ -180,6 +187,22 @@ export default function ChatWidget() {
       document.removeEventListener('visibilitychange', onVisibility);
     };
   }, [session, cursor, open, awaitingReply]);
+
+  // Mirror the unread count into the tab title, so a backgrounded tab shows
+  // "(2) OptimizeIndex | …" without the widget being visible at all.
+  useEffect(() => {
+    setTabBadge(unread);
+    return () => setTabBadge(0);
+  }, [unread]);
+
+  // Coming back to the tab with the panel open means they have seen it.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible' && open) setUnread(0);
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [open]);
 
   /* --- persistence ----------------------------------------------------- */
 
@@ -197,6 +220,10 @@ export default function ChatWidget() {
   /* --- open ------------------------------------------------------------ */
 
   const handleOpen = useCallback(async () => {
+    // Must happen inside the click. A browser will not start an AudioContext
+    // outside a user gesture, and one created later is born suspended — the
+    // first chime would be dropped silently.
+    unlockAudio();
     setOpen(true);
     setUnread(0);
 

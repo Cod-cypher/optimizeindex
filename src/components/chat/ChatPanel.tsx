@@ -11,7 +11,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Send, X } from 'lucide-react';
+import { Bell, BellOff, Send, X } from 'lucide-react';
 import type { ChatMessageDTO } from '../../../shared/chatTypes';
 import {
   CHAT_INPUT_PLACEHOLDER,
@@ -20,6 +20,7 @@ import {
 } from '../../content/chat';
 import { trackEvent } from '../../lib/tracker';
 import { optimisticId, sendChatMessage } from '../../lib/chat';
+import { isMuted, setMuted } from '../../lib/chatNotify';
 import type { ChatSession } from './ChatWidget';
 import ChatMessageList from './ChatMessageList';
 import ChatForm from './ChatForm';
@@ -48,11 +49,19 @@ export default function ChatPanel({
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
+  const [muted, setMutedState] = useState(false);
 
   const panelRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 639px)').matches;
+
+  // Read in an effect rather than during render. The panel is lazy so it never
+  // reaches the pre-renderer, but reading storage during render is the habit
+  // that breaks hydration the day something moves.
+  useEffect(() => {
+    setMutedState(isMuted());
+  }, []);
 
   /* --- escape, scroll lock, focus -------------------------------------- */
 
@@ -167,6 +176,24 @@ export default function ChatPanel({
             </p>
           )}
         </div>
+        <div className="flex items-center gap-1 shrink-0">
+        <button
+          type="button"
+          onClick={() => {
+            const next = !muted;
+            setMuted(next);
+            setMutedState(next);
+          }}
+          aria-label={muted ? 'Turn message sound on' : 'Turn message sound off'}
+          aria-pressed={muted}
+          className="h-8 w-8 grid place-items-center rounded-full border-1.5 border-ink bg-paper text-ink cursor-pointer focus-ring hover:bg-lime transition-colors"
+        >
+          {muted ? (
+            <BellOff size={14} strokeWidth={2.5} aria-hidden="true" />
+          ) : (
+            <Bell size={14} strokeWidth={2.5} aria-hidden="true" />
+          )}
+        </button>
         <button
           type="button"
           onClick={onClose}
@@ -175,6 +202,7 @@ export default function ChatPanel({
         >
           <X size={16} strokeWidth={2.5} aria-hidden="true" />
         </button>
+        </div>
       </header>
 
       {isForm ? (

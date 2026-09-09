@@ -133,13 +133,23 @@ export async function closeChat(id: string, token: string): Promise<void> {
    Polling
 ------------------------------------------------------------------------- */
 
+/** A hidden tab still checks, just rarely. See the note below. */
+const HIDDEN_MS = 30_000;
+
 /**
  * How long to wait before the next poll.
  *
  * Two seconds only while it matters — a human is typing, or a reply is
- * outstanding. Everything else backs off, and a hidden tab stops entirely: a
- * visitor who left the tab open overnight should not be making requests all
- * night.
+ * outstanding. Everything else backs off.
+ *
+ * A hidden tab used to stop polling altogether, on the reasoning that a visitor
+ * who left a tab open overnight should not be making requests all night. That
+ * was wrong once the widget grew a sound and a tab-title badge: both exist
+ * precisely to reach someone who is looking at a different tab, and neither can
+ * fire for a message that was never fetched. So a hidden tab keeps checking,
+ * slowly. Thirty seconds is roughly a hundred requests over an eight-hour
+ * night, against an indexed query — cheap enough not to matter, frequent enough
+ * that a reply is noticed within half a minute.
  */
 export function pollInterval(state: {
   status: string;
@@ -147,12 +157,11 @@ export function pollInterval(state: {
   awaitingReply: boolean;
   errorStreak: number;
 }): number | null {
-  if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return null;
-
   if (state.errorStreak >= 3) {
     // Exponential, capped at a minute. Enough to ride out a deploy.
     return Math.min(60_000, 5_000 * 2 ** (state.errorStreak - 2));
   }
+  if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return HIDDEN_MS;
   if (state.status === 'LIVE' || state.awaitingReply) return 2_000;
   if (state.panelOpen) return 5_000;
   return 20_000;

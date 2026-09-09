@@ -16,6 +16,7 @@ import type { ChatAgentContext, ChatAgentViewResponse, ChatMessageDTO } from '..
 import { mergeMessages } from '../lib/chat';
 import { CONTACT_EMAIL, CONTACT_PHONE_DISPLAY } from '../routes';
 import MessageText from '../components/chat/MessageText';
+import { playIncoming, setTabBadge, unlockAudio } from '../lib/chatNotify';
 
 interface Props {
   context: ChatAgentContext;
@@ -55,6 +56,7 @@ export default function AgentConsole({ context }: Props) {
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [unread, setUnread] = useState(0);
 
   const endRef = useRef<HTMLDivElement>(null);
   const id = context.conversationId;
@@ -106,6 +108,14 @@ export default function AgentConsole({ context }: Props) {
           if (!cancelled && data.messages.length > 0) {
             setMessages((prev) => mergeMessages(prev, data.messages));
             setCursor(data.cursor);
+
+            // Only the visitor's own messages. The assistant's replies and the
+            // agent's own echo are not things to be alerted about.
+            const fromVisitor = data.messages.filter((m) => m.role === 'VISITOR').length;
+            if (fromVisitor > 0) {
+              playIncoming();
+              if (document.visibilityState === 'hidden') setUnread((n) => n + fromVisitor);
+            }
           }
         }
       } catch {
@@ -126,9 +136,48 @@ export default function AgentConsole({ context }: Props) {
     endRef.current?.scrollIntoView({ block: 'end' });
   }, [messages.length]);
 
+  // The console is usually one tab among many. The count in the title is how a
+  // waiting visitor gets noticed at all.
+  useEffect(() => {
+    setTabBadge(unread);
+    return () => setTabBadge(0);
+  }, [unread]);
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') setUnread(0);
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
+
+  /*
+    Tell the server on the way out.
+
+    Best effort only, and deliberately not the mechanism this relies on:
+    beforeunload does not fire on a crash, a killed tab, or a phone losing
+    signal. The heartbeat in server/chat/presence.ts is what actually decides
+    the agent has gone. This just makes the common case — closing the tab —
+    hand back in a second instead of in thirty-five.
+  */
+  useEffect(() => {
+    const onLeave = () => {
+      if (!joined) return;
+      navigator.sendBeacon?.(
+        `/api/chat/agent/${encodeURIComponent(id)}/leave`,
+        new Blob([JSON.stringify({ resumeBot: true })], { type: 'application/json' }),
+      );
+    };
+    window.addEventListener('pagehide', onLeave);
+    return () => window.removeEventListener('pagehide', onLeave);
+  }, [id, joined]);
+
   /* --- actions --------------------------------------------------------- */
 
   const join = async () => {
+    // Inside the click, so the AudioContext starts running rather than
+    // suspended and the first chime is actually audible.
+    unlockAudio();
     setBusy(true);
     try {
       await fetch(`/api/chat/agent/${encodeURIComponent(id)}/join`, {

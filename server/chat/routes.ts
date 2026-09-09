@@ -24,6 +24,7 @@ import {
   CHAT_HANDOFF_UNAVAILABLE,
   CHAT_OFFLINE_NOTICE,
   CHAT_SEND_FAILED,
+  chatAgentDroppedNotice,
   chatAgentJoinedNotice,
   chatAgentLeftNotice,
 } from "../../src/content/chat";
@@ -33,6 +34,7 @@ import type {
   ChatStartResponse,
 } from "../../shared/chatTypes";
 import { asksForHuman, runTurn } from "./engine";
+import { agentPresent, clearAgentSeen, markAgentSeen } from "./presence";
 import { hasApiKey } from "./openai";
 import { checkChatRate } from "./ratelimit";
 import {
@@ -480,8 +482,30 @@ export function chatRoutes(prisma: PrismaClient, deps: ChatDeps): express.Router
         console.error("[Chat] Chat-started notification failed:", err),
       );
 
-      // A human is in the room. The bot stays quiet — two voices answering one
-      // question is worse than a pause.
+      /*
+        A human is in the room. The bot stays quiet — two voices answering one
+        question is worse than a pause.
+
+        Unless they are not, in fact, in the room. Nothing tells the server that
+        a browser tab closed, so if the console has stopped sending heartbeats
+        the conversation is handed back to the assistant rather than leaving the
+        visitor typing into silence.
+      */
+      if (conversation.status === "LIVE" && !agentPresent(id)) {
+        console.log(`[Chat] Agent gone from conversation ${id} - assistant resuming`);
+        clearAgentSeen(id);
+        await prisma.chatConversation
+          .update({ where: { id }, data: { status: "ACTIVE", agentJoinedAt: null } })
+          .catch(() => {});
+        await appendMessage(prisma, {
+          conversationId: id,
+          role: "SYSTEM",
+          content: chatAgentDroppedNotice(conversation.agentLabel || agentLabel()),
+          kind: "notice",
+        });
+        conversation.status = "ACTIVE";
+      }
+
       if (conversation.status === "LIVE") {
         const messages = await messagesAfter(prisma, id, after);
         res.json({ messages, cursor: cursorOf(messages, after), status: conversation.status, agentLabel: conversation.agentLabel || undefined } satisfies ChatPollResponse);
@@ -675,6 +699,7 @@ export function chatAgentRoutes(prisma: PrismaClient, deps: ChatDeps): express.R
     deps.setPrivateHeaders(res);
 
     const id = str(req.params.id, 40);
+    markAgentSeen(id);
     const conversation = await getConversation(prisma, id);
     if (!conversation) {
       res.status(404).json({ error: "not_found" });
@@ -723,6 +748,7 @@ export function chatAgentRoutes(prisma: PrismaClient, deps: ChatDeps): express.R
 
     const id = str(req.params.id, 40);
     const label = (req as AgentRequest).agentLabel || agentLabel();
+    markAgentSeen(id);
 
     const conversation = await getConversation(prisma, id);
     if (!conversation) {
@@ -754,6 +780,7 @@ export function chatAgentRoutes(prisma: PrismaClient, deps: ChatDeps): express.R
 
     const id = str(req.params.id, 40);
     const label = (req as AgentRequest).agentLabel || agentLabel();
+    markAgentSeen(id);
     const text = String((req.body || {}).text ?? "").trim().slice(0, MAX_MESSAGE_CHARS);
     if (!text) {
       res.status(400).json({ error: "empty" });
@@ -781,6 +808,9 @@ export function chatAgentRoutes(prisma: PrismaClient, deps: ChatDeps): express.R
     deps.setPrivateHeaders(res);
 
     const id = str(req.params.id, 40);
+    // The console's poll loop is the heartbeat. This one line is what keeps the
+    // assistant muted while somebody is actually there.
+    markAgentSeen(id);
     const after = Number(req.query.after) || 0;
     const conversation = await getConversation(prisma, id);
     if (!conversation) {
@@ -803,6 +833,7 @@ export function chatAgentRoutes(prisma: PrismaClient, deps: ChatDeps): express.R
     const id = str(req.params.id, 40);
     const label = (req as AgentRequest).agentLabel || agentLabel();
     const resumeBot = Boolean((req.body || {}).resumeBot);
+    clearAgentSeen(id);
 
     await prisma.chatConversation
       .update({
