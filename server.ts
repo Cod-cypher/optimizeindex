@@ -651,16 +651,20 @@ async function startServer() {
     }
   });
 
-  app.post("/api/leads", async (req, res) => {
-    const body = req.body || {};
-    if (!body.email || !body.website) {
-      res.status(400).json({ error: "email and website are required" });
-      return;
-    }
-
+  /**
+   * Builds the stored shape of a lead from a request body.
+   *
+   * Every field is clamped here rather than at the database, because the columns
+   * are unbounded text and a 2 MB "comments" would otherwise be written verbatim.
+   * The key list is closed: anything not named here is dropped, which is why a
+   * new question on a form has to be folded into an existing field (see the
+   * header of src/components/towing/TowingJobsLeadForm.tsx) rather than sent as
+   * a new key that would silently vanish.
+   */
+  function buildLeadData(body: Record<string, unknown>, req: express.Request) {
     const str = (v: unknown, max = 2000) => String(v ?? "").slice(0, max);
 
-    const leadData = {
+    return {
       type: str(body.type) || "unknown",
       name: str(body.name, 200),
       email: str(body.email, 320),
@@ -690,7 +694,21 @@ async function startServer() {
       userAgent: str(req.headers["user-agent"], 500),
       ipAddress: str(clientIp(req), 100),
     };
+  }
 
+  type LeadData = ReturnType<typeof buildLeadData>;
+
+  /**
+   * Delivers a lead through all three channels, in order of how much we would
+   * regret losing it: the notification email, the database, and — only if the
+   * database write failed — a file on disk.
+   *
+   * Extracted from the /api/leads handler so the chat widget captures a lead
+   * through the identical path (server/chat/tools.ts). Sharing the function is
+   * what makes "a chat lead is a lead" true structurally, rather than true
+   * because two implementations happen to agree today.
+   */
+  async function persistLead(leadData: LeadData): Promise<{ id: string | null; emailForwarded: boolean }> {
     // 1. Email forward (primary notification channel)
     const emailForwarded = await emailLead({ ...leadData, createdAt: new Date().toISOString() });
 
@@ -736,6 +754,18 @@ async function startServer() {
       });
       console.log(`[Leads] Saved ${leadData.type} lead from ${leadData.email} (file backup)`);
     }
+
+    return { id: dbId, emailForwarded };
+  }
+
+  app.post("/api/leads", async (req, res) => {
+    const body = req.body || {};
+    if (!body.email || !body.website) {
+      res.status(400).json({ error: "email and website are required" });
+      return;
+    }
+
+    const { id: dbId } = await persistLead(buildLeadData(body, req));
 
     // The lead was captured via at least one channel — report success to the visitor.
     res.json({ ok: true, id: dbId || "backup" });
