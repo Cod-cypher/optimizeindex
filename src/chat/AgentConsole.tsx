@@ -201,16 +201,46 @@ export default function AgentConsole({ context }: Props) {
       <header className="border-b-1.5 border-ink bg-paper px-4 py-3">
         <p className="font-mono text-[10px] uppercase tracking-wider text-stone">Live chat</p>
         <h1 className="font-display font-extrabold text-lg leading-tight">
-          {view?.visitorCompany || view?.visitorName || 'A visitor'}
+          {view?.visitorName || view?.visitorCompany || 'A visitor'}
+          {view?.visitorName && view?.visitorCompany && (
+            <span className="font-sans font-normal text-sm text-stone"> · {view.visitorCompany}</span>
+          )}
         </h1>
-        <dl className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[11px] text-stone">
-          {view?.visitorEmail && <Fact label="Email" value={view.visitorEmail} />}
+
+        {/*
+          The point of this block: whoever opens the link is about to talk to a
+          stranger and needs to know who, on what, and how else to reach them —
+          without scrolling the transcript to find out. The email and phone are
+          real links, because this is usually opened on a phone and the fastest
+          resolution is often to stop typing and call.
+        */}
+        <dl className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5 font-mono text-[11px] text-stone">
+          {view?.visitorEmail && (
+            <Fact label="Email" value={view.visitorEmail} href={`mailto:${view.visitorEmail}`} />
+          )}
+          {view?.visitorPhone && (
+            <Fact
+              label="Phone"
+              value={view.visitorPhone}
+              href={`tel:${view.visitorPhone.replace(/[^\d+]/g, '')}`}
+            />
+          )}
           {view?.visitorWebsite && <Fact label="Site" value={view.visitorWebsite} />}
           {view?.startedOn && <Fact label="Page" value={view.startedOn} />}
           {view?.auditDomain && (
             <Fact label="Audit" value={`${view.auditDomain} ${view.auditScore ?? '—'}/100`} />
           )}
         </dl>
+
+        {/*
+          Say plainly when a detail is missing, rather than leaving a gap the
+          reader has to notice. "No email yet" is an instruction to go and ask.
+        */}
+        {view && !view.visitorEmail && !view.visitorPhone && (
+          <p className="mt-2 font-mono text-[10px] uppercase tracking-wider text-ink bg-lime border-1.5 border-ink rounded-full px-2.5 py-1 inline-block">
+            No contact details yet
+          </p>
+        )}
       </header>
 
       {context.summary && !joined && (
@@ -341,11 +371,22 @@ export default function AgentConsole({ context }: Props) {
   );
 }
 
-function Fact({ label, value }: { label: string; value: string }) {
+function Fact({ label, value, href }: { label: string; value: string; href?: string }) {
   return (
     <span>
       <dt className="inline text-stone/70">{label}: </dt>
-      <dd className="inline text-ink">{value}</dd>
+      <dd className="inline text-ink">
+        {href ? (
+          <a
+            href={href}
+            className="underline underline-offset-2 decoration-2 hover:opacity-70 focus-ring rounded-sm"
+          >
+            {value}
+          </a>
+        ) : (
+          value
+        )}
+      </dd>
     </span>
   );
 }

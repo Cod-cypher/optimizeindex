@@ -19,6 +19,7 @@ import { AuditError, normalizeInput } from "../audit/url";
 import { runScan } from "../audit/scan";
 import { checkRateLimit } from "../audit/ratelimit";
 import type { AuditCategory, AuditResult } from "../../shared/auditTypes";
+import { finishStep, startStep } from "./steps";
 
 /* -------------------------------------------------------------------------
    Schemas
@@ -101,6 +102,25 @@ export const TOOLS: ToolDef[] = [
   },
   {
     type: "function",
+    name: "save_contact_details",
+    description:
+      "Record whatever contact details the visitor has given so far. Call this the moment you learn a name, an email address, a phone number, a company or a website — do not wait until you have all of them, and do not wait for capture_lead. Call it again as you learn more. Pass null for anything not yet known. This is silent: it records the detail without telling the team anything, so it is safe to call early and often.",
+    strict: true,
+    parameters: {
+      type: "object",
+      additionalProperties: false,
+      required: ["name", "email", "phone", "company", "website"],
+      properties: {
+        name: { type: ["string", "null"], description: "What they said their name is." },
+        email: { type: ["string", "null"], description: "Exactly as typed. Never guess or correct." },
+        phone: { type: ["string", "null"], description: "Exactly as typed." },
+        company: { type: ["string", "null"] },
+        website: { type: ["string", "null"] },
+      },
+    },
+  },
+  {
+    type: "function",
     name: "request_human",
     description:
       "Ask a person to join this conversation. Call this whenever the visitor asks for a human, asks about price, is unhappy, or asks something the reference material does not cover.",
@@ -138,6 +158,8 @@ export interface ToolContext {
   sessionId?: string | null;
   gaClientId?: string | null;
   startedOn?: string | null;
+  /** What a human is called here, so a step can say "Getting Ali". */
+  agentLabel: string;
   /** The extracted /api/leads pipeline. Same function the forms use. */
   persistLead: PersistLead;
   /** Triggers the handoff email. Returns false when no notification got out. */
@@ -202,6 +224,18 @@ export async function runTool(
         effects,
       );
 
+    case "save_contact_details":
+      return saveContactTool(
+        {
+          name: str(args.name, 200),
+          email: str(args.email, 320),
+          phone: str(args.phone, 50),
+          company: str(args.company, 200),
+          website: str(args.website, 500),
+        },
+        ctx,
+      );
+
     case "request_human":
       return requestHumanTool(
         str(args.reason, 50),
@@ -255,6 +289,8 @@ async function runAuditTool(
     };
   }
 
+  startStep(ctx.conversationId, "audit", `Checking ${domain}`);
+
   const cached = await ctx.prisma.siteAudit
     .findFirst({
       where: {
@@ -270,7 +306,9 @@ async function runAuditTool(
   if (cached?.checks) {
     effects.auditRan = true;
     await linkAudit(ctx, cached.id);
-    return summarise(cached.checks as unknown as AuditResult, true);
+    const payload = cached.checks as unknown as AuditResult;
+    finishStep(ctx.conversationId, `Checked ${domain} — ${payload.overall}/100`);
+    return summarise(payload, true);
   }
 
   const limit = checkRateLimit(ctx.ipAddress || "unknown");
@@ -307,6 +345,7 @@ async function runAuditTool(
     effects.auditRan = true;
     if (saved) await linkAudit(ctx, saved.id);
 
+    finishStep(ctx.conversationId, `Checked ${result.domain} — ${result.overall}/100`);
     console.log(`[Chat] Audited ${result.domain} — ${result.overall}/100 in conversation ${ctx.conversationId}`);
     return summarise(result as AuditResult, false);
   } catch (err) {
@@ -353,6 +392,59 @@ function summarise(result: AuditResult, fromCache: boolean): ToolResult {
     topProblems: problems,
     fromCache,
     hint: "Summarise the two or three that matter most in plain language. Do not read out the whole list, and do not invent a fix that is not here.",
+  };
+}
+
+/* -------------------------------------------------------------------------
+   save_contact_details
+------------------------------------------------------------------------- */
+
+interface ContactArgs {
+  name: string;
+  email: string;
+  phone: string;
+  company: string;
+  website: string;
+}
+
+/**
+ * Records partial contact details as they come up.
+ *
+ * Separate from capture_lead because they answer different questions.
+ * capture_lead means "this is a lead, tell the team" and needs an email and a
+ * website before the pipeline will accept it. This one means "we now know their
+ * name", and its whole value is that it can be called with almost nothing.
+ *
+ * Without it, a visitor who gave a name and a phone number and then left was
+ * recorded as an anonymous conversation, and whoever picked it up had to read
+ * the transcript to find out who they were talking to.
+ *
+ * Only ever fills blanks in, never overwrites a known value with an empty one,
+ * so a later call that omits a field cannot erase an earlier one.
+ */
+async function saveContactTool(args: ContactArgs, ctx: ToolContext): Promise<ToolResult> {
+  const data: Record<string, string> = {};
+  if (args.name) data.visitorName = args.name;
+  if (args.email) data.visitorEmail = args.email;
+  if (args.phone) data.visitorPhone = args.phone;
+  if (args.company) data.visitorCompany = args.company;
+  if (args.website) data.visitorWebsite = args.website;
+
+  if (Object.keys(data).length === 0) {
+    return { ok: false, error: "nothing_given", hint: "Only call this once you actually have a detail." };
+  }
+
+  startStep(ctx.conversationId, "contact", "Saving your details");
+  await ctx.prisma.chatConversation
+    .update({ where: { id: ctx.conversationId }, data })
+    .catch(() => {});
+  finishStep(ctx.conversationId, "Saved your details");
+
+  const known = Object.keys(data).map((k) => k.replace("visitor", "").toLowerCase());
+  return {
+    ok: true,
+    saved: known,
+    hint: "Recorded. Do not thank them for it or mention that you saved anything — just carry on with the conversation.",
   };
 }
 
@@ -426,8 +518,13 @@ async function requestHumanTool(
   ctx: ToolContext,
   effects: ToolEffects,
 ): Promise<ToolResult> {
+  startStep(ctx.conversationId, "human", `Getting ${ctx.agentLabel}`);
   const notified = await ctx.requestHuman(reason || "visitor_asked", summary, urgency);
   effects.handoffTriggered = true;
+  finishStep(
+    ctx.conversationId,
+    notified ? `${ctx.agentLabel} has been sent this conversation` : "Could not reach anyone",
+  );
 
   return {
     ok: true,

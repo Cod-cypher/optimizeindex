@@ -58,6 +58,21 @@ export interface ChatStartResponse {
   notice?: string;
 }
 
+/**
+ * One piece of visible work inside a turn.
+ *
+ * Exists so a fifteen-second audit does not look like a hang. These are
+ * transient — they live only while the turn runs and are never stored as
+ * messages, because "checking your site" is not something the visitor should
+ * find in the transcript tomorrow.
+ */
+export interface TurnStep {
+  id: string;
+  /** Shown verbatim. Written to read as progress: "Checking example.com". */
+  label: string;
+  state: 'active' | 'done';
+}
+
 export interface ChatPollResponse {
   messages: ChatMessageDTO[];
   cursor: number;
@@ -66,6 +81,8 @@ export interface ChatPollResponse {
   agentLabel?: string;
   /** True while the assistant is composing, so the widget holds its indicator. */
   pending?: boolean;
+  /** What the assistant is doing right now. Empty between turns. */
+  steps?: TurnStep[];
 }
 
 export interface ChatSendResponse extends ChatPollResponse {

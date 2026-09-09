@@ -23,7 +23,7 @@
 
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { MessageCircle } from 'lucide-react';
-import type { ChatMessageDTO, ChatMode } from '../../../shared/chatTypes';
+import type { ChatMessageDTO, ChatMode, TurnStep } from '../../../shared/chatTypes';
 import { CHAT_LAUNCHER_LABEL } from '../../content/chat';
 import { trackEvent } from '../../lib/tracker';
 import {
@@ -60,6 +60,10 @@ export default function ChatWidget() {
   const [unread, setUnread] = useState(0);
   const [starting, setStarting] = useState(false);
   const [awaitingReply, setAwaitingReply] = useState(false);
+  // What the assistant is doing right now, delivered by the poll while the
+  // send request is still open. This is the payoff for choosing polling: the
+  // turn and the progress report travel on separate connections.
+  const [steps, setSteps] = useState<TurnStep[]>([]);
 
   const launcherRef = useRef<HTMLButtonElement>(null);
   const errorStreak = useRef(0);
@@ -135,9 +139,12 @@ export default function ChatWidget() {
           const inbound = data.messages.filter((m) => m.role !== 'VISITOR');
           if (inbound.length > 0) {
             setAwaitingReply(false);
+            setSteps([]);
             if (!open) setUnread((n) => n + inbound.length);
           }
         }
+
+        setSteps(data.steps ?? []);
         if (data.status !== session.status || data.agentLabel !== session.agentLabel) {
           setSession((s) => (s ? { ...s, status: data.status, agentLabel: data.agentLabel } : s));
         }
@@ -267,12 +274,16 @@ export default function ChatWidget() {
             messages={messages}
             starting={starting}
             awaitingReply={awaitingReply}
+            steps={steps}
             onClose={handleClose}
             onSent={(sent, nextCursor) => {
               setMessages((prev) => mergeMessages(prev, sent));
               if (nextCursor > cursor) setCursor(nextCursor);
             }}
-            onAwaiting={setAwaitingReply}
+            onAwaiting={(v) => {
+              setAwaitingReply(v);
+              if (!v) setSteps([]);
+            }}
             onStatus={(status, agentLabel) =>
               setSession((s) => (s ? { ...s, status, agentLabel } : s))
             }

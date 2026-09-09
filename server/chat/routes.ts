@@ -33,6 +33,7 @@ import type {
   ChatStartResponse,
 } from "../../shared/chatTypes";
 import { asksForHuman, runTurn } from "./engine";
+import { beginTurn, endTurn, getSteps } from "./steps";
 import { hasApiKey } from "./openai";
 import { checkChatRate } from "./ratelimit";
 import {
@@ -400,11 +401,18 @@ export function chatRoutes(prisma: PrismaClient, deps: ChatDeps): express.Router
         sessionId: conversation.sessionId,
         gaClientId: conversation.gaClientId,
         startedOn: conversation.startedOn,
+        agentLabel: agentLabel(),
         persistLead: deps.persistLead,
         requestHuman: (reason, summary, _urgency) => triggerHandoff(id, reason, summary),
       };
 
-      const turn = await runTurn(prisma, conversation, ctx);
+      beginTurn(id);
+      let turn;
+      try {
+        turn = await runTurn(prisma, conversation, ctx);
+      } finally {
+        endTurn(id);
+      }
 
       // When the regex already answered, a second "I'll get Ali" from the model
       // would be a duplicate. Only append if it said something else.
@@ -458,6 +466,7 @@ export function chatRoutes(prisma: PrismaClient, deps: ChatDeps): express.Router
     }
 
     const messages = await messagesAfter(prisma, id, after);
+    const steps = getSteps(id);
     res.json({
       messages,
       cursor: cursorOf(messages, after),
@@ -465,6 +474,7 @@ export function chatRoutes(prisma: PrismaClient, deps: ChatDeps): express.Router
       ...(conversation.agentLabel && conversation.agentJoinedAt
         ? { agentLabel: conversation.agentLabel }
         : {}),
+      ...(steps.length ? { steps } : {}),
     } satisfies ChatPollResponse);
   });
 

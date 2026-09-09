@@ -12,7 +12,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Send, X } from 'lucide-react';
-import type { ChatMessageDTO } from '../../../shared/chatTypes';
+import type { ChatMessageDTO, TurnStep } from '../../../shared/chatTypes';
 import {
   CHAT_INPUT_PLACEHOLDER,
   CHAT_PANEL_TITLE,
@@ -29,6 +29,7 @@ interface Props {
   messages: ChatMessageDTO[];
   starting: boolean;
   awaitingReply: boolean;
+  steps: TurnStep[];
   onClose: () => void;
   onSent: (messages: ChatMessageDTO[], cursor: number) => void;
   onAwaiting: (value: boolean) => void;
@@ -40,6 +41,7 @@ export default function ChatPanel({
   messages,
   starting,
   awaitingReply,
+  steps,
   onClose,
   onSent,
   onAwaiting,
@@ -169,7 +171,12 @@ export default function ChatPanel({
         <ChatForm notice={session?.notice} onDone={onClose} />
       ) : (
         <>
-          <ChatMessageList messages={messages} starting={starting} awaitingReply={awaitingReply} />
+          <ChatMessageList
+            messages={messages}
+            starting={starting}
+            awaitingReply={awaitingReply}
+            steps={steps}
+          />
 
           {error && (
             <p role="alert" className="px-4 pb-2 font-mono text-[11px] text-[#B3261E] leading-relaxed">

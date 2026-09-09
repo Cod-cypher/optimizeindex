@@ -19,6 +19,7 @@ import { respond, type InputItem } from "./openai";
 import { conversationContext, systemPrompt } from "./prompt";
 import { historyForModel, recordUsage } from "./store";
 import { runTool, TOOLS, type ToolContext, type ToolEffects } from "./tools";
+import { finishStep, startStep } from "./steps";
 
 /** How many past messages the model sees. Older turns are dropped, not summarised. */
 const HISTORY_TURNS = 16;
@@ -156,6 +157,8 @@ export async function runTurn(
 
   const instructions = systemPrompt();
 
+  startStep(conversation.id, "thinking", "Reading your message");
+
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
     const result = await respond(instructions, input, TOOLS);
     if (result.status === "error") return degraded(result.reason, effects, alreadyHandedOver || effects.handoffTriggered);
@@ -178,6 +181,8 @@ export async function runTurn(
     }
 
     // parallel_tool_calls is false, so this is a loop over at most one call.
+    // startStep inside each tool handler names the work; once the loop comes
+    // back around, the next respond() call is the model writing the answer.
     for (const call of result.toolCalls) {
       const output = await runTool(call.name, call.arguments, ctx, effects);
       input.push({
@@ -193,6 +198,8 @@ export async function runTurn(
       });
     }
   }
+
+  startStep(conversation.id, "writing", "Writing your answer");
 
   // Out of tool rounds. Ask once more with no tools available, so the model has
   // no choice but to answer in words.
