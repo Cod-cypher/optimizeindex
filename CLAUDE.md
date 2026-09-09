@@ -247,3 +247,56 @@ and do not fork the component.
 Submission goes through `submitLead()` (`src/lib/leads.ts`), which already records
 `submittedFrom` — the originating pathname — so per-page lead attribution needs no
 extra code. Do not add per-page tracking events.
+
+---
+
+## The chat widget
+
+An OpenAI-backed assistant in the bottom-right corner of every marketing page,
+which answers from the site's own content, runs the real site audit inside the
+conversation, and emails Ali a link that drops him into that same conversation
+to talk to the visitor live.
+
+**`ChatWidget` returns `null` on its first render. Never change that.** It is
+what keeps the widget out of the 24 pre-rendered HTML files, and therefore out
+of every assertion in `verify-seo.ts` — the single-`h1` rule, the heading-level
+scan, the homepage's required 100/100, and the towing similarity gate. Rendering
+the launcher server-side puts all four back in play for the sake of one button.
+
+**It mounts in `AppRouter.tsx` as a sibling of the view**, never inside it. Both
+`App.tsx` and `TowingLayout` wrap content in a `<main>`, and the towing word
+count and 5-gram similarity are measured from `$('main').text()`.
+
+**All copy lives in `src/content/chat.ts`.** The assistant's knowledge is
+`public/llms.txt`, read at boot — **update llms.txt and you update the bot.**
+There is no second corpus.
+
+**The prompt rules are the whole control surface.** Current OpenAI models reject
+the `temperature` parameter outright, so there is no sampling knob. Anything the
+assistant must never do — invent a statistic, promise a ranking, quote a price,
+claim to be human — has to be written into `CHAT_RULES` in words.
+
+**Chat leads are leads.** `type: "chat_widget"` goes through the same
+`persistLead()` as every form, so it inherits the email forward, the funnel
+updates and the file backup.
+
+**The join link is a bearer token in a URL path.** Four surfaces must never
+capture it: nginx (`access_log off` for `/chat/join/`), application logs (log
+`tokenFingerprint()`, never the token), `PageView.path` (the `isPortalPage`
+check in `main.tsx`), and error pages. Rotating `SESSION_SECRET` revokes every
+outstanding link; `POST /api/admin/chats/:id/revoke` kills one conversation's.
+
+**Opening a join link must not announce the agent.** Mail clients prefetch
+links; joining is an explicit POST behind a button. This is the same hazard
+`ProposalView.confirmed` exists for.
+
+Two more for **Technical gotchas**: `compression()` at `server.ts:267` buffers
+SSE, so any future streaming endpoint needs both a compression exemption and
+`proxy_buffering off` in nginx. And `server/auth.ts` sets cookies with
+`res.setHeader`, which *replaces* — any second cookie on the same response must
+use `res.append` (see `setAgentCookie`).
+
+**This project does not enable `strict`.** Without `strictNullChecks`,
+TypeScript will not narrow a union on a boolean discriminant: `if (!result.ok)`
+compiles but leaves the type unnarrowed. Discriminate on a string instead — see
+`CompletionResult` in `server/chat/openai.ts`.
