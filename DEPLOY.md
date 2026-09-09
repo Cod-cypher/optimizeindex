@@ -203,9 +203,15 @@ Optional overrides, all with working defaults: `OPENAI_MODEL`,
 **The nginx change must be applied by hand — do NOT copy the file.** The repo's
 `deploy/nginx-optimizeindex.conf` gained a `location /chat/join/` block, but
 copying it over would wipe the `listen 443` block certbot wrote, exactly as
-described in the warning on step 4. Add this by hand to
-`/etc/nginx/sites-available/optimizeindex.conf`, **above** the `location /`
-block, inside the SSL server block:
+described in the warning on step 4. Back up first
+(`cp /etc/nginx/sites-available/optimizeindex.conf ~/optimizeindex.conf.bak`),
+then add this by hand anywhere inside the server block that has
+`listen 443 ssl` — right after its `server_name` line is easiest.
+
+Position within the block does not matter: nginx selects the **longest matching
+prefix**, not the first one in the file, so `/chat/join/` wins over `/`
+wherever it sits. What does matter is that it lands in the 443 block and not
+the port-80 redirect block.
 
 ```nginx
 location /chat/join/ {
@@ -219,7 +225,15 @@ location /chat/join/ {
 }
 ```
 
-Then `nginx -t && systemctl reload nginx`.
+Then test and reload:
+
+```bash
+nginx -t                 # must say "syntax is ok" and "test is successful"
+systemctl reload nginx
+```
+
+If `nginx -t` fails, do **not** reload — the running config is untouched until
+you do, so a syntax error is harmless until then. Restore the backup and retry.
 
 `access_log off` is the point of the block, not an optimisation. The join link
 that lets a person enter a live conversation carries a bearer token **in the URL
