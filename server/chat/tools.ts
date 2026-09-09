@@ -62,17 +62,34 @@ export const TOOLS: ToolDef[] = [
     parameters: {
       type: "object",
       additionalProperties: false,
-      required: ["email", "website", "summary"],
+      // Strict mode requires EVERY key in properties to appear in required.
+      // Genuinely optional fields are expressed as nullable instead, and the
+      // handler coerces null to an empty string. Listing a field here but not
+      // in required is a 400 on every request, which is silent from the
+      // visitor's side — they just get the fallback message every time.
+      required: ["email", "website", "name", "phone", "company", "service", "summary"],
       properties: {
         email: { type: "string", description: "As they typed it. Do not guess or correct it." },
         website: { type: "string", description: "Their website. Ask if not offered." },
-        name: { type: "string", description: "Empty string if not given." },
-        phone: { type: "string", description: "Empty string if not given." },
-        company: { type: "string", description: "Empty string if not given." },
+        name: { type: ["string", "null"], description: "Null if not given." },
+        phone: { type: ["string", "null"], description: "Null if not given." },
+        company: { type: ["string", "null"], description: "Null if not given." },
         service: {
-          type: "string",
-          description: "The service they are asking about, or an empty string.",
-          enum: ["gmb", "seo", "aeo", "geo", "paid-search", "paid-social", "content", "cro", "web-design", "other", ""],
+          type: ["string", "null"],
+          description: "The service they are asking about, or null.",
+          enum: [
+            "gmb",
+            "seo",
+            "aeo",
+            "geo",
+            "paid-search",
+            "paid-social",
+            "content",
+            "cro",
+            "web-design",
+            "other",
+            null,
+          ],
         },
         summary: {
           type: "string",
@@ -91,13 +108,13 @@ export const TOOLS: ToolDef[] = [
     parameters: {
       type: "object",
       additionalProperties: false,
-      required: ["reason", "summary"],
+      required: ["reason", "urgency", "summary"],
       properties: {
         reason: {
           type: "string",
           enum: ["visitor_asked", "qualified_lead", "out_of_scope", "complaint", "pricing"],
         },
-        urgency: { type: "string", enum: ["now", "today", "anytime", ""] },
+        urgency: { type: ["string", "null"], enum: ["now", "today", "anytime", null] },
         summary: {
           type: "string",
           description: "One or two sentences telling the person what they are walking into.",

@@ -20,23 +20,30 @@
 const DEFAULT_MODEL = "gpt-5.6-luna";
 
 /**
- * Reasoning budget. "none" is the lowest-latency setting and is what a
- * question-answering widget wants — there is nothing here to think hard about,
- * and a visitor watching a typing indicator is the cost of getting it wrong.
+ * Reasoning budget.
  *
- * If this is ever raised, raise MAX_OUTPUT_TOKENS with it: the cap counts
- * reasoning tokens as well as visible ones, so a higher effort against an
- * unchanged cap truncates replies mid-sentence with no obvious cause.
+ * Started at "none" on the theory that answering from a page summary needs no
+ * deliberation. In practice that produced replies that were fast and thin — the
+ * model would answer the literal question and miss that the visitor had already
+ * given it their website two turns ago, or hand off rather than piece together
+ * an answer that was there to be pieced together.
+ *
+ * "low" is OpenAI's recommended floor for latency-sensitive chat and costs one
+ * to two seconds. Worth it: this is a sales conversation, and a thin answer
+ * costs more than a slow one.
+ *
+ * MAX_OUTPUT_TOKENS moves with this. The cap counts reasoning tokens as well as
+ * visible ones, so raising effort against an unchanged cap truncates replies
+ * mid-sentence with no obvious cause.
  */
-const DEFAULT_REASONING_EFFORT = "none";
+const DEFAULT_REASONING_EFFORT = "low";
 
 /**
- * Counts reasoning tokens too, not just the visible reply. At effort "none"
- * there are none, so this is a real ~600 tokens of answer — comfortably more
- * than the four-sentence ceiling the prompt asks for, which leaves room for the
- * model to finish a thought rather than being cut off.
+ * Counts reasoning tokens as well as the visible reply, so this is not 900
+ * tokens of answer — at "low" effort a chunk goes on thinking. Sized to leave
+ * room for a properly explained answer plus the reasoning that got there.
  */
-const MAX_OUTPUT_TOKENS = 600;
+const MAX_OUTPUT_TOKENS = 900;
 
 /** A visitor will not wait longer than this, and neither should a socket. */
 const TIMEOUT_MS = 15_000;

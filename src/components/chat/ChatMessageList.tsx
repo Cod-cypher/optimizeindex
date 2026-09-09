@@ -1,14 +1,17 @@
 /**
  * The transcript.
  *
- * Messages are rendered as plain text with line breaks preserved — no markdown,
- * no HTML, no autolinking. That is a safety decision rather than a shortcut: a
- * URL the model invented should not be clickable, and the site's own copy rules
- * already treat content strings as plain text for the same reason.
+ * Messages render as plain text with line breaks preserved — no markdown, no
+ * HTML. The only exception is a narrow allowlist handled by MessageText: our
+ * own phone number and email addresses become tappable anywhere, and a human
+ * agent's message may additionally carry a real URL. A link the model invented
+ * is never clickable; see the header of MessageText.tsx for why that split is
+ * where it is.
  */
 
 import { useEffect, useRef } from 'react';
 import type { ChatMessageDTO } from '../../../shared/chatTypes';
+import MessageText from './MessageText';
 
 interface Props {
   messages: ChatMessageDTO[];
@@ -80,7 +83,7 @@ function Bubble({ message }: { message: ChatMessageDTO }) {
                 : 'bg-paper text-ink rounded-2xl rounded-bl-sm',
           ].join(' ')}
         >
-          {message.content}
+          <MessageText content={message.content} fromAgent={fromAgent} />
         </div>
       </div>
     </div>

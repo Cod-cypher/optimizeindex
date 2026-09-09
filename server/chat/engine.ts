@@ -10,6 +10,7 @@
 
 import type { ChatConversation, ChatMessage, PrismaClient } from "@prisma/client";
 import {
+  CHAT_FALLBACK_AFTER_HANDOFF,
   CHAT_FALLBACK_MESSAGE,
   CHAT_HANDOFF_UNAVAILABLE,
   CHAT_TURN_CAP,
@@ -45,6 +46,40 @@ const ASKS_FOR_HUMAN =
 
 export function asksForHuman(text: string): boolean {
   return ASKS_FOR_HUMAN.test(text);
+}
+
+/**
+ * Strips markdown the model emitted anyway.
+ *
+ * The prompt tells it to write plain text, and it mostly does — but "mostly" is
+ * not good enough when the widget renders exactly what it is given: one stray
+ * **bold** shows the visitor literal asterisks, which reads as a broken bot.
+ * Observed in testing against the real model, so this is a fix for something
+ * that happens rather than a hypothetical.
+ *
+ * Deliberately narrow. It removes the emphasis and heading markers that leak,
+ * and leaves everything else alone — the point is to clean up formatting, not
+ * to rewrite what was said.
+ */
+export function stripMarkdown(text: string): string {
+  return text
+    // **bold** and __bold__ -> bold
+    .replace(/\*\*(.+?)\*\*/g, "$1")
+    .replace(/__(.+?)__/g, "$1")
+    // *italic* and _italic_, only when they wrap a word rather than sitting
+    // inside one (so file_name and 3*4 survive).
+    .replace(/(^|\s)\*(\S(?:.*?\S)?)\*(?=\s|$)/g, "$1$2")
+    .replace(/(^|\s)_(\S(?:.*?\S)?)_(?=\s|$)/g, "$1$2")
+    // `code` -> code
+    .replace(/`([^`]+)`/g, "$1")
+    // Leading ### headings and > quotes.
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/^>\s?/gm, "")
+    // "- item" / "* item" -> "item", keeping the line break.
+    .replace(/^[-*]\s+/gm, "")
+    // [text](url) -> text (url), since a bare markdown link renders as noise.
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1 ($2)")
+    .trim();
 }
 
 export interface TurnResult {
@@ -93,6 +128,12 @@ export async function runTurn(
 ): Promise<TurnResult> {
   const effects: ToolEffects = { handoffTriggered: false, leadCaptured: false, auditRan: false };
 
+  // Already escalated before this turn started. Combined with
+  // effects.handoffTriggered below, this is what stops the fallback offering
+  // to fetch Ali when Ali is already on the way.
+  const alreadyHandedOver =
+    conversation.status === "HANDOFF_PENDING" || conversation.status === "LIVE";
+
   // A conversation that has gone on this long is not going to be rescued by
   // another guess. Hand it over rather than keep spending.
   if (conversation.turnCount >= maxTurns()) {
@@ -117,7 +158,7 @@ export async function runTurn(
 
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
     const result = await respond(instructions, input, TOOLS);
-    if (result.status === "error") return degraded(result.reason, effects);
+    if (result.status === "error") return degraded(result.reason, effects, alreadyHandedOver || effects.handoffTriggered);
 
     await recordUsage(prisma, conversation.id, result.usage);
     if (result.usage.cachedInput > 0) {
@@ -128,7 +169,7 @@ export async function runTurn(
 
     if (result.toolCalls.length === 0) {
       return {
-        text: result.text || CHAT_FALLBACK_MESSAGE,
+        text: stripMarkdown(result.text) || CHAT_FALLBACK_MESSAGE,
         handoffTriggered: effects.handoffTriggered,
         leadCaptured: effects.leadCaptured,
         auditRan: effects.auditRan,
@@ -156,11 +197,11 @@ export async function runTurn(
   // Out of tool rounds. Ask once more with no tools available, so the model has
   // no choice but to answer in words.
   const final = await respond(instructions, input);
-  if (final.status === "error") return degraded(final.reason, effects);
+  if (final.status === "error") return degraded(final.reason, effects, alreadyHandedOver || effects.handoffTriggered);
   await recordUsage(prisma, conversation.id, final.usage);
 
   return {
-    text: final.text || CHAT_FALLBACK_MESSAGE,
+    text: stripMarkdown(final.text) || CHAT_FALLBACK_MESSAGE,
     handoffTriggered: effects.handoffTriggered,
     leadCaptured: effects.leadCaptured,
     auditRan: effects.auditRan,
@@ -168,10 +209,16 @@ export async function runTurn(
   };
 }
 
-function degraded(reason: string, effects: ToolEffects): TurnResult {
+/**
+ * @param handedOver whether a person has already been called into this
+ *   conversation, either earlier or during this turn. Changes what we say:
+ *   offering to fetch Ali when Ali is already on the way reads as an assistant
+ *   that has lost track of its own conversation.
+ */
+function degraded(reason: string, effects: ToolEffects, handedOver: boolean): TurnResult {
   console.error(`[Chat] Model unavailable (${reason}) — falling back`);
   return {
-    text: CHAT_FALLBACK_MESSAGE,
+    text: handedOver ? CHAT_FALLBACK_AFTER_HANDOFF : CHAT_FALLBACK_MESSAGE,
     handoffTriggered: effects.handoffTriggered,
     leadCaptured: effects.leadCaptured,
     auditRan: effects.auditRan,

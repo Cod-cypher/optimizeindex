@@ -126,11 +126,16 @@ export default function ChatWidget() {
         if (data.messages.length > 0) {
           setMessages((prev) => mergeMessages(prev, data.messages));
           setCursor(data.cursor);
-          setAwaitingReply(false);
-          // Only count what the visitor did not send themselves.
-          if (!open) {
-            const inbound = data.messages.filter((m) => m.role !== 'VISITOR').length;
-            if (inbound > 0) setUnread((n) => n + inbound);
+
+          // Only what someone else said. The visitor's own message is stored
+          // before the model is called, so a poll landing mid-reply returns
+          // that echo first — clearing the indicator on any message at all
+          // made the dots vanish and the answer arrive seconds later, which
+          // reads as the bot having given up.
+          const inbound = data.messages.filter((m) => m.role !== 'VISITOR');
+          if (inbound.length > 0) {
+            setAwaitingReply(false);
+            if (!open) setUnread((n) => n + inbound.length);
           }
         }
         if (data.status !== session.status || data.agentLabel !== session.agentLabel) {

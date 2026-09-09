@@ -14,12 +14,38 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChatAgentContext, ChatAgentViewResponse, ChatMessageDTO } from '../../shared/chatTypes';
 import { mergeMessages } from '../lib/chat';
+import { CONTACT_EMAIL, CONTACT_PHONE_DISPLAY } from '../routes';
+import MessageText from '../components/chat/MessageText';
 
 interface Props {
   context: ChatAgentContext;
 }
 
 const POLL_LIVE_MS = 2000;
+
+/**
+ * One-tap lines the agent can drop into the draft.
+ *
+ * The phone number and email are written as plain text, not as markup: the
+ * transcript renderer recognises OptimizeIndex's own contact details and turns
+ * them into tel: and mailto: links on the visitor's side (see
+ * components/chat/MessageText.tsx). So the agent types words and the visitor
+ * gets something tappable, with no way for anyone to inject a different target.
+ */
+const QUICK_REPLIES = [
+  {
+    label: 'Send call link',
+    text: `Easiest is a quick call — tap ${CONTACT_PHONE_DISPLAY} and you will get one of us.`,
+  },
+  {
+    label: 'Send email link',
+    text: `You can also reach us at ${CONTACT_EMAIL} and we will reply there.`,
+  },
+  {
+    label: 'Ask for a time',
+    text: 'What time works for you in the next day or two? I will make sure someone is free.',
+  },
+] as const;
 
 export default function AgentConsole({ context }: Props) {
   const [view, setView] = useState<ChatAgentViewResponse | null>(null);
@@ -215,7 +241,7 @@ export default function AgentConsole({ context }: Props) {
                         : 'bg-paper/60 rounded-br-sm',
                   ].join(' ')}
                 >
-                  {m.content}
+                  <MessageText content={m.content} fromAgent={m.role === 'AGENT'} />
                 </div>
               </div>
             </div>
@@ -273,6 +299,25 @@ export default function AgentConsole({ context }: Props) {
                 Send
               </button>
             </form>
+            {/*
+              One tap to send something the visitor can act on.
+              These write into the draft rather than sending outright, so a
+              line can be edited or have a sentence added before it goes —
+              and so a mis-tap is not a message the visitor already saw.
+            */}
+            <div className="mt-2 flex flex-wrap gap-2">
+              {QUICK_REPLIES.map((quick) => (
+                <button
+                  key={quick.label}
+                  type="button"
+                  onClick={() => setDraft((d) => (d ? `${d.trimEnd()} ${quick.text}` : quick.text))}
+                  className="font-mono text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full border-1.5 border-ink/25 text-ink hover:border-ink hover:bg-lime transition-colors cursor-pointer focus-ring"
+                >
+                  {quick.label}
+                </button>
+              ))}
+            </div>
+
             <div className="mt-2 flex gap-3 justify-center font-mono text-[10px]">
               <button
                 type="button"

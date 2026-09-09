@@ -20,6 +20,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import * as cheerio from "cheerio";
 import {
   CHAT_CONTACT_FACTS,
   CHAT_GROUNDING_PREAMBLE,
@@ -57,6 +58,48 @@ function loadSiteKnowledge(): string {
   return "";
 }
 
+/**
+ * Pages whose exact wording visitors ask about.
+ *
+ * llms.txt summarises the site but only *links* to the policies, so the
+ * assistant could name them and nothing else — which is the worst possible
+ * answer to "what is your refund policy": confident enough to sound informed,
+ * empty enough to be useless.
+ *
+ * Read from the pre-rendered HTML rather than duplicated into a content file,
+ * so the assistant works from the same words the visitor would read on the
+ * page and there is no second copy to drift. Costs a couple of thousand
+ * tokens, cached with the rest of the prefix.
+ */
+const POLICY_PAGES = ["privacy-policy", "terms-of-service"];
+
+function loadPolicyPages(): string {
+  const chunks: string[] = [];
+
+  for (const slug of POLICY_PAGES) {
+    const file = path.join(process.cwd(), "dist", "client", slug, "index.html");
+    try {
+      const html = fs.readFileSync(file, "utf-8");
+      const $ = cheerio.load(html);
+      // <main> only: nav and footer are identical on every page and would
+      // just be repeated noise in the prompt.
+      const text = $("main").text().replace(/\s+/g, " ").trim();
+      if (text) chunks.push(`## ${slug}\n${text}`);
+    } catch {
+      // Not built yet. The assistant still has the llms.txt summary and will
+      // hand off rather than guess.
+    }
+  }
+
+  if (chunks.length === 0) {
+    console.warn(
+      "[Chat] No pre-rendered policy pages found - the assistant cannot answer " +
+        "refund or terms questions in detail. Run npm run build.",
+    );
+  }
+  return chunks.join("\n\n");
+}
+
 export function systemPrompt(): string {
   if (cached) return cached;
 
@@ -74,6 +117,8 @@ export function systemPrompt(): string {
     "",
     "---",
     loadSiteKnowledge(),
+    "",
+    loadPolicyPages(),
     "---",
   ].join("\n");
 
