@@ -13,6 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import Logo from './Logo';
 import { GOALS } from '../data';
 import { PROUDLY_SERVING, TOWING_BASE, TOWING_JOBS_PATH } from '../routes';
+import { LEGAL_NAME } from '../content/about';
 
 // The first two point at the services page rather than straight into the audit
 // form. Every entry here used to dead-end at /audit, which meant a column
@@ -26,6 +27,7 @@ const SERVICE_LINKS = [
 ];
 
 const AGENCY_LINKS = [
+  { label: 'ABOUT US', href: '/about' },
   { label: 'CASE STUDIES', href: '/case-studies' },
   { label: 'CONTACT US', href: 'mailto:contact@optimizeindex.com', external: true },
   { label: 'FREE AUDIT', href: '/audit' },
@@ -161,7 +163,11 @@ export default function SiteFooter() {
       <div className="brand-watermark" aria-hidden="true" />
 
       <div className="max-w-7xl mx-auto mt-6 pt-6 border-t border-ink/10 flex flex-col md:flex-row justify-between items-center text-[10px] font-mono text-stone relative z-10">
-        <p>© 2026 OPTIMIZEINDEX PERFORMANCE AGENCY. ALL RIGHTS RESERVED.</p>
+        {/* The trade name is what people know us by; the entity is what they
+            would actually be contracting with. Naming both in the one line
+            every page carries is cheaper than making anyone go looking, and
+            it matches the legalName in the Organization schema. */}
+        <p>© 2026 OPTIMIZEINDEX, A TRADE NAME OF {LEGAL_NAME.toUpperCase()}. ALL RIGHTS RESERVED.</p>
         <div className="flex gap-4 mt-2 md:mt-0 uppercase">
           <a href="/privacy-policy" onClick={go('/privacy-policy')} className="hover:underline">
             PRIVACY POLICY

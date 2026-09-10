@@ -144,7 +144,21 @@ decisions, police-rotation admission, commercial contract awards, whether a call
 books, actual revenue, third-party marketplace behaviour.
 
 **Never claim** guaranteed jobs, calls, rankings or revenue. OptimizeIndex is not a
-dispatcher, motor club, lead marketplace, broker, or employment site.
+motor club, broker, or employment site.
+
+**Lead generation and dispatch are on the roadmap, not on the price list.** Both
+are being built and neither ships today. Until one does, it may be described only
+as something we are building — `ABOUT_ROADMAP` in `src/content/about.ts` is the
+one place that wording lives, and the tense there is load-bearing. Do not write
+either as a current service anywhere else, and do not soften the "what we do not
+do" list on `/about` to make room for them. The day one ships, move it out of
+`ABOUT_ROADMAP` deliberately and update `ABOUT_DOES_NOT` and `public/llms.txt` in
+the same change.
+
+**The legal entity is Idea Brothers LLC**; OptimizeIndex is a trade name. It lives
+in `LEGAL_NAME` (`src/content/about.ts`) and is consumed by the Organization
+schema's `legalName`, the footer's copyright line, and `/about`. One constant, so
+the three cannot drift.
 
 ---
 
@@ -289,6 +303,33 @@ outstanding link; `POST /api/admin/chats/:id/revoke` kills one conversation's.
 **Opening a join link must not announce the agent.** Mail clients prefetch
 links; joining is an explicit POST behind a button. This is the same hazard
 `ProposalView.confirmed` exists for.
+
+**A conversation outlives the browser tab, on purpose.** `src/lib/chat.ts` keeps
+it in `localStorage` for seven days, and `POST /api/chat/:id/resume` re-signs the
+visitor token on every return so the window slides. `RESUME_WINDOW_MS` there and
+`VISITOR_TTL_MS` in `server/chat/tokens.ts` **must stay equal** — a longer client
+window sends a lapsed token, a shorter one discards conversations the server
+would still have honoured. The shared-browser exposure this creates is covered by
+the "Start a new chat" control in the panel header, which is the only thing
+wiring up `closeChat()` and `POST /api/chat/:id/close`; do not remove it.
+
+**`pagehide` is not proof anybody left.** It fires on a hard navigation and on a
+bfcache suspend, not just on a closed window. So the leave beacon may move the
+agent's presence pill immediately, but it must never send mail: every departure
+goes through `takeDepartedVisitors()` in `server/chat/presence.ts`, which waits
+out a grace period that any arriving heartbeat cancels. Emailing straight off the
+beacon puts "they left before you got there" in Ali's inbox every time a visitor
+follows a link that reloads the page.
+
+**Visitor presence tolerates far more silence than agent presence** — 90s against
+35s. A backgrounded visitor tab polls at 30s and browsers throttle hidden-tab
+timers toward one a minute; the agent console polls at 2s. Using one constant for
+both reports live visitors as gone.
+
+**`presence.ts` and `ratelimit.ts` are per-process Maps.** Both already assumed a
+single PM2 instance; visitor presence adds a third way that assumption bites —
+a poll served by another process would see no heartbeat and mail that the visitor
+walked out. See `ecosystem.config.cjs`.
 
 Two more for **Technical gotchas**: `compression()` at `server.ts:267` buffers
 SSE, so any future streaming endpoint needs both a compression exemption and

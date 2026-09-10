@@ -216,6 +216,46 @@ export const CHAT_CAP_REACHED =
 export const CHAT_CLOSED_NOTICE = 'This conversation has been closed.';
 
 /**
+ * Shown when somebody comes back to a conversation that has gone quiet.
+ *
+ * Short, and deliberately does not recap. A conversation can now be picked up
+ * days later, and the transcript is sitting right above this line — repeating
+ * what they said back at them reads as a machine proving it kept notes. It also
+ * cannot go stale or be wrong, which a summary of a three-day-old conversation
+ * very much can.
+ *
+ * Written as one canned string rather than a model turn on purpose. A greeting
+ * that costs a request every time a tab reopens is a greeting that costs money
+ * on refreshes, and it is one more place the assistant could overstep the rules
+ * for no gain.
+ */
+export const CHAT_WELCOME_BACK =
+  'Welcome back — this is where we left off. Carry on, or ask something new.';
+
+/** The control that abandons the thread and starts over. */
+export const CHAT_NEW_CHAT_LABEL = 'Start a new chat';
+export const CHAT_NEW_CHAT_CONFIRM = 'Sure? This clears it';
+
+/* -------------------------------------------------------------------------
+   The agent console
+------------------------------------------------------------------------- */
+
+/**
+ * Whether the visitor is still on the page. Agent-facing, never shown to the
+ * visitor.
+ *
+ * The reason this is on screen at all: the console renders a transcript and a
+ * composer whether or not anyone is still reading, so without it Ali can spend
+ * two minutes writing a careful reply to a window that closed before he
+ * started.
+ */
+export const CHAT_AGENT_VISITOR_HERE = 'On the page';
+export const CHAT_AGENT_VISITOR_AWAY = 'Not looking — another tab';
+export const CHAT_AGENT_VISITOR_GONE = 'Left the page';
+export const CHAT_AGENT_VISITOR_LEFT_BANNER =
+  'They closed the page. Anything you send now waits for them to come back — and it will, the conversation is kept.';
+
+/**
  * The label on every message from "our side", whoever actually wrote it.
  *
  * A human agent's messages carry this too. From the visitor's point of view

@@ -25,14 +25,25 @@ import {
   CHAT_OFFLINE_NOTICE,
   CHAT_SEND_FAILED,
   CHAT_SIDE_LABEL,
+  CHAT_WELCOME_BACK,
 } from "../../src/content/chat";
 import type {
+  ChatAgentPollResponse,
   ChatAgentViewResponse,
   ChatPollResponse,
+  ChatResumeResponse,
   ChatStartResponse,
 } from "../../shared/chatTypes";
 import { asksForHuman, runTurn } from "./engine";
-import { agentPresent, clearAgentSeen, markAgentSeen } from "./presence";
+import {
+  agentPresent,
+  clearAgentSeen,
+  markAgentSeen,
+  markVisitorGone,
+  markVisitorSeen,
+  takeDepartedVisitors,
+  visitorState,
+} from "./presence";
 import { hasApiKey } from "./openai";
 import { checkChatRate } from "./ratelimit";
 import {
@@ -49,12 +60,14 @@ import {
 import {
   buildLeadComments,
   emailTranscript,
+  chatResumedSubject,
   chatStartedSubject,
   handoffFacts,
   handoffSubject,
   joinBlockHtml,
   joinBlockText,
   joinUrl,
+  visitorLeftSubject,
 } from "./handoff";
 import {
   AGENT_TTL_MS,
@@ -73,6 +86,31 @@ const AGENT_COOKIE_MS = 12 * 60 * 60 * 1000;
 
 /** One handoff email per conversation per this long, however often it fires. */
 const HANDOFF_DEBOUNCE_MS = 15 * 60 * 1000;
+
+/**
+ * What counts as coming back rather than carrying on.
+ *
+ * A conversation survives the browser tab now, so the same thread can span a
+ * lunch break or a week. Two hours is the line: below it the visitor is still
+ * in the same sitting and Ali has already been emailed about it, above it this
+ * is a new arrival at an old conversation and worth a fresh notification. It
+ * doubles as the debounce on that email, so a visitor who reloads five times
+ * does not send five.
+ */
+const RESUMED_GAP_MS = 2 * 60 * 60 * 1000;
+
+/**
+ * How quiet a conversation has to be before a resume greets the visitor.
+ *
+ * Much shorter than RESUMED_GAP_MS, and they are answering different questions.
+ * Thirty minutes is "long enough that a greeting is welcome rather than
+ * baffling"; two hours is "long enough to be worth an email". A refresh two
+ * minutes after the last message gets neither.
+ */
+const WELCOME_BACK_AFTER_MS = 30 * 60 * 1000;
+
+/** How often to look for visitors whose leave beacon never arrived. */
+const VISITOR_SWEEP_MS = 30_000;
 
 const DEFAULT_TOKEN_CAP = 5_000_000;
 
@@ -197,6 +235,196 @@ export function chatRoutes(prisma: PrismaClient, deps: ChatDeps): express.Router
     }
     console.log(`[Chat] Chat-started email sent for conversation ${conversationId}`);
   }
+
+  /**
+   * Tells the team a visitor has come back to an old conversation.
+   *
+   * The gap notifyChatStarted cannot cover. That one is guarded by
+   * startedEmailSentAt and so fires exactly once in the life of a conversation
+   * — which was right when a conversation died with the browser tab, and is
+   * wrong now that one can be picked up on Thursday having started on Monday.
+   * Without this, a return visit reaches nobody: the visitor is typing into a
+   * thread Ali was emailed about days ago and has no reason to be looking at.
+   *
+   * Debounced on its own column rather than sharing handoffEmailSentAt, for the
+   * same reason startedEmailSentAt is separate: a returning visitor who then
+   * asks for a person must not have that request swallowed because a "they're
+   * back" note went out ninety seconds earlier.
+   *
+   * `quietFor` is measured before the incoming message is stored, because
+   * appendMessage touches lastMessageAt and would otherwise erase the very gap
+   * being measured.
+   */
+  async function notifyChatResumed(conversationId: string, text: string, quietFor: number): Promise<void> {
+    if (quietFor < RESUMED_GAP_MS) return;
+    if (!deps.smtpConfigured) return;
+
+    const conversation = await getConversation(prisma, conversationId);
+    if (!conversation) return;
+
+    /*
+      Never told about it in the first place: notifyChatStarted is the right
+      email for this conversation and has not fired yet. Let it.
+
+      The age check is not redundant with the null check, and the case it exists
+      for is real: someone opens the widget, wanders off for three hours, comes
+      back and sends their first message. quietFor is measured from the last
+      message — which is the greeting, three hours ago — so this passes, while
+      notifyChatStarted is firing for the very same message alongside it. Both
+      would land in Ali's inbox describing one event. Requiring the opening
+      notification to be older than the gap means a conversation cannot be
+      started and resumed in the same breath.
+    */
+    if (!conversation.startedEmailSentAt) return;
+    if (Date.now() - conversation.startedEmailSentAt.getTime() < RESUMED_GAP_MS) return;
+
+    // Somebody is already in the room. They can see the message arrive.
+    if (conversation.status === "LIVE") return;
+
+    const sentRecently =
+      conversation.resumedEmailSentAt &&
+      Date.now() - conversation.resumedEmailSentAt.getTime() < RESUMED_GAP_MS;
+    if (sentRecently) return;
+
+    // Same reuse-don't-rotate rule as triggerHandoff. If the old nonce is still
+    // live the link in the earlier email keeps working; if it has lapsed, a
+    // fresh one replaces a link that was already dead.
+    const jti = liveTokenId(conversation) || newAgentTokenId();
+
+    // Claim before sending, so two messages typed in quick succession cannot
+    // both pass the debounce while the first is still talking to SMTP. The
+    // condition repeats the check above rather than trusting it: the read and
+    // this write are not one transaction, and the whole point of the guard is
+    // the window between them.
+    const claimed = await prisma.chatConversation
+      .update({
+        where: {
+          id: conversationId,
+          OR: [
+            { resumedEmailSentAt: null },
+            { resumedEmailSentAt: { lt: new Date(Date.now() - RESUMED_GAP_MS) } },
+          ],
+        },
+        data: {
+          resumedEmailSentAt: new Date(),
+          agentTokenId: jti,
+          agentTokenExpiresAt: new Date(Date.now() + AGENT_TTL_MS),
+          agentLabel: conversation.agentLabel || agentLabel(),
+        },
+      })
+      .catch(() => null);
+    if (!claimed) return;
+
+    const url = joinUrl(signAgentToken(conversationId, jti));
+    const transcript = await fullTranscript(prisma, conversationId);
+    const facts = handoffFacts(claimed, null);
+    const hours = Math.round(quietFor / (60 * 60 * 1000));
+    const summary = `Back after ${hours > 47 ? `${Math.round(hours / 24)} days` : `${hours} hours`} away. They said: ${text.slice(0, 200)}`;
+
+    const sent = await deps.sendMail({
+      subject: chatResumedSubject(claimed),
+      html: renderHandoffHtml(facts, url, summary, emailTranscript(transcript)),
+      text: renderHandoffText(facts, url, summary, emailTranscript(transcript)),
+      ...(claimed.visitorEmail ? { replyTo: claimed.visitorEmail } : {}),
+    });
+
+    if (!sent) {
+      await prisma.chatConversation
+        .update({ where: { id: conversationId }, data: { resumedEmailSentAt: null } })
+        .catch(() => {});
+      return;
+    }
+    console.log(`[Chat] Chat-resumed email sent for conversation ${conversationId}`);
+  }
+
+  /**
+   * Tells the team a visitor closed the page before anyone reached them.
+   *
+   * Narrow on purpose. It fires only when nobody had joined — if Ali was in the
+   * conversation he is looking at the console, which shows him they left. And
+   * it fires only for conversations he has already been emailed about, because
+   * startedEmailSentAt is set on the first visitor message: without that gate
+   * this would be a notification about a chat he never knew existed, which is
+   * how notifications stop being read.
+   *
+   * Once per conversation, and the guard is claimed before the send in the same
+   * pattern as notifyChatStarted.
+   */
+  async function notifyVisitorLeft(conversationId: string): Promise<void> {
+    if (!deps.smtpConfigured) return;
+
+    const conversation = await getConversation(prisma, conversationId);
+    if (!conversation) return;
+    if (conversation.visitorLeftEmailSentAt) return;
+    if (conversation.agentJoinedAt) return;
+    if (!conversation.startedEmailSentAt) return;
+    if (conversation.status === "CLOSED") return;
+
+    const jti = liveTokenId(conversation) || newAgentTokenId();
+
+    const claimed = await prisma.chatConversation
+      .update({
+        where: { id: conversationId, visitorLeftEmailSentAt: null },
+        data: {
+          visitorLeftEmailSentAt: new Date(),
+          agentTokenId: jti,
+          agentTokenExpiresAt: new Date(Date.now() + AGENT_TTL_MS),
+          agentLabel: conversation.agentLabel || agentLabel(),
+        },
+      })
+      .catch(() => null);
+    if (!claimed) return;
+
+    const url = joinUrl(signAgentToken(conversationId, jti));
+    const transcript = await fullTranscript(prisma, conversationId);
+    const facts = handoffFacts(claimed, null);
+
+    // The link is still worth sending. A reply left in the conversation now is
+    // waiting for them the next time they open the site, which is the whole
+    // point of conversations outliving the tab.
+    const summary =
+      "They closed the page before anyone joined. The conversation is kept — a reply left here is waiting for them if they come back.";
+
+    const sent = await deps.sendMail({
+      subject: visitorLeftSubject(claimed),
+      html: renderHandoffHtml(facts, url, summary, emailTranscript(transcript)),
+      text: renderHandoffText(facts, url, summary, emailTranscript(transcript)),
+      ...(claimed.visitorEmail ? { replyTo: claimed.visitorEmail } : {}),
+    });
+
+    if (!sent) {
+      await prisma.chatConversation
+        .update({ where: { id: conversationId }, data: { visitorLeftEmailSentAt: null } })
+        .catch(() => {});
+      return;
+    }
+    console.log(`[Chat] Visitor-left email sent for conversation ${conversationId}`);
+  }
+
+  /*
+    The only thing that sends a visitor-left email.
+
+    Deliberately not the beacon, even though the beacon is what knows first.
+    pagehide fires on a hard navigation as well as on a real close — any link
+    that escapes the client-side router — so emailing from it directly would
+    tell Ali somebody walked out every time they followed a link that reloaded
+    the page. Routing every departure through here means a heartbeat arriving
+    inside the grace period cancels it silently, which is the common case.
+
+    It also covers what no beacon can: a crash, a killed tab, a phone that lost
+    signal. Nobody is coming back to send one of those later.
+
+    unref'd, like pruneOldChats in server.ts: a timer that keeps the process
+    alive at shutdown is a deploy that hangs.
+  */
+  const sweeper = setInterval(() => {
+    for (const conversationId of takeDepartedVisitors()) {
+      void notifyVisitorLeft(conversationId).catch((err) =>
+        console.error("[Chat] Visitor-left notification failed:", err),
+      );
+    }
+  }, VISITOR_SWEEP_MS);
+  sweeper.unref();
 
   /**
    * Triggers a handoff: mints a join link, stores its nonce, emails it.
@@ -469,6 +697,13 @@ export function chatRoutes(prisma: PrismaClient, deps: ChatDeps): express.Router
 
     const after = Number(body.cursor) || 0;
 
+    // Sending is the strongest possible evidence of presence.
+    markVisitorSeen(id, true);
+
+    // Measured before the message is stored. appendMessage touches
+    // lastMessageAt, so reading the gap afterwards would always find zero.
+    const quietFor = Date.now() - conversation.lastMessageAt.getTime();
+
     try {
       await appendMessage(prisma, { conversationId: id, role: "VISITOR", content: text });
 
@@ -478,6 +713,13 @@ export function chatRoutes(prisma: PrismaClient, deps: ChatDeps): express.Router
       // running twice, so letting it finish on its own is safe.
       void notifyChatStarted(id, text).catch((err) =>
         console.error("[Chat] Chat-started notification failed:", err),
+      );
+
+      // The same, for a conversation being picked up after a long gap. The two
+      // are mutually exclusive in practice — notifyChatResumed requires the
+      // started email to have gone out already — so at most one sends.
+      void notifyChatResumed(id, text, quietFor).catch((err) =>
+        console.error("[Chat] Chat-resumed notification failed:", err),
       );
 
       /*
@@ -603,6 +845,13 @@ export function chatRoutes(prisma: PrismaClient, deps: ChatDeps): express.Router
       return;
     }
 
+    // This poll is the visitor's heartbeat, the mirror of the agent console's.
+    // It costs one map write on a request that was already happening, and it is
+    // what puts "they are still reading" — or are not — on the agent's screen.
+    // `v` is panel-open-and-tab-visible; anything else is a loaded page nobody
+    // is looking at, which is worth telling apart from both of the others.
+    markVisitorSeen(id, str(req.query.v, 1) === "1");
+
     const after = Number(req.query.after) || 0;
     const conversation = await getConversation(prisma, id);
     if (!conversation) {
@@ -619,6 +868,131 @@ export function chatRoutes(prisma: PrismaClient, deps: ChatDeps): express.Router
         ? { agentLabel: conversation.agentLabel }
         : {}),
     } satisfies ChatPollResponse);
+  });
+
+  /* --- resume --------------------------------------------------------- */
+
+  /**
+   * Picks a conversation back up on a later visit.
+   *
+   * The widget used to resume by polling from cursor 0 and assuming the mode
+   * was "ai", which had two problems. The small one: a refresh during a model
+   * outage silently re-entered AI mode against an assistant that was not there.
+   * The large one: nothing renewed the visitor token, so a conversation could
+   * only ever be resumed inside the token's own lifetime, whatever the widget
+   * believed its window to be.
+   *
+   * So resuming is a start rather than a poll. It re-reads availability, and it
+   * re-signs the token — which is what makes the seven-day window slide from
+   * this visit rather than counting down from the first one.
+   */
+  router.post("/:id/resume", async (req, res) => {
+    deps.setPrivateHeaders(res);
+
+    const id = str(req.params.id, 40);
+    if (!visitorOwns(str((req.body || {}).visitorToken, 500), id)) {
+      // Not an error worth a 403 body the client has to special-case. An
+      // expired token and a pruned conversation mean the same thing to the
+      // widget: there is nothing here, start fresh.
+      res.json({ resumed: "expired" } satisfies ChatResumeResponse);
+      return;
+    }
+
+    const gate = checkChatRate("poll", deps.clientIp(req) || "unknown");
+    if (!gate.allowed) {
+      res.status(429).json({ error: gate.message, retryAfterSec: gate.retryAfterSec });
+      return;
+    }
+
+    const conversation = await getConversation(prisma, id).catch(() => null);
+    if (!conversation || conversation.status === "CLOSED") {
+      res.json({ resumed: "expired" } satisfies ChatResumeResponse);
+      return;
+    }
+
+    // The client says whether the panel is actually going to be open, rather
+    // than this assuming it. A resume happens on every full page load, most of
+    // which are somebody browsing with the widget shut — reporting all of them
+    // as "reading right now" would make the pill meaningless.
+    markVisitorSeen(id, Boolean((req.body || {}).active));
+
+    /*
+      The welcome-back line.
+
+      Only when the conversation has actually been quiet — a hard refresh two
+      minutes into a conversation should not be greeted like a returning
+      customer — and never while a person is in the room, where a canned
+      greeting would land in the middle of somebody's sentence.
+
+      No separate "already greeted" guard is needed: appendMessage touches
+      lastMessageAt, so the second of two refreshes finds a conversation whose
+      last message was a moment ago and says nothing.
+    */
+    const quietFor = Date.now() - conversation.lastMessageAt.getTime();
+    const shouldGreet =
+      quietFor > WELCOME_BACK_AFTER_MS &&
+      (conversation.status === "ACTIVE" || conversation.status === "HANDOFF_PENDING");
+
+    if (shouldGreet) {
+      await appendMessage(prisma, {
+        conversationId: id,
+        role: "ASSISTANT",
+        content: CHAT_WELCOME_BACK,
+        authorLabel: CHAT_SIDE_LABEL,
+      }).catch(() => {});
+    }
+
+    const availability = await assistantAvailable(prisma);
+    const messages = await messagesAfter(prisma, id, 0);
+
+    res.json({
+      resumed: "ok",
+      conversationId: id,
+      // Re-signed on every resume. This is the sliding window.
+      visitorToken: signVisitorToken(id),
+      mode: availability.ok ? "ai" : "form",
+      status: conversation.status as ChatStartResponse["status"],
+      messages,
+      cursor: cursorOf(messages, 0),
+      welcomedBack: shouldGreet,
+      ...(availability.notice ? { notice: availability.notice } : {}),
+    } satisfies ChatResumeResponse);
+  });
+
+  /* --- leaving -------------------------------------------------------- */
+
+  /**
+   * The visitor closed the page.
+   *
+   * Sent by a pagehide beacon, so it is best-effort and cannot be relied on:
+   * beacons do not fire for a crash, a killed tab, or a phone losing signal.
+   * This is what makes the ordinary case — closing the window — show on the
+   * agent's screen in about a second rather than in ninety.
+   *
+   * Two things it deliberately does NOT do.
+   *
+   * It does not email. pagehide also fires on a hard navigation, and a beacon
+   * is not evidence that anyone actually left; the sweeper above waits out a
+   * grace period, and a heartbeat arriving inside it cancels the departure
+   * silently.
+   *
+   * It does not close the conversation. The visitor may well be back tomorrow,
+   * and the transcript is kept for them. Closing is the "Start a new chat"
+   * control's job, and the agent's.
+   */
+  router.post("/:id/away", async (req, res) => {
+    deps.setPrivateHeaders(res);
+
+    const id = str(req.params.id, 40);
+    if (!visitorOwns(str((req.body || {}).visitorToken, 500), id)) {
+      res.status(403).json({ error: "forbidden" });
+      return;
+    }
+
+    markVisitorGone(id);
+
+    // The browser discards this response — the page is already unloading.
+    res.json({ ok: true });
   });
 
   /* --- close ---------------------------------------------------------- */
@@ -719,6 +1093,8 @@ export function chatAgentRoutes(prisma: PrismaClient, deps: ChatDeps): express.R
           .catch(() => null)
       : null;
 
+    const presence = visitorState(id);
+
     res.json({
       conversationId: id,
       status: conversation.status as ChatAgentViewResponse["status"],
@@ -726,6 +1102,10 @@ export function chatAgentRoutes(prisma: PrismaClient, deps: ChatDeps): express.R
       cursor: cursorOf(messages, 0),
       joined: Boolean(conversation.agentJoinedAt),
       agentLabel: (req as AgentRequest).agentLabel || agentLabel(),
+      visitor: presence.state,
+      ...(presence.lastSeenAt
+        ? { visitorLastSeenAt: new Date(presence.lastSeenAt).toISOString() }
+        : {}),
       visitorName: conversation.visitorName || undefined,
       visitorEmail: conversation.visitorEmail || undefined,
       visitorPhone: conversation.visitorPhone || undefined,
@@ -824,12 +1204,19 @@ export function chatAgentRoutes(prisma: PrismaClient, deps: ChatDeps): express.R
     }
 
     const messages = await messagesAfter(prisma, id, after);
+    const presence = visitorState(id);
     res.json({
       messages,
       cursor: cursorOf(messages, after),
       status: conversation.status as ChatPollResponse["status"],
       agentLabel: conversation.agentLabel || undefined,
-    } satisfies ChatPollResponse);
+      // Rides the poll the console is already making, so the presence pill
+      // updates on the same 2s beat as the transcript.
+      visitor: presence.state,
+      ...(presence.lastSeenAt
+        ? { visitorLastSeenAt: new Date(presence.lastSeenAt).toISOString() }
+        : {}),
+    } satisfies ChatAgentPollResponse);
   });
 
   router.post("/:id/leave", guard, async (req, res) => {

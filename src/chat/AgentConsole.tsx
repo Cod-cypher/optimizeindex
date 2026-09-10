@@ -12,9 +12,21 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { ChatAgentContext, ChatAgentViewResponse, ChatMessageDTO } from '../../shared/chatTypes';
+import type {
+  ChatAgentContext,
+  ChatAgentPollResponse,
+  ChatAgentViewResponse,
+  ChatMessageDTO,
+  VisitorState,
+} from '../../shared/chatTypes';
 import { mergeMessages } from '../lib/chat';
 import { CONTACT_EMAIL, CONTACT_PHONE_DISPLAY } from '../routes';
+import {
+  CHAT_AGENT_VISITOR_AWAY,
+  CHAT_AGENT_VISITOR_GONE,
+  CHAT_AGENT_VISITOR_HERE,
+  CHAT_AGENT_VISITOR_LEFT_BANNER,
+} from '../content/chat';
 import MessageText from '../components/chat/MessageText';
 import { playIncoming, setTabBadge, unlockAudio } from '../lib/chatNotify';
 
@@ -69,6 +81,26 @@ export default function AgentConsole({ context }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [unread, setUnread] = useState(0);
+  /**
+   * Whether the visitor is still on the page.
+   *
+   * Starts as "away" rather than "here": at first paint nothing is known, and
+   * guessing they are present is the guess that gets someone typing a careful
+   * reply to an empty room. The first poll settles it within two seconds.
+   */
+  const [visitor, setVisitor] = useState<VisitorState>('away');
+  const [visitorLastSeen, setVisitorLastSeen] = useState<string | undefined>();
+  /** Previous value, so the alert fires on the edge and not on every tick. */
+  const visitorRef = useRef<VisitorState>('away');
+  /**
+   * `joined` for the poll loop to read.
+   *
+   * Not the state directly: the poll effect deliberately depends on [id] alone,
+   * because it is the heartbeat the server uses to decide someone is still
+   * here, and every extra dependency is another thing that can tear the timer
+   * down and restart the wait. A ref reads the current value without being one.
+   */
+  const joinedRef = useRef(context.joined);
 
   const endRef = useRef<HTMLDivElement>(null);
   const id = context.conversationId;
@@ -97,6 +129,10 @@ export default function AgentConsole({ context }: Props) {
     setMessages(data.messages);
     cursorRef.current = data.cursor;
     setJoined(data.joined);
+    joinedRef.current = data.joined;
+    setVisitor(data.visitor);
+    visitorRef.current = data.visitor;
+    setVisitorLastSeen(data.visitorLastSeenAt);
   }, [id]);
 
   useEffect(() => {
@@ -116,7 +152,7 @@ export default function AgentConsole({ context }: Props) {
           credentials: 'same-origin',
         });
         if (res.ok) {
-          const data = (await res.json()) as { messages: ChatMessageDTO[]; cursor: number };
+          const data = (await res.json()) as ChatAgentPollResponse;
           if (!cancelled && data.messages.length > 0) {
             setMessages((prev) => mergeMessages(prev, data.messages));
             cursorRef.current = data.cursor;
@@ -128,6 +164,23 @@ export default function AgentConsole({ context }: Props) {
               playIncoming();
               if (document.visibilityState === 'hidden') setUnread((n) => n + fromVisitor);
             }
+          }
+
+          if (!cancelled && data.visitor) {
+            /*
+              Ring on the way out, once.
+
+              The transition is what carries the information — "they just
+              left", not "they are not here", which the pill already says and
+              which would otherwise chime every two seconds forever. Only while
+              joined: before that, nobody is mid-sentence to be interrupted.
+            */
+            if (visitorRef.current !== 'gone' && data.visitor === 'gone' && joinedRef.current) {
+              playIncoming();
+            }
+            visitorRef.current = data.visitor;
+            setVisitor(data.visitor);
+            setVisitorLastSeen(data.visitorLastSeenAt);
           }
         }
       } catch {
@@ -197,6 +250,7 @@ export default function AgentConsole({ context }: Props) {
         credentials: 'same-origin',
       });
       setJoined(true);
+      joinedRef.current = true;
       await load();
     } catch {
       setError('Could not join.');
@@ -304,16 +358,43 @@ export default function AgentConsole({ context }: Props) {
           )}
         </dl>
 
-        {/*
-          Say plainly when a detail is missing, rather than leaving a gap the
-          reader has to notice. "No email yet" is an instruction to go and ask.
-        */}
-        {view && !view.visitorEmail && !view.visitorPhone && (
-          <p className="mt-2 font-mono text-[10px] uppercase tracking-wider text-ink bg-lime border-1.5 border-ink rounded-full px-2.5 py-1 inline-block">
-            No contact details yet
-          </p>
-        )}
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          {/*
+            Whether anyone is still reading.
+
+            The console renders a transcript and a composer whether or not the
+            visitor is there, so without this you can spend two minutes writing
+            a careful reply to a window that closed before you started. It is
+            the only thing on this page that changes on its own, so it earns
+            the position.
+          */}
+          {view && <PresencePill state={visitor} lastSeenAt={visitorLastSeen} />}
+
+          {/*
+            Say plainly when a detail is missing, rather than leaving a gap the
+            reader has to notice. "No email yet" is an instruction to go and ask.
+          */}
+          {view && !view.visitorEmail && !view.visitorPhone && (
+            <p className="font-mono text-[10px] uppercase tracking-wider text-ink bg-lime border-1.5 border-ink rounded-full px-2.5 py-1">
+              No contact details yet
+            </p>
+          )}
+        </div>
       </header>
+
+      {/*
+        Only once you have joined. Before that the visitor leaving is ordinary —
+        most conversations end without anyone arriving — and a banner about it
+        would be the loudest thing on a screen you just opened.
+      */}
+      {joined && visitor === 'gone' && (
+        <p
+          role="status"
+          className="px-4 py-2 bg-cream border-b-1.5 border-ink font-mono text-[11px] leading-relaxed text-stone"
+        >
+          {CHAT_AGENT_VISITOR_LEFT_BANNER}
+        </p>
+      )}
 
       {context.summary && !joined && (
         <p className="px-4 py-3 bg-lime border-b-1.5 border-ink text-sm leading-relaxed">
@@ -440,6 +521,76 @@ export default function AgentConsole({ context }: Props) {
         )}
       </footer>
     </div>
+  );
+}
+
+/**
+ * How long ago, in the roughest terms that are still useful.
+ *
+ * Deliberately coarse. "4 min ago" is what decides whether to keep typing;
+ * "4 min 12 sec ago" is the same decision plus a number that changes while you
+ * read it.
+ */
+function agoLabel(iso: string): string {
+  const seconds = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
+  if (seconds < 90) return 'just now';
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours} hr ago`;
+  return `${Math.round(hours / 24)} d ago`;
+}
+
+function PresencePill({ state, lastSeenAt }: { state: VisitorState; lastSeenAt?: string }) {
+  /*
+    A clock, because nothing else will re-render this.
+
+    Once the visitor has gone, the poll keeps returning the same state and the
+    same lastSeenAt, so React bails out of both setState calls; no messages are
+    arriving either, since the person who would send them has left. Without a
+    tick of its own the pill would freeze on whatever it said at the moment they
+    went — permanently reading "left just now" twenty minutes later, which is
+    worse than showing nothing.
+
+    Only while gone. The other two states show no time and need no clock.
+  */
+  const [, tick] = useState(0);
+  useEffect(() => {
+    if (state !== 'gone') return;
+    const t = window.setInterval(() => tick((n) => n + 1), 30_000);
+    return () => window.clearInterval(t);
+  }, [state]);
+
+  const label =
+    state === 'here'
+      ? CHAT_AGENT_VISITOR_HERE
+      : state === 'away'
+        ? CHAT_AGENT_VISITOR_AWAY
+        : CHAT_AGENT_VISITOR_GONE;
+
+  // Lime only for "here". The pill is glanced at, not read, so the one state
+  // that means "type now" is the only one that gets the loud colour.
+  const tone =
+    state === 'here'
+      ? 'bg-lime border-ink text-ink'
+      : state === 'away'
+        ? 'bg-paper border-ink/40 text-stone'
+        : 'bg-paper border-ink/25 text-stone';
+
+  return (
+    <p
+      role="status"
+      className={`font-mono text-[10px] uppercase tracking-wider border-1.5 rounded-full px-2.5 py-1 ${tone}`}
+    >
+      <span
+        aria-hidden="true"
+        className={`inline-block h-1.5 w-1.5 rounded-full mr-1.5 align-middle ${
+          state === 'here' ? 'bg-ink' : 'bg-stone/50'
+        }`}
+      />
+      {label}
+      {state === 'gone' && lastSeenAt && ` · ${agoLabel(lastSeenAt)}`}
+    </p>
   );
 }
 

@@ -22,8 +22,25 @@
 import crypto from "node:crypto";
 import { sessionSecret } from "../auth";
 
-/** 24 hours. A visitor token only has to outlive the tab it was issued to. */
-const VISITOR_TTL_MS = 24 * 60 * 60 * 1000;
+/**
+ * Seven days, matching the widget's resume window in src/lib/chat.ts, and
+ * re-signed on every resume so the window slides.
+ *
+ * This was 24 hours, on the reasoning that a visitor token only has to outlive
+ * the tab it was issued to. A conversation now outlives the tab deliberately —
+ * it is kept in localStorage so somebody who comes back on Thursday picks up
+ * the thread they started on Monday — and a token that lapses first would mean
+ * the transcript is still on the server, still the same conversation, and the
+ * only person who cannot reach it is the person who wrote it.
+ *
+ * The cost is a seven-day bearer credential sitting in localStorage. What it
+ * buys the holder is bounded: read and write one conversation, nothing else, no
+ * account, no other conversation. And per the note above, the conversation id
+ * is already an unguessable cuid — this is defence in depth against id walking
+ * rather than the lock on the door. Rotating SESSION_SECRET still invalidates
+ * every one of these at once.
+ */
+const VISITOR_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
  * 48 hours. Long enough that a link read the next morning still works, short

@@ -128,6 +128,36 @@ export function chatStartedSubject(conversation: ChatConversation): string {
   return `Chat started: ${who}${where}`;
 }
 
+/**
+ * Subject for a visitor picking a conversation back up on a later visit.
+ *
+ * Says "resumed" rather than "started" because the difference matters to
+ * whoever reads it: there is already a transcript, they may already have
+ * replied in it, and the join link below is for a room they might have been in
+ * before.
+ */
+export function chatResumedSubject(conversation: ChatConversation): string {
+  const who = conversation.visitorCompany || conversation.visitorName || "Someone";
+  const where = conversation.startedOn ? ` on ${conversation.startedOn}` : "";
+  return `Chat resumed: ${who}${where}`;
+}
+
+/**
+ * Subject for a visitor who closed the page before anyone reached them.
+ *
+ * Phrased as a missed moment, not an alarm. There is nothing to do in the next
+ * thirty seconds — the point is that a real person was waiting, and the
+ * transcript and their details are in the email so following up is possible.
+ */
+export function visitorLeftSubject(conversation: ChatConversation): string {
+  const who =
+    conversation.visitorCompany ||
+    conversation.visitorName ||
+    conversation.visitorEmail ||
+    "A visitor";
+  return `Chat left unanswered: ${who}`;
+}
+
 export function handoffSubject(conversation: ChatConversation): string {
   const who =
     conversation.visitorCompany ||

@@ -482,6 +482,18 @@ model ChatConversation {
   /// an opening notification happened to go out four minutes earlier.
   startedEmailSentAt DateTime?
 
+  /// When the "they came back" email last went out. A conversation now survives
+  /// the browser tab, so the same thread can go quiet for days and then resume;
+  /// startedEmailSentAt can only ever fire once, so without this a return visit
+  /// would reach nobody. Re-armed after RESUMED_GAP_MS rather than once per
+  /// conversation, because a visitor can come back more than once.
+  resumedEmailSentAt DateTime?
+
+  /// When the "they left before you got there" email went out. Once per
+  /// conversation: the point is that a moment was missed, and saying so twice
+  /// does not un-miss it.
+  visitorLeftEmailSentAt DateTime?
+
   // Human handoff
   handoffRequestedAt DateTime?
   handoffReason      String? // visitor_asked | qualified_lead | out_of_scope | complaint | pricing

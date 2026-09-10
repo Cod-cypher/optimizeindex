@@ -74,6 +74,29 @@ export interface ChatSendResponse extends ChatPollResponse {
   retryAfterSec?: number;
 }
 
+/**
+ * Picking a conversation back up on a later visit.
+ *
+ * Shaped like ChatStartResponse rather than ChatPollResponse because resuming
+ * is a start: the widget has to learn the mode again (the assistant may have
+ * gone down since Monday), and the token is re-signed here so the seven-day
+ * window slides forward from this visit rather than from the first one.
+ *
+ * Discriminated on a string, not on a boolean `expired` flag. This project does
+ * not enable strict, and without strictNullChecks TypeScript will not narrow a
+ * union on a boolean — the widget would read data.mode off the branch that has
+ * no mode and compile cleanly. Same reasoning as CompletionResult in
+ * server/chat/openai.ts.
+ */
+export type ChatResumeResponse =
+  | ({
+      resumed: "ok";
+      /** A welcome-back line was appended, so the widget can badge it unread. */
+      welcomedBack: boolean;
+    } & ChatStartResponse)
+  /** Nothing to resume — pruned, closed, or the token has lapsed. Start fresh. */
+  | { resumed: "expired" };
+
 /* -------------------------------------------------------------------------
    Agent console
 ------------------------------------------------------------------------- */
@@ -97,6 +120,22 @@ export interface ChatAgentContext {
   startedOn?: string;
 }
 
+/**
+ * Whether the visitor is still there — agent-facing only.
+ *
+ * "here" is reading right now, "away" is loaded but not looked at, "gone" is a
+ * closed page. The visitor is never shown the mirror of this: they are not told
+ * when a person joins (see CHAT_SIDE_LABEL), so telling them when one wanders
+ * off would be announcing half a fact.
+ */
+export type VisitorState = "here" | "away" | "gone";
+
+export interface ChatAgentPollResponse extends ChatPollResponse {
+  visitor: VisitorState;
+  /** ISO. Absent when this process has never seen a heartbeat for the chat. */
+  visitorLastSeenAt?: string;
+}
+
 export interface ChatAgentViewResponse {
   conversationId: string;
   status: ChatConversationStatus;
@@ -104,6 +143,8 @@ export interface ChatAgentViewResponse {
   cursor: number;
   joined: boolean;
   agentLabel: string;
+  visitor: VisitorState;
+  visitorLastSeenAt?: string;
   visitorName?: string;
   visitorEmail?: string;
   visitorPhone?: string;

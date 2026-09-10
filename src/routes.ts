@@ -18,6 +18,7 @@
  */
 
 import { CASE_STUDIES, AUDIT_FAQS, QUOTE_FAQS } from './data';
+import { LEGAL_NAME } from './content/about';
 import { TOWING_PILLAR, TOWING_STATES, TOWING_UPDATED } from './content/towing';
 import { TOWING_JOBS } from './content/towingJobs';
 import { TOWING_JOBS_CLUSTER } from './content/towingJobsCluster';
@@ -56,6 +57,15 @@ const ORGANIZATION = {
   '@type': 'Organization',
   '@id': `${SITE_ORIGIN}/#organization`,
   name: SITE_NAME,
+  /*
+    The entity behind the trade name.
+
+    Unlike the two fields deliberately absent below, this one is a fact rather
+    than a flattering guess, and it is the answer to the question a cautious
+    buyer and an AI assistant both ask first: who is this actually. Stated in
+    the schema and in prose on /about, which is the page that has to carry it.
+  */
+  legalName: LEGAL_NAME,
   url: SITE_ORIGIN,
   logo: {
     '@type': 'ImageObject',
@@ -416,6 +426,31 @@ export const ROUTES: RouteMeta[] = [
   },
   ...caseStudyRoutes,
   ...towingRoutes,
+  {
+    path: '/about',
+    title: 'About OptimizeIndex | AI Built for Towing Work',
+    description:
+      'OptimizeIndex is the trade name of Idea Brothers LLC. We build AI for towing and roadside operators — our own assistants, voice agents and infrastructure.',
+    priority: 0.7,
+    jsonLd: [
+      /*
+        AboutPage rather than a second Organization node. The sitewide graph
+        already declares the organization with an @id; repeating it here would
+        give a consumer two descriptions of one entity to reconcile. This
+        points at the existing node instead, which is what mainEntity is for.
+      */
+      {
+        '@type': 'AboutPage',
+        name: 'About OptimizeIndex',
+        description:
+          'Who OptimizeIndex is, what it builds for towing and roadside operators, and the boundary of what it does and does not do.',
+        url: `${SITE_ORIGIN}/about`,
+        inLanguage: 'en-US',
+        mainEntity: { '@id': `${SITE_ORIGIN}/#organization` },
+      },
+      breadcrumb([{ name: 'Home', path: '/' }, { name: 'About', path: '/about' }]),
+    ],
+  },
   {
     path: '/audit',
     title: 'Get a Free AI Audit | OptimizeIndex',

@@ -24,6 +24,7 @@ import TowingStatePage from './pages/TowingStatePage';
 import TowingJobsPage from './pages/TowingJobsPage';
 import TowingJobsChildPage from './pages/TowingJobsChildPage';
 import ProudlyServingPage from './pages/ProudlyServingPage';
+import AboutPage from './pages/AboutPage';
 import { getTowingState } from './content/towing';
 import { getTowingJobsChild } from './content/towingJobsCluster';
 import { TOWING_BASE, PROUDLY_SERVING, TOWING_JOBS_PATH } from './routes';
@@ -96,6 +97,16 @@ function renderView(location: Location) {
     asserts no single-segment route collides with the proposal namespace).
   */
   const towingPath = location.pathname.replace(/\/+$/, '') || '/';
+
+  /*
+    /about lives out here with the towing pages rather than inside App.tsx's
+    view switch, and is eagerly imported for the same reason they are: it is
+    pre-rendered, and renderToString would emit a Suspense fallback for a lazy
+    component — an empty div on the one page whose whole job is telling a
+    crawler or an assistant who the business is.
+  */
+  if (towingPath === '/about') return <AboutPage />;
+
   if (towingPath === PROUDLY_SERVING) return <ProudlyServingPage />;
   if (towingPath === TOWING_JOBS_PATH) return <TowingJobsPage />;
   if (towingPath.startsWith(`${TOWING_JOBS_PATH}/`)) {

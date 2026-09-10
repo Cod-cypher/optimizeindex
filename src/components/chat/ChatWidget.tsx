@@ -28,11 +28,14 @@ import { CHAT_LAUNCHER_LABEL } from '../../content/chat';
 import { trackEvent } from '../../lib/tracker';
 import { playIncoming, setTabBadge, unlockAudio } from '../../lib/chatNotify';
 import {
+  beaconAway,
   clearPersisted,
+  closeChat,
   mergeMessages,
   pollChat,
   pollInterval,
   readPersisted,
+  resumeChat,
   startChat,
   writePersisted,
 } from '../../lib/chat';
@@ -76,6 +79,53 @@ export default function ChatWidget() {
   const errorStreak = useRef(0);
 
   /**
+   * The session, readable synchronously.
+   *
+   * handleOpen has to ask "do we already have a conversation?" *after* an
+   * await, and the `session` it closed over is stale by then. Reading state
+   * across an await is how the launcher ends up starting a second conversation
+   * on top of one that had just been resumed.
+   */
+  const sessionRef = useRef<ChatSession | null>(null);
+
+  /**
+   * The in-flight resume, so the launcher can wait for it.
+   *
+   * This is the fix for a real bug rather than a precaution. The resume is a
+   * round trip; the launcher is on screen while it is happening; and a visitor
+   * coming back to the site clicks it immediately, because the badge is what
+   * called them over. handleOpen would find a null session, conclude there was
+   * nothing to pick up, and call startChat() — so the server resumed the old
+   * conversation (which is why the agent console correctly showed them back on
+   * the page) while the visitor was handed a brand-new one with a fresh
+   * greeting. The old thread was never lost; it was replaced in the widget a
+   * few hundred milliseconds after being restored.
+   */
+  const resumeRef = useRef<Promise<void> | null>(null);
+
+  /** Keeps the synchronous mirror honest wherever the session is set. */
+  const applySession = useCallback((next: ChatSession | null) => {
+    sessionRef.current = next;
+    setSession(next);
+  }, []);
+
+  /** Same problem as sessionRef, for code that reads `open` after an await. */
+  const openRef = useRef(false);
+  useEffect(() => {
+    openRef.current = open;
+  }, [open]);
+
+  /*
+    The poll and the panel both patch status and agentLabel through plain
+    setSession, so the mirror would otherwise drift on those two fields. Nothing
+    reads them off the ref today, but a mirror that is only sometimes true is
+    worse than no mirror at all.
+  */
+  useEffect(() => {
+    sessionRef.current = session;
+  }, [session]);
+
+  /**
    * The single way a message enters the widget.
    *
    * Both paths land here, and that is the point. An assistant reply arrives on
@@ -109,43 +159,100 @@ export default function ChatWidget() {
     [open],
   );
 
-  useEffect(() => {
-    setReady(true);
-  }, []);
-
-  /* --- resume ---------------------------------------------------------- */
+  /* --- mount and resume ------------------------------------------------ */
 
   /**
-   * Picks a conversation back up after a full page load.
+   * Reveals the launcher, and picks any stored conversation back up.
    *
    * React Router handles navigation inside the app, so the component survives
-   * most link clicks on its own. This is for the cases where it does not: a
-   * hard refresh, a direct URL, an external link back into the site.
+   * most link clicks on its own. The resume is for everything else: a hard
+   * refresh, a direct URL, an external link back into the site — and, since the
+   * conversation moved to localStorage, a visit days after the last one.
+   *
+   * The two are one effect on purpose. They were separate, with the resume
+   * gated on `ready`, which meant the launcher was painted and clickable a
+   * whole commit before the resume had even been *started* — never mind
+   * finished. Kicking the resume off in the same effect that sets `ready`
+   * guarantees resumeRef is populated before anything the visitor can click
+   * exists, and handleOpen waits on it from there.
+   *
+   * The mode comes from the response rather than being assumed. Resuming used
+   * to hardcode 'ai', which meant a reload during a model outage re-entered AI
+   * mode against an assistant that was not answering.
    */
   useEffect(() => {
-    if (!ready) return;
+    setReady(true);
+
     const stored = readPersisted();
     if (!stored) return;
 
     let cancelled = false;
-    void (async () => {
+    resumeRef.current = (async () => {
       try {
-        const data = await pollChat(stored.id, stored.token, 0);
+        // wasOpen is what decides whether the panel comes back up below, so it
+        // is also the honest answer to "are they about to be reading this".
+        const data = await resumeChat(stored.id, stored.token, stored.wasOpen);
         if (cancelled) return;
-        setSession({
+
+        if (data.resumed !== 'ok') {
+          /*
+            "expired" is the server saying this conversation is really gone —
+            pruned, closed, or a token past its seven days. That is the only
+            answer that earns forgetting it.
+
+            Anything else reaching here is transient: a rate-limit body, a shape
+            we do not recognise. A conversation is now days old by design, and
+            throwing one away because a single request came back wrong is the
+            failure worth coding against. Leave it; the next page load retries.
+          */
+          if (data.resumed === 'expired') clearPersisted();
+          return;
+        }
+
+        applySession({
           id: stored.id,
-          token: stored.token,
-          mode: 'ai',
+          // The server re-signs on every resume; the stored one is now the
+          // older of the two. The persistence effect writes this back.
+          token: data.visitorToken || stored.token,
+          mode: data.mode,
           status: data.status,
-          agentLabel: data.agentLabel,
+          ...(data.notice ? { notice: data.notice } : {}),
         });
         setMessages(data.messages);
         cursorRef.current = data.cursor;
+
+        /*
+          Only ever opens, never closes. The visitor may have clicked the
+          launcher while this was in flight, and slamming the panel shut on
+          somebody who just opened it is a worse bug than the one this path
+          exists to fix.
+        */
         if (stored.wasOpen) setOpen(true);
-        else setUnread(0);
+
+        /*
+          A welcome-back line is a message that arrived while they were away, so
+          it gets the badge treatment — otherwise the one thing added for a
+          returning visitor is the one thing they never see, because the panel
+          is shut on a cold load.
+
+          Read through the ref, not `open`: this closure captured `open` as
+          false at mount, and by now the visitor may well be looking at the
+          panel, where a badge would be counting a message on screen.
+
+          The chime will usually be dropped and that is expected: an
+          AudioContext created outside a user gesture is born suspended, and on
+          a cold load nothing has been clicked yet. unlockAudio() runs on the
+          launcher click. The badge is the half that always works.
+        */
+        if (data.welcomedBack && !stored.wasOpen && !openRef.current) {
+          setUnread(1);
+          playIncoming();
+        }
       } catch {
-        // Expired, revoked, or pruned. Nothing to resume.
-        clearPersisted();
+        // A throw is the network or a 5xx, never a verdict on the conversation
+        // — the server says that in the body. Deliberately does not clear
+        // storage: this used to, back when a stored chat was worth two hours
+        // and a failed resume cost almost nothing.
       }
     })();
 
@@ -164,7 +271,10 @@ export default function ChatWidget() {
 
     const tick = async () => {
       try {
-        const data = await pollChat(session.id, session.token, cursorRef.current);
+        // The second half of the presence signal the agent console reads:
+        // reading it right now, versus a page that is open but not looked at.
+        const active = open && document.visibilityState === 'visible';
+        const data = await pollChat(session.id, session.token, cursorRef.current, active);
         if (cancelled) return;
         errorStreak.current = 0;
 
@@ -205,12 +315,53 @@ export default function ChatWidget() {
     };
     document.addEventListener('visibilitychange', onVisibility);
 
+    /*
+      Coming back through the bfcache.
+
+      pagehide fires on a back/forward-cache navigation as well as on a real
+      close, so the beacon below will have told the server this visitor left.
+      Returning has to correct that, and the next scheduled poll could be
+      twenty seconds away — long enough for the agent to be looking at "left
+      the page" for somebody who is reading. An immediate tick re-marks them.
+    */
+    const onPageShow = () => {
+      window.clearTimeout(timer);
+      void tick();
+    };
+    window.addEventListener('pageshow', onPageShow);
+
     return () => {
       cancelled = true;
       window.clearTimeout(timer);
       document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('pageshow', onPageShow);
     };
   }, [session, open, awaitingReply, ingest]);
+
+  /*
+    Tell the server on the way out, so the agent console stops showing a reader
+    who is not there.
+
+    pagehide, not beforeunload — beforeunload is unreliable on mobile, where
+    most of these conversations happen, and pagehide is the event that actually
+    fires when iOS discards a tab.
+
+    Best effort, and deliberately not the mechanism the server relies on: this
+    does not fire for a crash, a killed tab, or a phone losing signal. The
+    heartbeat timeout in server/chat/presence.ts is what decides somebody has
+    gone. This makes the ordinary case register in a second instead of ninety.
+
+    In-app navigation does not fire pagehide, so clicking through the site
+    leaves the conversation alone — which is the whole reason the widget lives
+    in AppRouter rather than inside a page.
+  */
+  useEffect(() => {
+    if (!session?.id || !session.token) return;
+
+    const onLeave = () => beaconAway(session.id, session.token);
+    window.addEventListener('pagehide', onLeave);
+    return () => window.removeEventListener('pagehide', onLeave);
+  }, [session]);
 
   // Mirror the unread count into the tab title, so a backgrounded tab shows
   // "(2) OptimizeIndex | …" without the widget being visible at all.
@@ -236,7 +387,10 @@ export default function ChatWidget() {
       id: session.id,
       token: session.token,
       cursor: cursorRef.current,
-      openedAt: Date.now(),
+      // Refreshed on every write, which is what makes the resume window slide.
+      // The server does the same to the token itself on each resume, so the two
+      // halves expire together rather than one stranding the other.
+      lastSeenAt: Date.now(),
       wasOpen: open,
     });
   }, [session, open]);
@@ -248,14 +402,33 @@ export default function ChatWidget() {
     // outside a user gesture, and one created later is born suspended — the
     // first chime would be dropped silently.
     unlockAudio();
+    openRef.current = true;
     setOpen(true);
     setUnread(0);
 
-    if (session || starting) return;
+    if (sessionRef.current || starting) return;
     setStarting(true);
     try {
+      /*
+        Let any resume finish first.
+
+        A returning visitor clicks this the moment the page paints — the unread
+        badge is what called them over — which is squarely inside the resume's
+        round trip. Without this wait, handleOpen saw a null session, concluded
+        there was nothing to pick up, and started a second conversation over the
+        top of the one being restored. The visitor got a fresh greeting while
+        the server, correctly, had them back in the old conversation.
+
+        Re-checking the ref rather than `session` afterwards is the other half:
+        the state read here was captured before the await and is stale by now.
+      */
+      if (resumeRef.current) {
+        await resumeRef.current;
+        if (sessionRef.current) return;
+      }
+
       const data = await startChat();
-      setSession({
+      applySession({
         id: data.conversationId,
         token: data.visitorToken,
         mode: data.mode,
@@ -268,16 +441,70 @@ export default function ChatWidget() {
     } catch {
       // Falls back to the contact form, which posts to /api/leads and has its
       // own file-backup path on the server.
-      setSession({ id: '', token: '', mode: 'form', status: 'ACTIVE' });
+      applySession({ id: '', token: '', mode: 'form', status: 'ACTIVE' });
     } finally {
       setStarting(false);
     }
-  }, [session, starting]);
+  }, [starting, applySession]);
 
   const handleClose = useCallback(() => {
     setOpen(false);
     launcherRef.current?.focus();
   }, []);
+
+  /**
+   * Abandons the conversation and starts a clean one.
+   *
+   * This is the counterweight to keeping conversations in localStorage. A
+   * thread that survives for a week is the right default on a personal device
+   * and the wrong one on a shared or family browser, where the next person to
+   * open the widget would otherwise be handed a stranger's transcript. Rather
+   * than solve that by forgetting everything for everyone, there is one visible
+   * way to end it — and it is the visitor's decision, which is the part that
+   * matters.
+   *
+   * Closes the conversation server-side as well as clearing storage, so the
+   * abandoned thread stops being something Ali could join, and shows as closed
+   * in the admin inbox rather than sitting there looking live.
+   */
+  const handleReset = useCallback(() => {
+    const current = sessionRef.current;
+    if (current?.id && current.token) void closeChat(current.id, current.token);
+    clearPersisted();
+
+    // Nothing to resume any more. Left in place, a resume still in flight from
+    // this page load would restore the conversation that was just discarded.
+    resumeRef.current = null;
+
+    setMessages([]);
+    setUnread(0);
+    setAwaitingReply(false);
+    cursorRef.current = 0;
+    errorStreak.current = 0;
+    applySession(null);
+
+    // Start the replacement immediately. Clearing and leaving an empty panel
+    // reads as having broken something.
+    setStarting(true);
+    void (async () => {
+      try {
+        const data = await startChat();
+        applySession({
+          id: data.conversationId,
+          token: data.visitorToken,
+          mode: data.mode,
+          status: data.status,
+          notice: data.notice,
+        });
+        setMessages(data.messages);
+        cursorRef.current = data.cursor;
+      } catch {
+        applySession({ id: '', token: '', mode: 'form', status: 'ACTIVE' });
+      } finally {
+        setStarting(false);
+      }
+    })();
+  }, [applySession]);
 
   if (!ready) return null;
 
@@ -320,6 +547,7 @@ export default function ChatWidget() {
             starting={starting}
             awaitingReply={awaitingReply}
             onClose={handleClose}
+            onReset={handleReset}
             onSent={ingest}
             onAwaiting={setAwaitingReply}
             onStatus={(status, agentLabel) =>

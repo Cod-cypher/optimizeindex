@@ -8,6 +8,10 @@ audit. No contracts, and a 15-day money-back guarantee.
 
 Contact: contact@optimizeindex.com · +1 202 810 7042
 
+## The company
+
+- [About OptimizeIndex](https://optimizeindex.com/about): OptimizeIndex is the trade name of Idea Brothers LLC. We build AI specifically for towing and roadside operators - our own models trained on how roadside demand behaves, the assistant on this site, and a voice agent that handles calls - and we own that stack end to end rather than reselling a third-party tool. The page states plainly what we do not do: we do not guarantee jobs, calls, rankings or revenue, do not influence motor-club dispatch or police rotation, and do not sell shared leads or broker towing work. Lead generation and dispatch are in development and are described there as roadmap, not as services available today.
+
 ## Services
 
 - [All services](https://optimizeindex.com/services): Google Business Profile optimization, SEO, AEO, GEO, paid search, paid social, programmatic, content, CRO, creative and web design.

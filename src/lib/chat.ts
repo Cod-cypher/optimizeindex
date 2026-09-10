@@ -11,6 +11,7 @@
 import type {
   ChatMessageDTO,
   ChatPollResponse,
+  ChatResumeResponse,
   ChatSendResponse,
   ChatStartResponse,
 } from '../../shared/chatTypes';
@@ -18,23 +19,51 @@ import { getSessionId, getVisitorId } from './tracker';
 import { getGaClientId } from './analytics';
 
 /**
- * sessionStorage, not localStorage.
+ * localStorage, not sessionStorage.
  *
- * A conversation is scoped to a visit. On a shared or family browser,
- * localStorage would resurrect a stranger's conversation — including whatever
- * they told the assistant — the next day. This matches how tracker.ts scopes
- * its own session id.
+ * This was sessionStorage, on the reasoning that a conversation is scoped to a
+ * visit and that on a shared or family browser localStorage would resurrect a
+ * stranger's conversation — including whatever they told the assistant — the
+ * next day. That reasoning is still sound. It is being traded away knowingly.
+ *
+ * What it cost: a conversation died with the browser tab. Somebody who asked a
+ * question on Monday, got an answer, and came back on Wednesday met a blank
+ * widget and a fresh greeting — while the transcript Ali had been emailed about
+ * sat on the server as an orphan, and Ali got no second email either, because
+ * the "chat started" notification can only fire once per conversation. The
+ * thread the visitor thought they were in did not exist on either side.
+ *
+ * The mitigation for the shared-browser case is the "Start a new chat" control
+ * in the panel header: one visible, two-tap way to close the conversation and
+ * clear this key. That is a better answer than silent amnesia, because it is
+ * the visitor's decision rather than the storage API's.
+ *
+ * Bounded three ways even so — RESUME_WINDOW_MS here, the token's own seven-day
+ * signature (server/chat/tokens.ts), and pruneOldChats on the server.
  */
 const STORAGE_KEY = 'oi_chat';
 
-/** Beyond this, a stored conversation is treated as stale and a new one starts. */
-const RESUME_WINDOW_MS = 2 * 60 * 60 * 1000;
+/**
+ * Beyond this, a stored conversation is treated as stale and a new one starts.
+ *
+ * Matched to VISITOR_TTL_MS in server/chat/tokens.ts. The two have to agree:
+ * a longer window here would hand the server a lapsed token and resume would
+ * fail, and a shorter one would throw away conversations the server would still
+ * have honoured. Both slide — the server re-signs on every resume, and the
+ * write below refreshes lastSeenAt — so a visitor who keeps coming back keeps
+ * the thread.
+ */
+const RESUME_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
 export interface PersistedChat {
   id: string;
   token: string;
   cursor: number;
-  openedAt: number;
+  /**
+   * Refreshed on every write, not set once at the start. The resume window
+   * measures silence, not the age of the conversation.
+   */
+  lastSeenAt: number;
   /** Re-open the panel after a full page load, so a chat does not vanish. */
   wasOpen: boolean;
 }
@@ -42,11 +71,11 @@ export interface PersistedChat {
 export function readPersisted(): PersistedChat | null {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = window.sessionStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as PersistedChat;
     if (!parsed?.id || !parsed.token) return null;
-    if (Date.now() - parsed.openedAt > RESUME_WINDOW_MS) return null;
+    if (Date.now() - (parsed.lastSeenAt || 0) > RESUME_WINDOW_MS) return null;
     return parsed;
   } catch {
     // Private mode, disabled storage, or corrupt JSON. Start fresh.
@@ -57,7 +86,7 @@ export function readPersisted(): PersistedChat | null {
 export function writePersisted(value: PersistedChat): void {
   if (typeof window === 'undefined') return;
   try {
-    window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(value));
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
   } catch {
     // Not being able to remember the conversation is survivable; the chat
     // still works for as long as the page is open.
@@ -67,7 +96,7 @@ export function writePersisted(value: PersistedChat): void {
 export function clearPersisted(): void {
   if (typeof window === 'undefined') return;
   try {
-    window.sessionStorage.removeItem(STORAGE_KEY);
+    window.localStorage.removeItem(STORAGE_KEY);
   } catch {
     /* nothing to do */
   }
@@ -110,15 +139,65 @@ export async function sendChatMessage(
   });
 }
 
+/**
+ * `active` is panel-open-and-tab-visible, and it is the visitor's half of the
+ * presence signal the agent console reads. It rides a request that was already
+ * being made, so knowing whether somebody is still reading costs nothing.
+ */
 export async function pollChat(
   id: string,
   token: string,
   after: number,
+  active: boolean,
 ): Promise<ChatPollResponse> {
-  const query = new URLSearchParams({ after: String(after), t: token });
+  const query = new URLSearchParams({ after: String(after), t: token, v: active ? '1' : '0' });
   const res = await fetch(`/api/chat/${encodeURIComponent(id)}/messages?${query}`);
   if (!res.ok) throw new Error(`Chat poll failed: ${res.status}`);
   return (await res.json()) as ChatPollResponse;
+}
+
+/**
+ * Picks up a conversation from a previous visit.
+ *
+ * Deliberately not a poll from cursor zero, which is what this used to be. The
+ * server re-reads whether the assistant is available (it may have gone down
+ * since the last visit), decides whether the gap earns a welcome-back line, and
+ * hands back a freshly signed token — so the seven-day window slides from this
+ * visit rather than counting down from the first one. Store the token it
+ * returns; the one that was sent is the older of the two.
+ */
+export async function resumeChat(
+  id: string,
+  token: string,
+  active: boolean,
+): Promise<ChatResumeResponse> {
+  return postJson<ChatResumeResponse>(`/api/chat/${encodeURIComponent(id)}/resume`, {
+    visitorToken: token,
+    active,
+  });
+}
+
+/**
+ * Tells the server the page is closing, so the agent console stops showing a
+ * reader who is not there.
+ *
+ * sendBeacon rather than fetch: the page is unloading and a normal request is
+ * cancelled with it. Best effort by nature — nothing fires for a crash or a
+ * killed tab, which is why the server also times the heartbeat out.
+ *
+ * Note this does not close the conversation. The visitor may be back tomorrow,
+ * and the transcript is kept for them.
+ */
+export function beaconAway(id: string, token: string): void {
+  if (typeof navigator === 'undefined' || !navigator.sendBeacon) return;
+  try {
+    navigator.sendBeacon(
+      `/api/chat/${encodeURIComponent(id)}/away`,
+      new Blob([JSON.stringify({ visitorToken: token })], { type: 'application/json' }),
+    );
+  } catch {
+    // Nothing useful to do while the page is going away.
+  }
 }
 
 export async function closeChat(id: string, token: string): Promise<void> {

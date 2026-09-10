@@ -11,10 +11,12 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Bell, BellOff, Send, X } from 'lucide-react';
+import { Bell, BellOff, RotateCcw, Send, X } from 'lucide-react';
 import type { ChatMessageDTO } from '../../../shared/chatTypes';
 import {
   CHAT_INPUT_PLACEHOLDER,
+  CHAT_NEW_CHAT_CONFIRM,
+  CHAT_NEW_CHAT_LABEL,
   CHAT_PANEL_TITLE,
   CHAT_SEND_FAILED,
 } from '../../content/chat';
@@ -31,10 +33,15 @@ interface Props {
   starting: boolean;
   awaitingReply: boolean;
   onClose: () => void;
+  /** Abandon this conversation and open a clean one. */
+  onReset: () => void;
   onSent: (messages: ChatMessageDTO[], cursor: number) => void;
   onAwaiting: (value: boolean) => void;
   onStatus: (status: string, agentLabel?: string) => void;
 }
+
+/** How long the reset button stays armed before going back to its label. */
+const CONFIRM_WINDOW_MS = 4000;
 
 export default function ChatPanel({
   session,
@@ -42,6 +49,7 @@ export default function ChatPanel({
   starting,
   awaitingReply,
   onClose,
+  onReset,
   onSent,
   onAwaiting,
   onStatus,
@@ -50,6 +58,7 @@ export default function ChatPanel({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
   const [muted, setMutedState] = useState(false);
+  const [confirmingReset, setConfirmingReset] = useState(false);
 
   const panelRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -62,6 +71,14 @@ export default function ChatPanel({
   useEffect(() => {
     setMutedState(isMuted());
   }, []);
+
+  // Disarm on its own. A button left saying "Sure?" for the rest of the
+  // conversation is one mis-tap away from throwing the transcript out.
+  useEffect(() => {
+    if (!confirmingReset) return;
+    const t = window.setTimeout(() => setConfirmingReset(false), CONFIRM_WINDOW_MS);
+    return () => window.clearTimeout(t);
+  }, [confirmingReset]);
 
   /* --- escape, scroll lock, focus -------------------------------------- */
 
@@ -176,6 +193,50 @@ export default function ChatPanel({
           */}
         </div>
         <div className="flex items-center gap-1 shrink-0">
+        {/*
+          The escape hatch for a conversation that now outlives the browser tab.
+          Kept in localStorage, a thread survives for a week — right on a
+          personal device, wrong on a shared one, where the next person to open
+          the widget would be handed a stranger's transcript. This is the one
+          visible way to end it.
+
+          Two taps, because one tap that destroys a conversation is a bug. The
+          second state says what will happen rather than asking "are you sure"
+          about an unnamed thing.
+
+          Hidden until there is something to clear: on a brand-new conversation
+          it would only offer to replace a greeting with the same greeting.
+        */}
+        {session?.id && !isForm && messages.length > 1 && (
+          <button
+            type="button"
+            onClick={() => {
+              if (!confirmingReset) {
+                setConfirmingReset(true);
+                return;
+              }
+              setConfirmingReset(false);
+              setDraft('');
+              setError('');
+              onReset();
+            }}
+            aria-label={confirmingReset ? CHAT_NEW_CHAT_CONFIRM : CHAT_NEW_CHAT_LABEL}
+            title={CHAT_NEW_CHAT_LABEL}
+            className={[
+              'h-8 grid place-items-center rounded-full border-1.5 border-ink text-ink',
+              'cursor-pointer focus-ring transition-colors',
+              confirmingReset
+                ? 'px-3 bg-lime font-mono text-[10px] font-bold uppercase tracking-wider'
+                : 'w-8 bg-paper hover:bg-lime',
+            ].join(' ')}
+          >
+            {confirmingReset ? (
+              CHAT_NEW_CHAT_CONFIRM
+            ) : (
+              <RotateCcw size={14} strokeWidth={2.5} aria-hidden="true" />
+            )}
+          </button>
+        )}
         <button
           type="button"
           onClick={() => {

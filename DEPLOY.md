@@ -248,11 +248,37 @@ curl -s https://optimizeindex.com/chat/join/notarealtoken > /dev/null
 tail -5 /var/log/nginx/access.log | grep -c notarealtoken   # expect 0
 ```
 
-**Migrations.** `20260910000000_chat_area` and `20260910120000_chat_started_email`
-ship with this. Both add a single nullable column and neither touches an
-existing table, so they are safe to apply while the site is serving. Until they
-are applied the widget stays in form mode, because the generated Prisma client
-asks for columns the database does not have.
+**Migrations.** `20260910000000_chat_area`, `20260910120000_chat_started_email`
+and `20260910130000_chat_presence_resume` ship with this. All three only add
+nullable columns and none touches an existing table, so they are safe to apply
+while the site is serving. Until they are applied the widget stays in form mode,
+because the generated Prisma client asks for columns the database does not have.
+
+### Visitor presence and conversations that outlive the tab
+
+Nothing to configure — no new environment variable and **no nginx change**. The
+two new endpoints (`/api/chat/:id/resume` and `/api/chat/:id/away`) sit under
+`/api`, which the existing `location /` block already proxies. Do not copy the
+nginx conf for this deploy; see the warning on step 4.
+
+Two things to know when reading the logs after this goes out:
+
+- A conversation now survives the browser being closed, for seven days, and is
+  resumed with a re-signed token on each return. So `[Chat] Chat-resumed email
+  sent for conversation …` is a returning visitor, not a new one, and it is
+  debounced to at most one per two hours per conversation.
+- `[Chat] Visitor-left email sent for conversation …` fires at most once per
+  conversation, and only when nobody had joined. It is deliberately delayed by a
+  grace period rather than sent the instant the page closes, because `pagehide`
+  also fires on an ordinary hard navigation.
+
+Both notifications refresh the join link, so the most recent email always has a
+working one.
+
+**Presence is per-process state**, like the rate limiters — another reason
+`instances` in `ecosystem.config.cjs` must stay at 1. At two instances a poll
+served by the wrong process sees no heartbeat and mails that the visitor left
+while they are still typing.
 
 ### Checking it works
 
@@ -418,7 +444,8 @@ IndexNow — for Google, the sitemap is the mechanism.
 ```bash
 curl -sI https://optimizeindex.com/towing-companies | head -1        # 200
 curl -sI https://optimizeindex.com/towing-companies/nevada | head -1 # 404, not 200
-curl -s  https://optimizeindex.com/sitemap.xml | grep -c '<loc>'     # 15
+curl -s  https://optimizeindex.com/sitemap.xml | grep -c '<loc>'     # 16
+curl -sI https://optimizeindex.com/about | head -1                   # 200
 # The AI crawlers must get the full pre-rendered page, not a shell:
 curl -s -A "OAI-SearchBot" https://optimizeindex.com/towing-companies/california | grep -c "Rotation Tow"
 ```
