@@ -36,6 +36,7 @@ import {
   SMS_PROGRAM_SUMMARY,
   SMS_MESSAGE_TYPES,
   SMS_OPT_IN_SCRIPT,
+  SMS_CONSENT_STATEMENT,
   SMS_CONSENT_RECORD,
   SMS_OPT_IN_MESSAGE,
   SMS_OPT_OUT_MESSAGE,
@@ -1672,6 +1673,12 @@ export default function App() {
                   <blockquote className="border-l-4 border-lime bg-cream/60 px-5 py-4 rounded-r-xl font-sans text-sm text-ink leading-relaxed">
                     “{SMS_OPT_IN_SCRIPT}”
                   </blockquote>
+                  <p className="font-sans text-sm text-stone leading-relaxed">
+                    Saying yes to that question is your consent, and this is what it means:
+                  </p>
+                  <div className="border-2 border-ink bg-lime/30 px-5 py-4 rounded-xl font-sans text-sm text-ink leading-relaxed font-semibold" id="sms-consent">
+                    {SMS_CONSENT_STATEMENT}
+                  </div>
                   <p className="font-sans text-sm text-stone leading-relaxed">
                     If you say yes, we record the following so that your consent can be shown later:
                   </p>

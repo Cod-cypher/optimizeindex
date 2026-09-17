@@ -60,6 +60,15 @@ export const SMS_MESSAGE_TYPES = [
 export const SMS_OPT_IN_SCRIPT =
   'Would you like us to text you about your inquiry, quotes, scheduling and support? Message frequency varies, up to 4 messages a month, and message and data rates may apply. You can reply STOP at any time to opt out and HELP for help. Texting is not required to work with us. Can I confirm the mobile number is the one you are calling from?';
 
+/**
+ * The consent statement, in the form reviewers expect to see it on the page:
+ * what the customer is agreeing to, from whom, how often, at what cost, and
+ * how to leave. This is the sentence the customer's "yes" on the call is a
+ * yes to. Uses the abbreviated carrier wording ("Msg & data rates may apply")
+ * on purpose, because that is the string reviewers search for.
+ */
+export const SMS_CONSENT_STATEMENT = `By saying yes when asked on the call, you agree to receive text messages from ${SMS_PROGRAM_NAME} (${LEGAL_NAME}) about your inquiries, quotes, service information, scheduling, appointment updates and customer support. Message frequency varies, up to 4 messages per month. Msg & data rates may apply. Reply STOP to opt out at any time, HELP for help. Consent is not a condition of purchase.`;
+
 /** What gets logged when the customer says yes. */
 export const SMS_CONSENT_RECORD = [
   'The mobile number, as confirmed on the call',
