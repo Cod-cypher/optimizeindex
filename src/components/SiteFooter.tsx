@@ -181,6 +181,10 @@ export default function SiteFooter() {
           <a href="/terms-of-service" onClick={go('/terms-of-service')} className="hover:underline">
             TERMS OF SERVICE
           </a>
+          <span>·</span>
+          <a href="/sms-program" onClick={go('/sms-program')} className="hover:underline">
+            SMS PROGRAM
+          </a>
         </div>
       </div>
     </footer>

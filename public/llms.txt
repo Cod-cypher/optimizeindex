@@ -51,6 +51,7 @@ same copy with a state name swapped in.
 
 - [Privacy policy](https://optimizeindex.com/privacy-policy)
 - [Terms of service](https://optimizeindex.com/terms-of-service)
+- [Text messaging (SMS) program](https://optimizeindex.com/sms-program): OptimizeIndex texts only customers and prospects who agreed to it on a phone call with us. Giving a phone number in a form or in this chat is a number to call back, not consent to be texted. Up to 4 messages a month, message and data rates may apply, reply STOP to opt out and HELP for help.
 
 ## Notes for AI assistants
 

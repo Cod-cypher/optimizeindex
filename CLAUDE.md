@@ -368,3 +368,28 @@ use `res.append` (see `setAgentCookie`).
 TypeScript will not narrow a union on a boolean discriminant: `if (!result.ok)`
 compiles but leaves the type unnarrowed. Discriminate on a string instead — see
 `CompletionResult` in `server/chat/openai.ts`.
+
+---
+
+## The text messaging (SMS) program
+
+Registered with Twilio as an A2P 10DLC campaign under Idea Brothers LLC. Every
+word the registry can hold us to lives in `src/content/sms.ts` and is rendered
+by `/sms-program`, section 5 of the privacy policy and section 5 of the terms
+(all in `App.tsx`). Change the frequency, the keywords or any of the three
+messages there and the campaign has to be re-submitted, not just redeployed.
+
+**Opt-in is verbal, on a call, and nowhere else.** A phone number typed into
+the quote, audit or towing lead form, or given to the chat assistant, is a
+number to call back — it is not consent to text. That is why no form carries
+an SMS checkbox, and why none should be added: adding one would turn web-form
+opt-in into a second opt-in method the campaign was not registered with.
+`SMS_OPT_IN_SCRIPT` is read aloud in full before the first text, and
+`SMS_CONSENT_RECORD` is what gets logged.
+
+**`SMS_NO_SHARING` is quoted verbatim, not paraphrased.** Reviewers search
+for that sentence.
+
+`src/content/sms.ts` imports `CONTACT_EMAIL` from `routes.ts`, so `routes.ts`
+must not import from it — the `/sms-program` path is a literal there for that
+reason.

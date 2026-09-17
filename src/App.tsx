@@ -31,7 +31,23 @@ import {
 
 import { GOALS, SERVICES, CASE_STUDIES, PROCESS_STEPS, AUDIT_FAQS, QUOTE_FAQS } from './data';
 import { SERVICES_FAQS } from './content/services';
-import { ROUTES, getRouteMeta, canonicalFor } from './routes';
+import {
+  SMS_PROGRAM_NAME,
+  SMS_PROGRAM_SUMMARY,
+  SMS_MESSAGE_TYPES,
+  SMS_OPT_IN_SCRIPT,
+  SMS_CONSENT_RECORD,
+  SMS_OPT_IN_MESSAGE,
+  SMS_OPT_OUT_MESSAGE,
+  SMS_HELP_MESSAGE,
+  SMS_FREQUENCY,
+  SMS_RATES,
+  SMS_NO_SHARING,
+  SMS_TWILIO_STATEMENT,
+  SMS_PROVIDER_SHARING,
+  SMS_CARRIER_LIABILITY,
+} from './content/sms';
+import { ROUTES, getRouteMeta, canonicalFor, CONTACT_EMAIL, CONTACT_PHONE_DISPLAY } from './routes';
 import { buildHeadTags } from './lib/head';
 import { GoalId, CaseStudy } from './types';
 import { submitLead } from './lib/leads';
@@ -77,7 +93,7 @@ export default function App() {
 
   // Compute currentView dynamically based on location.pathname
   const path = location.pathname;
-  let currentView: 'home' | 'services' | 'quote' | 'case-studies' | 'audit' | 'privacy-policy' | 'terms-of-conversion' | 'case-study-detail' | 'not-found' = 'home';
+  let currentView: 'home' | 'services' | 'quote' | 'case-studies' | 'audit' | 'privacy-policy' | 'terms-of-conversion' | 'sms-program' | 'case-study-detail' | 'not-found' = 'home';
   let caseStudyId: string | null = null;
   if (path.startsWith('/case-study/')) {
     currentView = 'case-study-detail';
@@ -99,9 +115,11 @@ export default function App() {
     currentView = 'privacy-policy';
   } else if (path === '/terms-of-service' || path === '/terms-of-conversion') {
     currentView = 'terms-of-conversion';
+  } else if (path === '/sms-program') {
+    currentView = 'sms-program';
   }
 
-  const navigateTo = (view: 'home' | 'services' | 'quote' | 'case-studies' | 'audit' | 'privacy-policy' | 'terms-of-conversion' | 'case-study-detail', hash?: string) => {
+  const navigateTo = (view: 'home' | 'services' | 'quote' | 'case-studies' | 'audit' | 'privacy-policy' | 'terms-of-conversion' | 'sms-program' | 'case-study-detail', hash?: string) => {
     let targetPath = '/';
     if (view === 'services') targetPath = '/services';
     else if (view === 'case-studies') targetPath = '/case-studies';
@@ -109,6 +127,7 @@ export default function App() {
     else if (view === 'audit') targetPath = '/audit';
     else if (view === 'privacy-policy') targetPath = '/privacy-policy';
     else if (view === 'terms-of-conversion') targetPath = '/terms-of-service';
+    else if (view === 'sms-program') targetPath = '/sms-program';
 
     if (location.pathname === '/' && view === 'home' && hash) {
       const el = document.getElementById(hash.replace('#', ''));
@@ -1522,8 +1541,21 @@ export default function App() {
                   </p>
                 </section>
 
+                <section className="space-y-3 text-left border-t border-ink/10 pt-8" id="sms">
+                  <h2 className="font-display font-extrabold text-xl text-ink">5. Text Messaging (SMS)</h2>
+                  <p className="font-sans text-sm text-stone leading-relaxed">
+                    {SMS_PROGRAM_SUMMARY} {SMS_PROGRAM_NAME} collects mobile phone numbers for text messaging only when a customer or prospective customer voluntarily provides the number and agrees, verbally on a phone call with a member of our team, to receive text messages. Giving us a phone number through a form on this site, or in the chat, does not sign you up for text messages; it is a number for us to call back. Text messages only start once you have said yes on that call.
+                  </p>
+                  <p className="font-sans text-sm text-stone leading-relaxed">
+                    By opting in, you agree to receive text messages from {SMS_PROGRAM_NAME} about your inquiries, quotes, service information, scheduling, appointment updates, and customer support. {SMS_FREQUENCY} {SMS_RATES} Reply STOP to any {SMS_PROGRAM_NAME} text message to opt out; you will receive one message confirming it and no further texts after that. Reply HELP for help, or contact us at <a href={`mailto:${CONTACT_EMAIL}`} className="underline font-bold text-ink">{CONTACT_EMAIL}</a> or {CONTACT_PHONE_DISPLAY}.
+                  </p>
+                  <p className="font-sans text-sm text-stone leading-relaxed">
+                    {SMS_TWILIO_STATEMENT} {SMS_NO_SHARING} {SMS_PROVIDER_SHARING} The full program terms are on our <a href="/sms-program" onClick={(e) => { e.preventDefault(); navigateTo('sms-program'); }} className="underline font-bold text-ink">text messaging program</a> page.
+                  </p>
+                </section>
+
                 <div className="pt-8 border-t border-ink/15 text-center flex flex-col md:flex-row items-center justify-between gap-4">
-                  <p className="font-mono text-[10px] text-stone">LAST UPDATED: JULY 2026</p>
+                  <p className="font-mono text-[10px] text-stone">LAST UPDATED: SEPTEMBER 2026</p>
                   <button
                     onClick={() => navigateTo('home')}
                     className="px-6 py-3 bg-lime text-ink font-mono text-xs font-bold uppercase rounded-full hover:bg-lime/90 cursor-pointer shadow-hard"
@@ -1591,6 +1623,127 @@ export default function App() {
               </nav>
             </div>
           </section>
+        ) : currentView === 'sms-program' ? (
+          <section className="py-20 bg-forest text-cream border-b-1.5 border-ink min-h-[90vh] relative overflow-hidden">
+            <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(to_right,#fff_1px,transparent_1px),linear-gradient(to_bottom,#fff_1px,transparent_1px)] bg-[size:24px_24px]" />
+
+            <div className="max-w-4xl mx-auto px-6 md:px-12 relative z-10">
+              <div className="mb-12">
+                <button
+                  onClick={() => navigateTo('home')}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-paper text-ink border-2 border-ink font-mono text-xs font-bold uppercase rounded-full hover:bg-cream transition-all cursor-pointer focus-ring shadow-hard hover:shadow-hard-hover"
+                  id="sms-back-btn"
+                >
+                  <span>← Back to Homepage</span>
+                </button>
+              </div>
+
+              <div className="text-center max-w-3xl mx-auto mb-16">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-lime text-ink border border-ink shadow-hard rounded-full mb-4 -rotate-1">
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  <span className="font-mono text-[10px] font-bold">REPLY STOP TO OPT OUT, HELP FOR HELP</span>
+                </div>
+                <h1 className="font-display font-black text-4xl md:text-5xl lg:text-6xl text-cream tracking-tight leading-[1.1] mt-2">
+                  Text Messaging Program
+                </h1>
+                <p className="font-sans text-cream/75 mt-6 leading-relaxed text-base md:text-lg">
+                  {SMS_PROGRAM_SUMMARY}
+                </p>
+              </div>
+
+              <div className="space-y-8 bg-paper text-ink border-2 border-ink p-8 md:p-12 rounded-3xl shadow-hard">
+                <section className="space-y-3 text-left">
+                  <h2 className="font-display font-extrabold text-xl text-ink">1. What we text about</h2>
+                  <p className="font-sans text-sm text-stone leading-relaxed">
+                    The {SMS_PROGRAM_NAME} program is for conversations you have already started with us. It is not a broadcast list, and we do not text anyone who has not asked us to. Messages are about:
+                  </p>
+                  <ul className="list-disc pl-5 space-y-1.5 font-sans text-sm text-stone leading-relaxed">
+                    {SMS_MESSAGE_TYPES.map((t) => (
+                      <li key={t}>{t}</li>
+                    ))}
+                  </ul>
+                </section>
+
+                <section className="space-y-3 text-left border-t border-ink/10 pt-8">
+                  <h2 className="font-display font-extrabold text-xl text-ink">2. How you opt in</h2>
+                  <p className="font-sans text-sm text-stone leading-relaxed">
+                    Consent is given verbally, on a phone call with a member of our team, and only there. Giving us your phone number through a form on this site, or in the chat, does not enrol you in text messages; it is a number for us to call you back on. Before the first text is sent, the person you are speaking with will ask you this, in these words:
+                  </p>
+                  <blockquote className="border-l-4 border-lime bg-cream/60 px-5 py-4 rounded-r-xl font-sans text-sm text-ink leading-relaxed">
+                    “{SMS_OPT_IN_SCRIPT}”
+                  </blockquote>
+                  <p className="font-sans text-sm text-stone leading-relaxed">
+                    If you say yes, we record the following so that your consent can be shown later:
+                  </p>
+                  <ul className="list-disc pl-5 space-y-1.5 font-sans text-sm text-stone leading-relaxed">
+                    {SMS_CONSENT_RECORD.map((t) => (
+                      <li key={t}>{t}</li>
+                    ))}
+                  </ul>
+                  <p className="font-sans text-sm text-stone leading-relaxed">
+                    You then receive one confirmation text, which reads:
+                  </p>
+                  <blockquote className="border-l-4 border-ink/20 bg-cream/60 px-5 py-4 rounded-r-xl font-mono text-xs text-ink leading-relaxed">
+                    {SMS_OPT_IN_MESSAGE}
+                  </blockquote>
+                  <p className="font-sans text-sm text-stone leading-relaxed">
+                    Texting is optional. Declining, or opting out later, changes nothing about the service you receive from us.
+                  </p>
+                </section>
+
+                <section className="space-y-3 text-left border-t border-ink/10 pt-8">
+                  <h2 className="font-display font-extrabold text-xl text-ink">3. Message frequency and cost</h2>
+                  <p className="font-sans text-sm text-stone leading-relaxed">
+                    {SMS_FREQUENCY} Most people hear from us far less often than that, because we text when there is something specific to tell you: a quote is ready, a call is coming up, or a result has landed. {SMS_RATES} Those rates are set by your mobile carrier, not by us, and {SMS_CARRIER_LIABILITY.charAt(0).toLowerCase() + SMS_CARRIER_LIABILITY.slice(1)}
+                  </p>
+                </section>
+
+                <section className="space-y-3 text-left border-t border-ink/10 pt-8">
+                  <h2 className="font-display font-extrabold text-xl text-ink">4. How to opt out</h2>
+                  <p className="font-sans text-sm text-stone leading-relaxed">
+                    Reply STOP to any text from us. You will receive one message confirming that you are unsubscribed, and nothing after it. You can also opt out by emailing <a href={`mailto:${CONTACT_EMAIL}`} className="underline font-bold text-ink">{CONTACT_EMAIL}</a> or calling {CONTACT_PHONE_DISPLAY}, and we will do it for you. The confirmation reads:
+                  </p>
+                  <blockquote className="border-l-4 border-ink/20 bg-cream/60 px-5 py-4 rounded-r-xl font-mono text-xs text-ink leading-relaxed">
+                    {SMS_OPT_OUT_MESSAGE}
+                  </blockquote>
+                </section>
+
+                <section className="space-y-3 text-left border-t border-ink/10 pt-8">
+                  <h2 className="font-display font-extrabold text-xl text-ink">5. How to get help</h2>
+                  <p className="font-sans text-sm text-stone leading-relaxed">
+                    Reply HELP to any text from us, or contact us directly by email or phone. The automatic reply to HELP reads:
+                  </p>
+                  <blockquote className="border-l-4 border-ink/20 bg-cream/60 px-5 py-4 rounded-r-xl font-mono text-xs text-ink leading-relaxed">
+                    {SMS_HELP_MESSAGE}
+                  </blockquote>
+                </section>
+
+                <section className="space-y-3 text-left border-t border-ink/10 pt-8">
+                  <h2 className="font-display font-extrabold text-xl text-ink">6. Your mobile information</h2>
+                  <p className="font-sans text-sm text-stone leading-relaxed">
+                    {SMS_NO_SHARING} {SMS_PROVIDER_SHARING} How we handle the rest of what you give us is in the <a href="/privacy-policy#sms" onClick={(e) => { e.preventDefault(); navigateTo('privacy-policy'); }} className="underline font-bold text-ink">Privacy Policy</a>, and the terms that apply to texting are in section 5 of the <a href="/terms-of-service#sms" onClick={(e) => { e.preventDefault(); navigateTo('terms-of-conversion'); }} className="underline font-bold text-ink">Terms of Service</a>.
+                  </p>
+                </section>
+
+                <section className="space-y-3 text-left border-t border-ink/10 pt-8">
+                  <h2 className="font-display font-extrabold text-xl text-ink">7. Contact</h2>
+                  <p className="font-sans text-sm text-stone leading-relaxed">
+                    Questions about this program, a text you received, or your consent: email <a href={`mailto:${CONTACT_EMAIL}`} className="underline font-bold text-ink">{CONTACT_EMAIL}</a> or call {CONTACT_PHONE_DISPLAY}.
+                  </p>
+                </section>
+
+                <div className="pt-8 border-t border-ink/15 text-center flex flex-col md:flex-row items-center justify-between gap-4">
+                  <p className="font-mono text-[10px] text-stone">LAST UPDATED: SEPTEMBER 2026</p>
+                  <button
+                    onClick={() => navigateTo('home')}
+                    className="px-6 py-3 bg-lime text-ink font-mono text-xs font-bold uppercase rounded-full hover:bg-lime/90 cursor-pointer shadow-hard"
+                  >
+                    Return to Home
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
         ) : currentView === 'terms-of-conversion' ? (
           <section className="py-20 bg-forest text-cream border-b-1.5 border-ink min-h-[90vh] relative overflow-hidden">
             {/* Subtle grid background */}
@@ -1651,8 +1804,21 @@ export default function App() {
                   </p>
                 </section>
 
+                <section className="space-y-3 text-left border-t border-ink/10 pt-8" id="sms">
+                  <h2 className="font-display font-extrabold text-xl text-ink">5. SMS Terms</h2>
+                  <p className="font-sans text-sm text-stone leading-relaxed">
+                    {SMS_PROGRAM_SUMMARY} {SMS_PROGRAM_NAME} sends text messages only after you have given that consent, and texting is never a condition of working with us. Texts cover your inquiries, quotes, service information, scheduling, appointment updates, and customer support.
+                  </p>
+                  <p className="font-sans text-sm text-stone leading-relaxed">
+                    {SMS_FREQUENCY} {SMS_RATES} Reply STOP to opt out at any time; you will receive one message confirming that you have been unsubscribed. Reply HELP for assistance, or contact <a href={`mailto:${CONTACT_EMAIL}`} className="underline font-bold text-ink">{CONTACT_EMAIL}</a> or {CONTACT_PHONE_DISPLAY}. {SMS_CARRIER_LIABILITY}
+                  </p>
+                  <p className="font-sans text-sm text-stone leading-relaxed">
+                    How {SMS_PROGRAM_NAME} handles your mobile number and consent is explained in the Text Messaging (SMS) section of the <a href="/privacy-policy#sms" onClick={(e) => { e.preventDefault(); navigateTo('privacy-policy'); }} className="underline font-bold text-ink">Privacy Policy</a>, and the program is described in full on the <a href="/sms-program" onClick={(e) => { e.preventDefault(); navigateTo('sms-program'); }} className="underline font-bold text-ink">text messaging program</a> page.
+                  </p>
+                </section>
+
                 <div className="pt-8 border-t border-ink/15 text-center flex flex-col md:flex-row items-center justify-between gap-4">
-                  <p className="font-mono text-[10px] text-stone">LAST UPDATED: JULY 2026</p>
+                  <p className="font-mono text-[10px] text-stone">LAST UPDATED: SEPTEMBER 2026</p>
                   <button
                     onClick={() => navigateTo('home')}
                     className="px-6 py-3 bg-lime text-ink font-mono text-xs font-bold uppercase rounded-full hover:bg-lime/90 cursor-pointer shadow-hard"

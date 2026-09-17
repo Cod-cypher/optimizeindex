@@ -515,6 +515,16 @@ export const ROUTES: RouteMeta[] = [
       'The terms governing your use of the OptimizeIndex website and services, including our no-contract policy and the 15-day money-back guarantee.',
     priority: 0.3,
   },
+  {
+    // The path is a literal rather than SMS_PROGRAM_PATH from content/sms.ts,
+    // because that file imports CONTACT_EMAIL from here and a cycle between
+    // the two would evaluate one of them before its constants exist.
+    path: '/sms-program',
+    title: 'Text Messaging (SMS) Program | OptimizeIndex',
+    description:
+      'How the OptimizeIndex text messaging program works: what we text about, how you opt in on a call, message frequency, and how to reply STOP or HELP.',
+    priority: 0.3,
+  },
 ];
 
 /** Rendered to dist/404.html and served with a real 404 status. */

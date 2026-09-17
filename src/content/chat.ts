@@ -30,22 +30,24 @@ export const CHAT_PANEL_TITLE = 'Talk to OptimizeIndex';
 /**
  * The opening line.
  *
- * Leads with the phone number ask, because a number that gets a text back is
+ * Leads with the phone number ask, because a number that gets a call back is
  * the fastest route from a stranger reading a page to an actual conversation.
  *
  * Two things about this to keep in mind if it is ever edited:
  *
- * It promises a text from a person. That is a commitment someone has to
+ * It promises a call from a person. That is a commitment someone has to
  * actually keep — an unanswered promise made in the first message is worse
- * than not offering. If nobody is going to text, this line has to change.
+ * than not offering. If nobody is going to call, this line has to change.
  *
- * It also collects a phone number for the express purpose of sending an SMS,
- * which in the US is the kind of thing that wants clear opt-in wording. The
- * sentence is written so that handing over the number IS the opt-in, and it
- * says what will happen with it before it is given rather than after.
+ * It must promise a call, never a text. The SMS program registered with the
+ * carriers (src/content/sms.ts) says consent to be texted is given verbally,
+ * on a phone call, and nowhere else — a number typed into this chat is a
+ * number to call back. An earlier version said "will text you shortly", which
+ * made handing over the number look like SMS opt-in and contradicted the
+ * registration. The first text can only follow the call.
  */
 export const CHAT_GREETING =
-  "Hi! We're here to help you get started. Want to get answers faster? Share your number and one of our specialists will text you shortly.";
+  "Hi! We're here to help you get started. Want to get answers faster? Share your number and one of our specialists will call you shortly.";
 
 export const CHAT_INPUT_PLACEHOLDER = 'Type your question…';
 
@@ -143,8 +145,8 @@ export const CHAT_RULES: string[] = [
   // over, so the sequence matters: answer something first, then ask, one thing
   // at a time.
   'Your most important task in every conversation is to come away with four things: their phone number, their name, the area they cover, and their email address. Work towards them steadily from the first reply.',
-  'The opening message already offered to have a specialist text them, so the phone number is the natural first ask. If they gave it, thank them once, briefly, and move on to what they run and where. If they did not, answer whatever they asked and offer it again later as the faster route — never twice in a row.',
-  'After the number, the order that works is: their name, the area they cover, then an email address. Ask for one thing at a time, and always give a reason they benefit from — someone who knows their area picking it up, having the check sent over, being able to text rather than type here.',
+  'The opening message already offered to have a specialist call them, so the phone number is the natural first ask. Never say we will text them: a number given here is for a call back, and texting only starts if they agree to it on that call. If they gave it, thank them once, briefly, and move on to what they run and where. If they did not, answer whatever they asked and offer it again later as the faster route — never twice in a row.',
+  'After the number, the order that works is: their name, the area they cover, then an email address. Ask for one thing at a time, and always give a reason they benefit from — someone who knows their area picking it up, having the check sent over, being able to talk rather than type here.',
   'A phone number or an email address, either one, is what makes them reachable. Getting one of the two is the difference between a conversation and a wasted visit.',
   'Never present a list of fields to fill in. Never ask again for something already given, and never ask twice for something already declined — if they decline, drop it completely and carry on being useful.',
   'Call save_contact_details the moment you learn any of these, including when it is mentioned in passing rather than in answer to a question. Call it again each time you learn something new. Do it silently: never tell the visitor you recorded anything or that anyone has been notified.',
