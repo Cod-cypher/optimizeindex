@@ -395,7 +395,7 @@ export const TOWING_JOBS = {
       id: 'job-seekers',
       question: 'Looking for work as a tow truck driver?',
       answer:
-        'This page is written for people who own or run towing companies, not for drivers looking for a job. We are a marketing agency and we do not list vacancies or place drivers.',
+        'This page is written for people who own or run towing companies, not for drivers looking for a job. We are an AI solutions company for towing operators and we do not list vacancies or place drivers.',
       detail: [
         'If you are looking for driver or operator work, the general job boards carry the listings, and applying directly to operators in your area is usually faster than any of them. We would rather tell you that in one paragraph than keep you reading a page that was never going to help.',
       ],

@@ -32,8 +32,13 @@ export default function TowingPillarPage() {
 
   return (
     <TowingLayout>
-      {/* Hero. The H1 carries the brand voice; the <title> in routes.ts carries
-          the search terms. head.ts keeps the two independent on purpose. */}
+      {/* Hero. The <title> in routes.ts carries the "towing seo" query Search
+          Console surfaces this page for; the H1 carries the identity (AI
+          solutions, the revenue problem), per the Positioning rule in
+          CLAUDE.md. The two are independent by design and the pillar is
+          exempt from verify-seo's H1/title match. This used to read "Proudly
+          Serving Towing Companies", byte-identical to the H1 on
+          /proudly-serving. */}
       <section className="bg-cream border-b-1.5 border-ink px-6 md:px-12 py-16 md:py-20 relative overflow-hidden">
         <div className="absolute inset-0 opacity-5 pointer-events-none bg-[linear-gradient(to_right,#000_1px,transparent_1px),linear-gradient(to_bottom,#000_1px,transparent_1px)] bg-[size:24px_24px]" />
         <div className="max-w-4xl mx-auto relative z-10">
@@ -43,11 +48,11 @@ export default function TowingPillarPage() {
           </span>
 
           <h1 className="font-display font-black text-4xl md:text-5xl lg:text-6xl text-ink tracking-tight mt-4 leading-[1.05]">
-            Proudly Serving{' '}
+            AI Solutions for{' '}
             <span className="font-serif-accent italic text-lime bg-ink px-3 py-1 rounded-sm shadow-hard inline-block -rotate-1">
               Towing
             </span>{' '}
-            Companies
+            Companies Missing Revenue
           </h1>
 
           <p className="font-sans text-lg md:text-xl text-stone leading-relaxed mt-6">
@@ -92,7 +97,7 @@ export default function TowingPillarPage() {
       {/* Body */}
       <div className="bg-cream px-6 md:px-12 py-14">
         <div className="max-w-4xl mx-auto space-y-8">
-          {TOWING_PILLAR.sections.map((section) => (
+          {TOWING_PILLAR.sections.map((section) => [
             <SectionBlock
               key={section.id}
               section={section}
@@ -103,8 +108,35 @@ export default function TowingPillarPage() {
                     ? DEMAND_LABELS[section.demand]
                     : undefined
               }
-            />
-          ))}
+            />,
+            /* Bridge from the heavy-duty section to the page that covers who
+               buys heavy recovery and how the state quick-clearance programs
+               certify operators for it. Here rather than in the content file
+               because section detail[] renders as plain text and cannot carry
+               a link. Returned as an array so no Fragment import is needed. */
+            section.id === 'heavy-duty' ? (
+              <p
+                key="heavy-duty-bridge"
+                className="font-sans text-stone leading-relaxed border-l-4 border-lime pl-4"
+              >
+                Selling to the fleet dispatcher and the adjuster is its own process.{' '}
+                <a
+                  href="/towing-jobs/heavy-duty-towing-accounts"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate('/towing-jobs/heavy-duty-towing-accounts');
+                    window.scrollTo({ top: 0 });
+                  }}
+                  id="pillar-heavy-duty-link"
+                  className="font-bold text-ink underline hover:text-lime focus-ring"
+                >
+                  How heavy-duty towing accounts are won
+                </a>{' '}
+                covers who buys heavy recovery and the state quick-clearance programs that certify
+                operators for it.
+              </p>
+            ) : null,
+          ])}
 
           {/* Bridge into /towing-jobs. The direct-calls section above answers
               the "change the mix" question in summary; that page is the long
@@ -200,7 +232,7 @@ export default function TowingPillarPage() {
       </section>
 
       <FaqSection
-        heading="Towing marketing questions, answered"
+        heading="Towing visibility questions, answered"
         faqs={TOWING_PILLAR.faqs}
         tone="light"
         id="towing-faq"

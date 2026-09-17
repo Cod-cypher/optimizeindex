@@ -55,18 +55,24 @@ export interface TowingJobsChild {
 
 import { commercialAccounts } from './commercialAccounts';
 import { directCalls } from './directCalls';
+import { heavyDutyAccounts } from './heavyDutyAccounts';
 import { motorClub } from './motorClub';
 import { paidLeads } from './paidLeads';
+import { privatePropertyContracts } from './privatePropertyContracts';
 
 /**
  * Order is the order they appear in the pillar's hub block and in its ItemList
  * schema. Direct calls and commercial accounts lead because they are the two
- * channels an operator has most agency over.
+ * channels an operator has most agency over; heavy-duty follows commercial
+ * because it is the specialised case of it; property contracts sit with the
+ * other work someone else controls the terms of.
  */
 export const TOWING_JOBS_CLUSTER: TowingJobsChild[] = [
   directCalls,
   commercialAccounts,
+  heavyDutyAccounts,
   motorClub,
+  privatePropertyContracts,
   paidLeads,
 ];
 

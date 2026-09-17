@@ -115,6 +115,19 @@ async function main() {
     check(canonical === `${SITE_ORIGIN}${route.path}`, `${label} canonical is "${canonical}", expected "${SITE_ORIGIN}${route.path}"`);
     check(h1s.length === 1, `${label} has ${h1s.length} h1 elements, expected exactly 1`);
     check(words >= 300, `${label} has only ${words} words of rendered text`);
+
+    // Positioning rule (CLAUDE.md): the H1 leads with the identity — AI
+    // solutions, the revenue problem — never with the mechanism. "SEO" and
+    // "marketing" may appear in body copy, sparingly; the two counts on the
+    // log line keep that visible without failing the build over it.
+    const h1Text = h1s.text().replace(/\s+/g, ' ').trim();
+    check(
+      !/\bSEO\b|\bmarket(?:ing|er)s?\b/i.test(h1Text),
+      `${label} h1 names the mechanism rather than the identity: "${h1Text}"`,
+    );
+    const mainText = $('main').text();
+    const seoCount = (mainText.match(/\bSEO\b/gi) || []).length;
+    const mktCount = (mainText.match(/\bmarket(?:ing|er)s?\b/gi) || []).length;
     check(!seenTitles.has(title), `${label} title is a duplicate of another route`);
     check(!seenDescriptions.has(desc), `${label} description is a duplicate of another route`);
     check(html.includes('data-prerendered="true"'), `${label} is not marked pre-rendered`);
@@ -133,7 +146,9 @@ async function main() {
     }
     check(skip === null, `${label} skips a heading level (${skip})`);
 
-    console.log(`  ${label} ${String(words).padStart(5)}w  h1=${h1s.length}  title=${title.length}  desc=${desc.length}`);
+    console.log(
+      `  ${label} ${String(words).padStart(5)}w  h1=${h1s.length}  title=${title.length}  desc=${desc.length}  seo=${seoCount} mkt=${mktCount}`,
+    );
   }
 
   console.log('\n=== 404 page ===\n');

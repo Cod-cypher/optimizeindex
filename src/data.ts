@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Goal, Service, CaseStudy, ProcessStep, Testimonial, Faq } from './types';
+import { Goal, Service, CaseStudy, ProcessStep, Faq } from './types';
 
 export const GOALS: Goal[] = [
   {
@@ -451,56 +451,53 @@ The local campaign drove immediate and compounding dividends.
   */
 ];
 
+/**
+ * The homepage process. Step 1 is the AI research pass, because it is what
+ * the rest is ordered by and it is the part of the work that is ours rather
+ * than generic; the four delivery steps follow it. App.tsx reads the count
+ * from this array, so adding or removing a step here is the whole change.
+ */
 export const PROCESS_STEPS: ProcessStep[] = [
   {
     number: '01',
-    title: 'Step 1: Optimize Your Google Business Profile',
-    description: 'We begin by strengthening your local presence with a fully optimized Google Business Profile. This helps your business appear in local searches, Google Maps, and attracts nearby customers.',
+    title: 'Step 1: AI Research on Your Market',
+    description: 'Before anything is built, our AI models study how customers in your market actually search — on Google, Google Maps and AI assistants — where you appear today, and where the revenue is being missed. That research decides the order of everything that follows.',
     isOffer: true
   },
   {
     number: '02',
-    title: 'Step 2: Expand with SEO',
-    description: 'Once your local foundation is in place, we optimize your website using proven SEO strategies. This improves your rankings on Google, increases organic traffic, and brings in more qualified leads.',
+    title: 'Step 2: Optimize Your Google Business Profile',
+    description: 'We strengthen your local presence with a fully optimized Google Business Profile, built from what the research found. This helps your business appear in local searches and Google Maps, and attracts nearby customers.',
     isOffer: false
   },
   {
     number: '03',
-    title: 'Step 3: Scale with AEO',
-    description: 'After building search visibility, we optimize your content for Answer Engines. This helps your business appear in featured snippets, voice searches, and AI-generated answers, making it easier for customers to find trusted information.',
+    title: 'Step 3: Expand with SEO',
+    description: 'Once your local foundation is in place, we optimize your website with AI-driven SEO. This improves your rankings on Google, increases organic traffic, and brings in more qualified leads.',
     isOffer: false
   },
   {
     number: '04',
-    title: 'Step 4: Future-Proof with GEO',
+    title: 'Step 4: Scale with AEO',
+    description: 'After building search visibility, we optimize your content for Answer Engines. This helps your business appear in featured snippets, voice searches, and AI-generated answers, making it easier for customers to find trusted information.',
+    isOffer: false
+  },
+  {
+    number: '05',
+    title: 'Step 5: Future-Proof with GEO',
     description: 'Finally, we prepare your business for the next generation of search. Through Generative Engine Optimization, we ensure AI platforms like ChatGPT, Gemini, and other AI search tools can understand, reference, and recommend your business.',
     isOffer: false
   }
 ];
 
-export const TESTIMONIALS: Testimonial[] = [
-  {
-    quote: "More traffic is nice. More revenue is the point. OptimizeIndex did exactly what they promised: cut our customer acquisition costs by 42% in ninety days without dropping volume.",
-    author: "Manufacturing Executive",
-    role: "VP of Supply Chain Growth",
-    company: "Automotive Parts Manufacturer",
-    avatarUrl: ""
-  },
-  {
-    quote: "They don't sell blobs or beautiful slides. They sell math. Our organic search pipeline is now our #1 highest profit driver, verified directly in sales channels.",
-    author: "E-commerce Founder",
-    role: "Chief Executive Officer",
-    company: "D2C Apparel Brand",
-    avatarUrl: ""
-  },
-  {
-    quote: "While other agencies were debating what GEO meant, OptimizeIndex got us cited as the top answer for 400+ high-value queries. Our conversions skyrocketed.",
-    author: "Industrial Tech Director",
-    role: "Director of Digital Systems",
-    company: "Heavy Machinery & Equipment",
-    avatarUrl: ""
-  }
-];
+/*
+  There is deliberately no TESTIMONIALS list. The one that used to be here
+  carried three anonymous quotes ("Manufacturing Executive", "E-commerce
+  Founder") with figures nobody could check ("42%", "400+ queries"). On a site
+  whose pitch is that every number names the tool it was verified in, those
+  were the only claims that broke the rule. The two case studies are the
+  proof; a real, attributable testimonial can be added when one exists.
+*/
 
 /**
  * The homepage ticker.

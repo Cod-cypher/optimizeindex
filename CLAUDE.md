@@ -133,6 +133,22 @@ join" — attributed as Agero's claims, not as independent fact.
 
 ## Positioning
 
+**OptimizeIndex is an AI solutions company for businesses missing revenue.** SEO,
+Google Business Profile, AEO and GEO are how the results are delivered, always
+framed as done with AI, never as what the company is. Identity surfaces (every
+H1, hero lede, homepage section heading, the entity description, footer blurb,
+nav and footer labels, CTA headings) lead with AI and the revenue problem and
+never carry "SEO" or "marketing" as the noun we are; they may name the
+mechanisms in a trailing clause ("AI-driven SEO, Google Business Profile, AEO
+and GEO"). Body copy, service names, process steps, case studies and FAQs keep
+the mechanisms, sparingly: name SEO/AEO/GEO once where introduced, then say
+"search", "visibility", "getting found". `<title>`, meta descriptions, JSON-LD
+and `public/llms.txt` keep the search terms ("towing seo", "free seo quote"),
+because that is what Google matches and shows. "Missing revenue" describes the
+problem we solve; it is never a promised outcome (see "Never claim" below).
+`verify-seo.ts` fails the build on either word in an `<h1>` and prints per-page
+`seo=`/`mkt=` counts so drift stays visible.
+
 State plainly what OptimizeIndex does and does not do. The pages are more credible for
 it, and the honesty is the differentiator in a vertical full of vendors.
 
@@ -190,10 +206,17 @@ the three cannot drift.
 
 /towing-jobs                                  operator pillar — where work comes from
 ├── /towing-jobs/commercial-towing-accounts    B2B acquisition
+├── /towing-jobs/heavy-duty-towing-accounts    heavy recovery buyers + DOT quick-clearance programs
 ├── /towing-jobs/more-direct-towing-calls      cash-call playbook + measurement
 ├── /towing-jobs/motor-club-towing             evaluating network dispatch
+├── /towing-jobs/private-property-towing-contracts  the contract, the statute, the manager
 └── /towing-jobs/paid-towing-leads             buying leads vs owning demand
 ```
+
+**State pages target "Best AI Towing Agency in <State>" on purpose.** Title and
+H1 come from `stateHeadline()` in `src/content/towing.ts` and are that query.
+The "towing seo" intent Search Console surfaces belongs to `/towing-companies`,
+whose `<title>` carries it. Do not retitle the state pages toward it.
 
 ### Cannibalization boundaries
 
@@ -205,6 +228,8 @@ the three cannot drift.
 | `…/more-direct-towing-calls` | The operational playbook + call-quality measurement | Service description → `/towing-companies`; channel comparison → pillar |
 | `…/motor-club-towing` | Evaluating network work | The other five channels → pillar |
 | `…/paid-towing-leads` | Bought leads, and owning demand instead | Organic/GBP how-to → `/towing-companies` |
+| `…/heavy-duty-towing-accounts` | Who buys heavy recovery (carriers, adjusters, DOT programs) and what each qualifies on; TRIP / RISC / MIT from their own specs | The generic B2B sales process, COIs, net terms → `…/commercial-towing-accounts`; corridor-page mechanics → `/towing-companies` heavy-duty section |
+| `…/private-property-towing-contracts` | Who awards property contracts, what the manager is buying, the posting / authorisation / notification / storage statutes, what the contract obliges | Impound one-star reviews → `/towing-companies` `impound-reviews`; the channel summary → pillar; selling on account → `…/commercial-towing-accounts` |
 
 `more-direct-towing-calls` carries the highest risk — it sits between
 `/towing-companies` (the service) and 649 words of pillar covering the same channel.
@@ -214,7 +239,7 @@ drifted; cut it and link instead.
 
 ### SERP validation record
 
-Checked **2026-09-03**. Re-validate before publishing new pages in this cluster.
+Checked **2026-09-03**; the two 2026-09-17 rows were validated the day they were built. Re-validate before publishing new pages in this cluster.
 
 | Page | Target query | SERP intent | Dominant result type | Why our page matches |
 |---|---|---|---|---|
@@ -222,6 +247,8 @@ Checked **2026-09-03**. Re-validate before publishing new pages in this cluster.
 | more-direct-towing-calls | *how to get more direct towing calls / towing cash calls* | Commercial-informational | Agency listicles ("Top 37 Towing Marketing Ideas", "20 Proven Strategies") + pay-per-call lead vendors (towingcashcalls.com, towingleads.com) | Everyone ranking writes idea-lists or sells calls. Nobody publishes the operational playbook — tracking setup, qualified-call definition, booked-tow logging. Procedural depth is the gap. |
 | motor-club-towing | *are motor club towing jobs worth it* | Investigational | Network first-party pages (Agero, AAA), trade guidance (Tow Academy, RAPA), plus employment listings bleeding in (builtin, themuse) | Ranking pages are either the networks themselves (not neutral) or thin best-practice posts. An operator-side evaluation with first-party citations and no invented rates is genuinely absent. |
 | paid-towing-leads | *are towing leads worth buying* | Investigational, heavily commercial | **100% lead vendors** — Contractor Webmasters, Top7Seven, RoadsideAndTowingLeads, WDLG, SixtyFourLeads, AllLocalPros. Only TowMarX is editorial | Nothing ranking is neutral; every result sells the thing being evaluated. An independent page that declines to sell leads is the differentiator, and the FTC lead-generation guidance is a citation none of them carry. |
+| heavy-duty-towing-accounts | *how to get heavy duty towing accounts* (2026-09-17) | **Mixed** — thin operator informational + local commercial | Towing companies' own heavy-duty / fleet-account pages (Smith, Geyers, Mortons, TCTR), a payments vendor (RoadSync), start-a-business guides (UpFlip, Indeed), Tow Academy | Nothing ranking explains who buys heavy recovery or that state DOTs run certified quick-clearance programs with published equipment, training and response specs. TRIP, RISC and MIT cited from their own documents; no invented rates. |
+| private-property-towing-contracts | *how to get private property towing contracts* (2026-09-17) | Informational, operator-side | Towing companies' own listicles (Freeway Towing, Chavez, B&D), an insurance broker's guide (Wexford), forums, a US Legal Forms template, one Texas admin rule | Intent matches. None of the ranking pages cite the statute that governs the tow, which is the first thing a property manager asks about. Page is organised by who awards / how won / what it obliges, with CA, FL, WA, PA and MI rules from primary sources and IN / GA named as gaps. |
 | ~~hiring-tow-truck-drivers~~ | *how to hire tow truck drivers* | **Employment** — not employer | Indeed (#1), Indeed again, ZipRecruiter ×2, Towing.com Careers. Only 3 of 8 serve employers | **No match — deferred.** Google resolves even employer-phrased towing queries to job listings. Also topically off-axis: the cluster is about acquiring work, not staff. |
 
 ### Terminology
@@ -233,14 +260,14 @@ naturally alongside "direct calls".
 ### Deferred pages
 
 Ranked by value against cannibalization risk. Do not build without re-validating the SERP.
+Heavy-duty accounts and private-property contracts were built 2026-09-17 and are no
+longer deferred.
 
-1. **Heavy-duty and recovery accounts** — high value, low risk. Strongest next candidate.
-2. **Private-property and impound contracts** — the pillar's 272-word section has room.
-3. **Police rotation by state** — high intent but **blocked**: `CONTENT_GAPS` records
+1. **Police rotation by state** — high intent but **blocked**: `CONTENT_GAPS` records
    that Georgia, Pennsylvania and Indiana rotation rules could not be confirmed from a
    primary source. Cannot be written honestly until they can.
-4. **Tow truck insurance** — high volume, weak commercial fit, reads as filler.
-5. **Hiring tow truck drivers** — see the SERP row above. Revisit only if a narrower
+2. **Tow truck insurance** — high volume, weak commercial fit, reads as filler.
+3. **Hiring tow truck drivers** — see the SERP row above. Revisit only if a narrower
    long-tail such as *tow truck driver retention* shows a non-employment SERP.
 
 ---

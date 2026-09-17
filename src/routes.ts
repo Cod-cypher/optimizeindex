@@ -17,9 +17,10 @@
  *   description 70-160 chars  (Google truncates past ~160)
  */
 
-import { CASE_STUDIES, AUDIT_FAQS, QUOTE_FAQS } from './data';
+import { CASE_STUDIES, SERVICES, AUDIT_FAQS, QUOTE_FAQS } from './data';
 import { LEGAL_NAME } from './content/about';
-import { TOWING_PILLAR, TOWING_STATES, TOWING_UPDATED } from './content/towing';
+import { SERVICES_FAQS } from './content/services';
+import { TOWING_PILLAR, TOWING_STATES, TOWING_UPDATED, stateHeadline } from './content/towing';
 import { TOWING_JOBS } from './content/towingJobs';
 import { TOWING_JOBS_CLUSTER } from './content/towingJobsCluster';
 import type { Faq } from './types';
@@ -53,6 +54,14 @@ export interface RouteMeta {
    either would be exactly the fabrication this work exists to remove.
 ------------------------------------------------------------------------- */
 
+/**
+ * The entity in one sentence. Consumed by the Organization schema below and
+ * mirrored by hand in public/llms.txt (which the chat widget reads at boot),
+ * so a change here is a change there too.
+ */
+export const ENTITY_DESCRIPTION =
+  'AI solutions for towing companies and local service businesses that are missing revenue: AI-driven SEO, Google Business Profile, AEO and GEO that get a business found on Google, Google Maps and in AI assistants.';
+
 const ORGANIZATION = {
   '@type': 'Organization',
   '@id': `${SITE_ORIGIN}/#organization`,
@@ -75,8 +84,15 @@ const ORGANIZATION = {
   },
   email: CONTACT_EMAIL,
   telephone: CONTACT_PHONE,
-  description:
-    'Performance marketing agency specializing in Google Business Profile optimization, SEO, Answer Engine Optimization (AEO) and Generative Engine Optimization (GEO) for AI-powered search.',
+  /*
+    One sentence, repeated verbatim in public/llms.txt and paraphrased in the
+    homepage description, so Google, the chat widget and an AI assistant all
+    read the same answer to "what is this company". Identity first (AI
+    solutions, the revenue problem), then the mechanisms (SEO, Google Business
+    Profile, AEO, GEO) as the how, which is also what Search Console shows the
+    site being surfaced for.
+  */
+  description: ENTITY_DESCRIPTION,
   areaServed: 'US',
   // Populate with real profile URLs when they exist — an empty array is
   // honest, a fabricated one is not.
@@ -103,14 +119,14 @@ const PROFESSIONAL_SERVICE = {
   priceRange: '$$',
   areaServed: 'US',
   parentOrganization: { '@id': `${SITE_ORIGIN}/#organization` },
-  makesOffer: [
-    'Google Business Profile Optimization',
-    'Search Engine Optimization (SEO)',
-    'Answer Engine Optimization (AEO)',
-    'Generative Engine Optimization (GEO)',
-    'Paid Search & Social Advertising',
-    'Conversion Rate Optimization',
-  ].map((name) => ({ '@type': 'Offer', itemOffered: { '@type': 'Service', name } })),
+  // Derived from the same list /services renders, so the schema cannot offer
+  // something the page does not describe or omit something it does. Lead
+  // generation and dispatch are not in SERVICES and must not be added here
+  // until they ship — see ABOUT_ROADMAP in src/content/about.ts.
+  makesOffer: SERVICES.map((s) => ({
+    '@type': 'Offer',
+    itemOffered: { '@type': 'Service', name: s.title },
+  })),
 };
 
 export const SITEWIDE_JSONLD = [ORGANIZATION, WEBSITE, PROFESSIONAL_SERVICE];
@@ -190,11 +206,12 @@ const caseStudyRoutes: RouteMeta[] = CASE_STUDIES.map((study) => ({
    studies above, so a sixth state is one entry in TOWING_STATES and needs no
    change here, in the sitemap generator, or in the SEO gate.
 
-   Every state page now targets a comparison query, so each sets titleOverride
-   and h1Override to "Best AI Towing Agency in <State>" and the two match. The
-   generated fallback below is kept because head.ts holds titles and H1s
-   independently — a future state that wants brand-voice framing can simply
-   omit both overrides and get it.
+   Every state page targets a comparison query, so each sets titleOverride
+   and h1Override to stateHeadline(), "Best AI Towing Agency in <State>", and
+   the two match. That keyword is deliberate; the "towing seo" intent belongs
+   to the pillar's <title>. The generated fallback below is kept because
+   head.ts holds titles and H1s independently — a future state that wants
+   brand-voice framing can simply omit both overrides and get it.
 ------------------------------------------------------------------------- */
 
 export const TOWING_BASE = '/towing-companies';
@@ -233,8 +250,10 @@ export const TOWING_JOBS_PATH = '/towing-jobs';
 function towingService(area?: string) {
   return {
     '@type': 'Service',
-    name: area ? `Towing company marketing in ${area}` : 'Towing company marketing',
-    serviceType: 'Towing company marketing',
+    name: area
+      ? `AI search and visibility solutions for towing companies in ${area}`
+      : 'AI search and visibility solutions for towing companies',
+    serviceType: 'AI search and visibility solutions for towing companies',
     provider: { '@id': `${SITE_ORIGIN}/#organization` },
     audience: { '@type': 'BusinessAudience', name: 'Towing companies' },
     areaServed: area ? { '@type': 'State', name: area } : 'US',
@@ -248,9 +267,9 @@ function towingService(area?: string) {
  * Hand-written per state, 70-160 chars, all unique.
  *
  * These frame the buying decision rather than the market, because every state
- * page now targets a comparison query ("best AI towing agency in <state>").
- * None of them claim we are the best - the pages answer that question honestly
- * and the description has to match what the page actually says.
+ * page targets a comparison query ("best AI towing agency in <state>"). None
+ * of them claim we are the best - the pages answer that question honestly and
+ * the description has to match what the page actually says.
  */
 const TOWING_STATE_DESCRIPTIONS: Record<string, string> = {
   california:
@@ -289,7 +308,7 @@ const towingRoutes: RouteMeta[] = [
         itemListElement: TOWING_STATES.map((s, i) => ({
           '@type': 'ListItem',
           position: i + 1,
-          name: `Best AI Towing Agency in ${s.state}`,
+          name: s.titleOverride ?? stateHeadline(s.state),
           url: `${SITE_ORIGIN}${TOWING_BASE}/${s.slug}`,
         })),
       },
@@ -297,9 +316,13 @@ const towingRoutes: RouteMeta[] = [
   },
   {
     path: TOWING_BASE,
-    title: 'Towing Company Marketing & Lead Generation | OptimizeIndex',
+    // "Towing seo" and "towing company seo" are the queries Search Console
+    // shows this site for; the title says so. No "lead generation": that is
+    // roadmap, not a service (ABOUT_ROADMAP), and a title is not the place to
+    // soften that.
+    title: 'Towing SEO & AI Search Agency | OptimizeIndex',
     description:
-      'We help towing companies get found on Google Maps and AI assistants, and turn that into direct calls. Measured in calls and booked tows, not rankings.',
+      'Towing SEO and AI search for towing companies: Google Business Profile, reviews, local rankings and how AI assistants describe you. Measured in booked tows.',
     priority: 0.9,
     jsonLd: [
       towingService(),
@@ -379,11 +402,10 @@ const towingRoutes: RouteMeta[] = [
   })),
   ...TOWING_STATES.map((s) => ({
     path: `${TOWING_BASE}/${s.slug}`,
-    // titleOverride is set only where the page targets a comparison query and
-    // the title needs to be that query. Everything else about the route is
-    // generated identically, which is what keeps the two title strategies
-    // comparable in Search Console later.
-    title: `${s.titleOverride ?? `Towing Company Marketing in ${s.state}`} | ${SITE_NAME}`,
+    // Every state currently sets titleOverride to stateHeadline(); the fallback
+    // is the same helper so a state that omits it still targets the same
+    // comparison query rather than an older phrasing.
+    title: `${s.titleOverride ?? stateHeadline(s.state)} | ${SITE_NAME}`,
     description: TOWING_STATE_DESCRIPTIONS[s.slug],
     priority: 0.8,
     jsonLd: [
@@ -401,18 +423,24 @@ const towingRoutes: RouteMeta[] = [
 export const ROUTES: RouteMeta[] = [
   {
     path: '/',
-    title: 'Get Found on Google | OptimizeIndex AI Agency',
+    // Brand first, then the category in the words people search. Towing is
+    // deliberately not named here so the homepage does not compete with
+    // /towing-companies for the towing queries.
+    title: 'OptimizeIndex | AI Search Optimization & Solutions',
     description:
-      'We get local and trade businesses found on Google, Google Maps and AI assistants. Free instant website check, no contracts and no jargon.',
+      'AI solutions for businesses missing revenue: AI-driven SEO, Google Business Profile, AEO and GEO that get you found on Google, Google Maps and in AI assistants.',
     priority: 1.0,
   },
   {
     path: '/services',
-    title: 'AI Search & Growth Services | OptimizeIndex',
+    title: 'AI Search Optimization: SEO, AEO & GEO | OptimizeIndex',
     description:
-      'Get found by customers and by the AI assistants they ask — profile, content, website and conversion work, measured in revenue rather than vanity metrics.',
+      'SEO, Google Business Profile, Answer Engine Optimization and Generative Engine Optimization, plus paid, content and CRO work: what each does and who it is for.',
     priority: 0.9,
-    jsonLd: [breadcrumb([{ name: 'Home', path: '/' }, { name: 'Services', path: '/services' }])],
+    jsonLd: [
+      breadcrumb([{ name: 'Home', path: '/' }, { name: 'Services', path: '/services' }]),
+      faqPage(SERVICES_FAQS),
+    ],
   },
   {
     path: '/case-studies',
@@ -453,9 +481,9 @@ export const ROUTES: RouteMeta[] = [
   },
   {
     path: '/audit',
-    title: 'Get a Free AI Audit | OptimizeIndex',
+    title: 'Free SEO & AI Search Audit | OptimizeIndex',
     description:
-      'Get a free 15-point audit of your search footprint — technical SEO, content, speed and AI search readiness — with a prioritized fix plan within 24 hours.',
+      'A free 15-point SEO and AI search audit: crawlability, on-page content, speed, and whether AI assistants can read and cite your site. Fix plan within 24 hours.',
     priority: 0.9,
     jsonLd: [
       breadcrumb([{ name: 'Home', path: '/' }, { name: 'Free Audit', path: '/audit' }]),
@@ -464,9 +492,9 @@ export const ROUTES: RouteMeta[] = [
   },
   {
     path: '/quote',
-    title: 'Get a Free AI Quote | OptimizeIndex',
+    title: 'Free SEO Quote & AI Search Proposal | OptimizeIndex',
     description:
-      "Tell us your growth goal and we'll send back a custom proposal with scope, timeline and projected impact. No contracts, 15-day money-back guarantee.",
+      'Get a free SEO and AI search quote: tell us your goal and get a proposal with scope, timeline and expected impact. No contracts, 15-day money-back guarantee.',
     priority: 0.9,
     jsonLd: [
       breadcrumb([{ name: 'Home', path: '/' }, { name: 'Get a Quote', path: '/quote' }]),

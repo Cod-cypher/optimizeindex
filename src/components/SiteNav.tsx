@@ -17,6 +17,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { ArrowRight, Menu, X } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Logo from './Logo';
+import { TOWING_BASE } from '../routes';
 
 interface NavLink {
   label: string;
@@ -30,7 +31,12 @@ const LINKS: NavLink[] = [
   { label: 'SERVICES', href: '/services', id: 'services' },
   { label: 'CASE STUDIES', href: '/case-studies', id: 'cases' },
   { label: 'PROCESS', href: '/', hash: '#process', id: 'process' },
-  { label: 'TESTIMONIALS', href: '/', hash: '#testimonials', id: 'testimonials' },
+  // The towing vertical is the industry /about says we build for, and the
+  // cluster behind it is most of the site by word count. Until this link
+  // existed it hung off the rest of the site by three footer links and one
+  // homepage sentence. This slot used to be TESTIMONIALS, a section removed
+  // because its quotes were anonymous and its figures unsourced.
+  { label: 'TOWING', href: TOWING_BASE, id: 'towing' },
 ];
 
 export default function SiteNav({

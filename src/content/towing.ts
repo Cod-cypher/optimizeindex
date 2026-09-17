@@ -51,7 +51,19 @@ import type { Faq } from '../types';
  * which is exactly the kind of unearned freshness signal the rest of this
  * codebase refuses to fabricate.
  */
-export const TOWING_UPDATED = '2026-08-28';
+export const TOWING_UPDATED = '2026-09-17';
+
+/**
+ * The H1 and title of every state page.
+ *
+ * "Best AI Towing Agency in <State>" is the query these pages were built to
+ * target, deliberately. Do not retitle it toward "towing seo": that intent
+ * belongs to /towing-companies, whose <title> carries it. One helper rather
+ * than seven literals because scripts/verify-seo.ts requires a state page's
+ * H1 to equal its title's leading clause, and two strings that must be
+ * identical should have one source.
+ */
+export const stateHeadline = (state: string) => `Best AI Towing Agency in ${state}`;
 
 /** Axis 1 — the job the operator is trying to win. */
 export type DemandIntent =
@@ -175,11 +187,12 @@ export interface TowingState {
    * Overrides the "Proudly Serving <State> Towing Companies" H1.
    *
    * Set only where the page targets a comparison query and the H1 needs to be
-   * the query itself. Everything else about the page is unchanged, which is
-   * what makes the two H1 strategies comparable in Search Console later.
+   * the query itself. Every state currently does, via stateHeadline(), and
+   * verify-seo.ts requires the H1 to equal the title's leading clause, so set
+   * both overrides from that one helper rather than typing either by hand.
    */
   h1Override?: string;
-  /** Overrides the generated "Towing Company Marketing in <State>" title. */
+  /** Overrides the generated title. Must equal h1Override on a state page. */
   titleOverride?: string;
   /**
    * The commercial bridge: what the market facts above mean for how an
@@ -206,7 +219,7 @@ export interface TowingState {
   /**
    * Evaluation framework for hiring an agency.
    *
-   * This is how a page titled "Best AI Towing Agency in Michigan" earns that
+   * This is how a state page earns the "best AI towing agency in <state>"
    * query without asserting we are it. Someone typing "best" wants to compare,
    * so the honest way to rank is to genuinely help them compare and then answer
    * the same questions about ourselves.
@@ -438,7 +451,7 @@ function buyersGuideFor(state: string, a: StateBuyerAnswers) {
 export const TOWING_PILLAR: TowingPillar = {
   metros: [],
   intro:
-    'OptimizeIndex is a performance marketing agency that helps towing companies get found on Google, Google Maps and AI assistants, and turns that visibility into direct calls. We report on calls and booked jobs rather than rankings, because a tow operator gets paid for tows and not for impressions.',
+    'OptimizeIndex builds AI solutions for towing companies that are missing revenue: AI-driven SEO, Google Business Profile and AI-assistant visibility that get you found on Google, Google Maps and in AI answers, and turn that into direct calls. We report on calls and booked jobs rather than rankings, because a tow operator gets paid for tows and not for impressions.',
   sections: [
     {
       id: 'what-we-do',
@@ -591,8 +604,8 @@ const california: TowingState = {
   slug: 'california',
   state: 'California',
   metros: ['Los Angeles', 'San Diego', 'San Jose', 'Sacramento', 'Fresno', 'the Inland Empire'],
-  h1Override: 'Best AI Towing Agency in California',
-  titleOverride: 'Best AI Towing Agency in California',
+  h1Override: stateHeadline('California'),
+  titleOverride: stateHeadline('California'),
   landscape:
     'Looking for the best AI towing agency in California? There is no independent ranking that can objectively declare one agency the best, so this page is written for California towing companies evaluating AI agencies and AI systems: what to ask, what to verify, and where AI genuinely helps a tow operation rather than where it is a label on a slide. OptimizeIndex works at the intersection of AI search visibility, local search and call attribution for towing businesses across Los Angeles, San Diego, San Jose, Sacramento, Fresno and the Inland Empire.',
   searchProblem:
@@ -752,8 +765,8 @@ const florida: TowingState = {
   slug: 'florida',
   state: 'Florida',
   metros: ['Miami', 'Tampa', 'Orlando', 'Jacksonville', 'Fort Lauderdale', 'St. Petersburg'],
-  h1Override: 'Best AI Towing Agency in Florida',
-  titleOverride: 'Best AI Towing Agency in Florida',
+  h1Override: stateHeadline('Florida'),
+  titleOverride: stateHeadline('Florida'),
   landscape:
     'Looking for the best AI towing agency in Florida? No independent ranking exists that can objectively name one agency the best, so this page is built for Florida towing companies evaluating AI agencies and AI systems — the criteria worth applying, and where AI actually earns its place in a tow operation. OptimizeIndex works at the intersection of AI search visibility, local search and call attribution for towing businesses across Miami, Tampa, Orlando, Jacksonville, Fort Lauderdale and St. Petersburg.',
   searchProblem:
@@ -912,8 +925,8 @@ const georgia: TowingState = {
   slug: 'georgia',
   state: 'Georgia',
   metros: ['Atlanta', 'Savannah', 'Augusta', 'Columbus', 'Macon'],
-  h1Override: 'Best AI Towing Agency in Georgia',
-  titleOverride: 'Best AI Towing Agency in Georgia',
+  h1Override: stateHeadline('Georgia'),
+  titleOverride: stateHeadline('Georgia'),
   landscape:
     'Looking for the best AI towing agency in Georgia? There is no objective ranking that lets any agency truthfully claim that title, so this page is written for Georgia towing companies comparing AI agencies and AI systems: the questions worth asking, and the places AI genuinely helps a tow business. OptimizeIndex works at the intersection of AI search visibility, local search and call attribution for towing operators across Atlanta, Savannah, Augusta, Columbus and Macon.',
   searchProblem:
@@ -1061,8 +1074,8 @@ const pennsylvania: TowingState = {
   slug: 'pennsylvania',
   state: 'Pennsylvania',
   metros: ['Philadelphia', 'Pittsburgh', 'Allentown', 'Erie', 'Harrisburg', 'Scranton'],
-  h1Override: 'Best AI Towing Agency in Pennsylvania',
-  titleOverride: 'Best AI Towing Agency in Pennsylvania',
+  h1Override: stateHeadline('Pennsylvania'),
+  titleOverride: stateHeadline('Pennsylvania'),
   landscape:
     'Looking for the best AI towing agency in Pennsylvania? No independent ranking exists that can objectively declare one agency the best, so this page is for Pennsylvania towing companies evaluating AI agencies and AI systems — what to ask, what to verify, and where AI is genuinely useful to a tow operation. OptimizeIndex works at the intersection of AI search visibility, local search and call attribution for towing businesses across Philadelphia, Pittsburgh, Allentown, Erie, Harrisburg and Scranton.',
   searchProblem:
@@ -1202,8 +1215,8 @@ const indiana: TowingState = {
   slug: 'indiana',
   state: 'Indiana',
   metros: ['Indianapolis', 'Fort Wayne', 'Evansville', 'South Bend', 'Gary'],
-  h1Override: 'Best AI Towing Agency in Indiana',
-  titleOverride: 'Best AI Towing Agency in Indiana',
+  h1Override: stateHeadline('Indiana'),
+  titleOverride: stateHeadline('Indiana'),
   landscape:
     'Looking for the best AI towing agency in Indiana? There is no objective ranking that allows an agency to truthfully claim it, so this page is written for Indiana towing companies comparing AI agencies and AI systems: the criteria that separate them, and where AI helps a tow business that runs on freight rather than on consumer roadside work. OptimizeIndex works at the intersection of AI search visibility, local search and call attribution for towing operators across Indianapolis, Fort Wayne, Evansville, South Bend and Gary.',
   searchProblem:
@@ -1366,8 +1379,8 @@ const michigan: TowingState = {
   slug: 'michigan',
   state: 'Michigan',
   metros: ['Detroit', 'Grand Rapids', 'Warren', 'Sterling Heights', 'Ann Arbor', 'Lansing', 'Flint'],
-  h1Override: 'Best AI Towing Agency in Michigan',
-  titleOverride: 'Best AI Towing Agency in Michigan',
+  h1Override: stateHeadline('Michigan'),
+  titleOverride: stateHeadline('Michigan'),
   // The lede. Deliberately explicit about AI + towing + Michigan + the entity
   // in the first hundred words, because this is the passage a retriever lifts
   // and the first thing Google reads. Every later section can afford to be
@@ -1588,8 +1601,8 @@ const washington: TowingState = {
   slug: 'washington',
   state: 'Washington',
   metros: ['Seattle', 'Tacoma', 'Spokane', 'Vancouver', 'Bellevue', 'Everett', 'Yakima'],
-  h1Override: 'Best AI Towing Agency in Washington',
-  titleOverride: 'Best AI Towing Agency in Washington',
+  h1Override: stateHeadline('Washington'),
+  titleOverride: stateHeadline('Washington'),
   landscape:
     'Looking for the best AI towing agency in Washington? No independent ranking exists that can objectively declare one agency the best, so this page is written for Washington towing companies evaluating AI agencies and AI systems: what to ask, what to verify, and where AI genuinely helps a registered tow truck operator rather than where it is a label on a slide. OptimizeIndex works at the intersection of AI search visibility, local search and call attribution for towing businesses across Seattle, Tacoma, Spokane, Vancouver, Bellevue, Everett and Yakima.',
   searchProblem:
@@ -1810,6 +1823,16 @@ export const CONTENT_GAPS: { state: string; topic: string }[] = [
   { state: 'Pennsylvania', topic: 'Turnpike authorised-operator arrangements.' },
   { state: 'Indiana', topic: 'State towing licensing and non-consensual rate rules.' },
   { state: 'Indiana', topic: 'State police wrecker rotation requirements.' },
+  {
+    state: 'Indiana',
+    topic:
+      'Commercial private-property tow-away zone signage and authorisation rules (IC 24-14-4). The Indiana General Assembly PDF could not be read on 2026-09-17, so the private-property contracts page names Indiana as a gap rather than paraphrasing a secondary source.',
+  },
+  {
+    state: 'Florida',
+    topic:
+      'RISC contractor requirements and incentive amounts. FDOT\'s program page returned 403 on 2026-09-17; the heavy-duty page cites only the Turnpike\'s own summary (bonuses for meeting quick-clearance goals against the 90-minute Open Roads goal) and publishes no dollar figure for Florida.',
+  },
   { state: 'Florida', topic: 'Operator licensing requirements beyond the § 125.0103 rate framework.' },
   { state: 'California', topic: 'Local (non-CHP) municipal tow franchise and rate rules.' },
   {

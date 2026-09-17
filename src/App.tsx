@@ -4,19 +4,16 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   ArrowRight, 
   Sparkles, 
   TrendingUp, 
   Check, 
-  Star, 
   Search, 
   Zap, 
   Shield, 
   ChevronLeft,
-  ChevronRight,
   ChevronDown,
   Globe, 
   LineChart, 
@@ -25,7 +22,6 @@ import {
   MessageSquare,
   AlertCircle,
   Clock,
-  Briefcase,
   Mail,
   User,
   Building2,
@@ -33,7 +29,8 @@ import {
   Target,
 } from 'lucide-react';
 
-import { GOALS, SERVICES, CASE_STUDIES, PROCESS_STEPS, TESTIMONIALS, AUDIT_FAQS, QUOTE_FAQS } from './data';
+import { GOALS, SERVICES, CASE_STUDIES, PROCESS_STEPS, AUDIT_FAQS, QUOTE_FAQS } from './data';
+import { SERVICES_FAQS } from './content/services';
 import { ROUTES, getRouteMeta, canonicalFor } from './routes';
 import { buildHeadTags } from './lib/head';
 import { GoalId, CaseStudy } from './types';
@@ -52,10 +49,13 @@ import Logo from './components/Logo';
 import SiteNav from './components/SiteNav';
 import SiteFooter from './components/SiteFooter';
 
-// The four services shown on the homepage. Conversion Optimization (09)
-// takes the slot SEO used to have. Listed by id rather than SERVICES.slice(0, 4)
-// so the selection doesn't silently depend on the order of the data file.
-const HOME_SERVICE_IDS = ['gmb', 'cro', 'aeo', 'geo'];
+// The four services shown on the homepage: the Google Business Profile → SEO
+// → AEO → GEO ladder the process section describes, in that order. SEO is
+// back in the second slot (Conversion Optimization held it for a while)
+// because the title now names SEO and the page should show it. Listed by id
+// rather than SERVICES.slice(0, 4) so the selection doesn't silently depend
+// on the order of the data file.
+const HOME_SERVICE_IDS = ['gmb', 'seo', 'aeo', 'geo'];
 
 // Every path that resolves to a real page. Aliases are 301'd server-side
 // (see REDIRECTS in routes.ts) but are listed here so a client-side visit to
@@ -231,9 +231,6 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<'quote' | 'audit'>('quote');
 
-  // Testimonial index
-  const [activeTestimonial, setActiveTestimonial] = useState(0);
-
   // Local Storage Lead tracker states (leads entered during session)
   const [localLeads, setLocalLeads] = useState<any[]>([]);
   const [showLeadDrawer, setShowLeadDrawer] = useState(false);
@@ -319,14 +316,6 @@ export default function App() {
 
   const handleGoalSelect = (id: GoalId) => {
     setSelectedGoal(id);
-  };
-
-  const nextTestimonial = () => {
-    setActiveTestimonial(prev => (prev + 1) % TESTIMONIALS.length);
-  };
-
-  const prevTestimonial = () => {
-    setActiveTestimonial(prev => (prev - 1 + TESTIMONIALS.length) % TESTIMONIALS.length);
   };
 
   const clearLeads = () => {
@@ -478,14 +467,14 @@ export default function App() {
               OUR CAPABILITIES
             </span>
             <h2 className="font-display font-extrabold text-4xl lg:text-5xl text-ink tracking-tight mt-3">
-              One focused team. Every digital lever that moves <span className="font-serif-accent italic text-lime bg-ink px-2.5 py-0.5 rounded-sm shadow-hard inline-block -rotate-1">revenue</span>.
+              AI solutions for businesses missing <span className="font-serif-accent italic text-lime bg-ink px-2.5 py-0.5 rounded-sm shadow-hard inline-block -rotate-1">revenue</span>.
             </h2>
             <p className="font-sans text-stone mt-4 leading-relaxed">
-              No vanity-metric slide decks. We get you found everywhere your customers search — Google, Google Maps, voice assistants, and AI tools like ChatGPT — and we measure it in leads and sales.{' '}
-              {/* One contextual link into the towing cluster. Deliberately a
-                  sentence rather than a nav item: the homepage serves every
-                  trade, and promoting one vertical into the header would
-                  misrepresent the business. */}
+              AI-driven SEO, Google Business Profile, AEO and GEO that get you found everywhere your customers search — Google, Google Maps, voice assistants, and AI tools like ChatGPT — measured in leads and sales rather than slide decks.{' '}
+              {/* The contextual link into the towing cluster. The header now
+                  carries a TOWING item as well (see SiteNav); this sentence
+                  stays because it is the one place the homepage tells an
+                  operator, in prose, that the site was built for them. */}
               <a
                 href="/towing-companies"
                 onClick={(e) => {
@@ -589,7 +578,7 @@ export default function App() {
                 VERIFIED PERFORMANCE
               </span>
               <h2 className="font-display font-extrabold text-4xl lg:text-5xl text-cream tracking-tight mt-3">
-                Zero vanity traffic. Pure bottom-line <span className="font-serif-accent italic text-lime bg-ink px-2.5 py-0.5 rounded-sm shadow-hard inline-block rotate-1">growth</span>.
+                Client results verified in Search Console and <span className="font-serif-accent italic text-lime bg-ink px-2.5 py-0.5 rounded-sm shadow-hard inline-block rotate-1">GA4</span>.
               </h2>
               <p className="font-sans text-cream/75 mt-4 leading-relaxed">
                 We measure performance in leads, sales, and Search Console data — not rank-tracker screenshots. Here's what we've built for real clients.
@@ -709,15 +698,15 @@ export default function App() {
               THE BLUEPRINT
             </span>
             <h2 className="font-display font-extrabold text-4xl lg:text-5xl text-ink tracking-tight mt-3">
-              How we engineer search <span className="font-serif-accent italic text-lime bg-ink px-2.5 py-0.5 rounded-sm shadow-hard inline-block -rotate-1">dominance</span>.
+              Our five-step process, from AI research to AI <span className="font-serif-accent italic text-lime bg-ink px-2.5 py-0.5 rounded-sm shadow-hard inline-block -rotate-1">search</span>.
             </h2>
             <p className="font-sans text-stone mt-4 leading-relaxed">
-              No guesswork, no busywork. We follow the same proven four-step process for every client — starting with your local presence and building toward AI-powered search.
+              No guesswork, no busywork. We follow the same five-step process for every client — starting with AI research into your market, then your local presence, and building toward AI-powered search.
             </p>
           </div>
 
           {/* Connected Process steps */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 relative">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-8 relative">
             
             {/* Steps map */}
             {PROCESS_STEPS.map((step, idx) => (
@@ -755,7 +744,7 @@ export default function App() {
                   </div>
                 ) : (
                   <div className="pt-4 border-t border-ink/10 mt-4 text-[9px] font-mono text-stone uppercase relative z-10">
-                    ✓ STEP {step.number} OF OUR 4-STEP PROCESS
+                    ✓ STEP {step.number} OF OUR {PROCESS_STEPS.length}-STEP PROCESS
                   </div>
                 )}
               </div>
@@ -763,86 +752,9 @@ export default function App() {
           </div>
         </section>
 
-        {/* TESTIMONIALS SECTION */}
-        <section id="testimonials" className="defer-paint py-20 bg-cream px-6 md:px-12 border-b-1.5 border-ink overflow-hidden">
-          <div className="max-w-4xl mx-auto text-center space-y-8 relative">
-            
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-paper border border-ink text-stone font-mono text-xs rounded-full shadow-hard">
-              <Star className="w-3.5 h-3.5 text-lime fill-lime" />
-              <span>WHAT OUR CLIENTS SAY</span>
-            </div>
-
-            {/* Testimonial Quote Carousel Display */}
-            <div className="min-h-[180px] flex items-center justify-center">
-              <AnimatePresence mode="wait">
-                <motion.blockquote
-                  key={activeTestimonial}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.25 }}
-                  className="font-serif-accent italic text-2xl md:text-3xl text-ink leading-relaxed max-w-2xl px-4"
-                >
-                  "{TESTIMONIALS[activeTestimonial].quote}"
-                </motion.blockquote>
-              </AnimatePresence>
-            </div>
-
-            {/* Author Attribution */}
-            <div className="flex flex-col md:flex-row items-center justify-center gap-4 pt-4">
-              {/* Industry Briefcase Icon Frame */}
-              <div className="w-12 h-12 rounded-xl border-1.5 border-ink bg-ink flex items-center justify-center shadow-hard rotate-[-3deg] shrink-0">
-                <Briefcase className="w-5 h-5 text-lime" />
-              </div>
-
-              <div className="text-center md:text-left font-mono">
-                <p className="text-xs font-bold text-ink uppercase">
-                  {TESTIMONIALS[activeTestimonial].author}
-                </p>
-                <p className="text-[10px] text-stone uppercase mt-0.5">
-                  {TESTIMONIALS[activeTestimonial].role} @ <span className="text-ink font-bold">{TESTIMONIALS[activeTestimonial].company}</span>
-                </p>
-              </div>
-            </div>
-
-            {/* Carousel Navigation buttons */}
-            <div className="flex items-center justify-center gap-3 pt-6">
-              <button
-                onClick={prevTestimonial}
-                className="p-2 border-1.5 border-ink rounded-full bg-paper hover:bg-cream transition-colors cursor-pointer focus-ring"
-                aria-label="Previous testimonial"
-                id="testimonial-prev-btn"
-              >
-                <ChevronLeft className="w-4 h-4 text-ink" />
-              </button>
-              
-              <div className="flex gap-1.5">
-                {TESTIMONIALS.map((_, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setActiveTestimonial(idx)}
-                    className={`w-2 h-2 box-content border-[8px] border-transparent bg-clip-content rounded-full outline outline-1 outline-ink -outline-offset-[8px] transition-colors cursor-pointer ${
-                      activeTestimonial === idx ? 'bg-lime' : 'bg-stone/20'
-                    }`}
-                    aria-label={`Go to testimonial ${idx + 1}`}
-                    id={`testimonial-dot-${idx}`}
-                  />
-                ))}
-              </div>
-
-              <button
-                onClick={nextTestimonial}
-                className="p-2 border-1.5 border-ink rounded-full bg-paper hover:bg-cream transition-colors cursor-pointer focus-ring"
-                aria-label="Next testimonial"
-                id="testimonial-next-btn"
-              >
-                <ChevronRight className="w-4 h-4 text-ink" />
-              </button>
-            </div>
-          </div>
-        </section>
           </>
         ) : currentView === 'services' ? (
+          <>
           <section className="py-20 bg-cream border-b-1.5 border-ink min-h-[60vh] relative overflow-hidden">
             {/* Subtle grid background */}
             <div className="absolute inset-0 opacity-5 pointer-events-none bg-[linear-gradient(to_right,#000_1px,transparent_1px),linear-gradient(to_bottom,#000_1px,transparent_1px)] bg-[size:24px_24px]" />
@@ -870,10 +782,11 @@ export default function App() {
                   DETAILED SERVICES & CAPABILITIES
                 </span>
                 <h1 className="font-display font-black text-4xl md:text-5xl lg:text-6xl text-ink tracking-tight mt-4 leading-[1.1]">
-                  Our Full-Spectrum <span className="font-serif-accent italic text-lime bg-ink px-2.5 py-0.5 rounded-sm shadow-hard inline-block -rotate-1">Growth</span> Engine
+                  AI Solutions for Businesses Missing{' '}
+                  <span className="font-serif-accent italic text-lime bg-ink px-2.5 py-0.5 rounded-sm shadow-hard inline-block -rotate-1">Revenue</span>
                 </h1>
                 <p className="font-sans text-stone mt-6 leading-relaxed text-base md:text-lg">
-                  Beyond core SEO and AI search optimization, we run every channel that drives measurable growth — paid ads, content, conversion optimization, and web design. One team, one accountable strategy.{' '}
+                  Search engine optimization, the Google Business Profile, Answer Engine Optimization and Generative Engine Optimization, delivered with AI, are the core: getting a business found on Google, on Google Maps and in the answers AI assistants give. Around that we run every channel that drives measurable growth — paid ads, content, conversion optimization, and web design. One team, one accountable strategy.{' '}
                   <a
                     href="/towing-companies"
                     onClick={(e) => {
@@ -888,11 +801,15 @@ export default function App() {
                 </p>
               </div>
 
-              {/* Bento Grid for Remaining 6 Services */}
+              {/* Every service, in order. An earlier slice(2, length - 1)
+                  silently dropped Google Business Profile, SEO and web design
+                  from the page named after them. Each card carries its id so
+                  the footer's /services#gmb-style links land on it. */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {SERVICES.slice(2, SERVICES.length - 1).map((serv) => (
+                {SERVICES.map((serv) => (
                   <div
                     key={serv.id}
+                    id={serv.id}
                     className="bg-paper border-2 border-ink p-6 md:p-8 rounded-2xl shadow-hard hover:shadow-hard-hover hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all relative flex flex-col justify-between group"
                   >
                     {/* Index number */}
@@ -933,6 +850,14 @@ export default function App() {
               </div>
             </div>
           </section>
+          {/* Server-rendered <details>, mirrored into FAQPage schema in
+              routes.ts from the same constant. */}
+          <FaqSection
+            id="services-faq"
+            heading="Questions about how we deliver results with AI"
+            faqs={SERVICES_FAQS}
+          />
+          </>
         ) : currentView === 'case-studies' ? (
           <section className="py-20 bg-forest text-cream border-b-1.5 border-ink min-h-[90vh] relative overflow-hidden">
             {/* Subtle grid elements in forest */}
@@ -2043,7 +1968,7 @@ export default function App() {
           
           <div className="max-w-4xl mx-auto text-center space-y-8 relative z-10">
             <h2 className="font-display font-extrabold text-3xl md:text-5xl text-cream tracking-tight">
-              Ready to speak with a marketing expert? Give us a ring.
+              Ready to talk about the revenue you're missing? Give us a ring.
             </h2>
       
 
@@ -2173,18 +2098,9 @@ function parseMarkdownToReact(text: string) {
     }
     // Bullet points
     if (line.startsWith('* ')) {
-      const bulletText = line.replace('* ', '');
-      if (bulletText.includes('**')) {
-        const parts = bulletText.split('**');
-        return (
-          <li key={idx} className="ml-5 list-disc text-cream/80 text-sm md:text-base leading-relaxed my-1">
-            {parts.map((part, pIdx) => pIdx % 2 === 1 ? <strong key={pIdx} className="text-lime font-bold">{part}</strong> : part)}
-          </li>
-        );
-      }
       return (
         <li key={idx} className="ml-5 list-disc text-cream/80 text-sm md:text-base leading-relaxed my-1">
-          {bulletText}
+          {renderInline(line.replace('* ', ''))}
         </li>
       );
     }
@@ -2192,22 +2108,62 @@ function parseMarkdownToReact(text: string) {
     if (line.trim() === '') {
       return <div key={idx} className="h-2" />;
     }
-
-    // Process inline markdown like bold (**text**)
-    if (line.includes('**')) {
-      const parts = line.split('**');
-      return (
-        <p key={idx} className="font-sans text-cream/75 text-sm md:text-base leading-relaxed my-2">
-          {parts.map((part, pIdx) => pIdx % 2 === 1 ? <strong key={pIdx} className="text-lime font-bold">{part}</strong> : part)}
-        </p>
-      );
-    }
-
-    // Return simple paragraph
     return (
       <p key={idx} className="font-sans text-cream/75 text-sm md:text-base leading-relaxed my-2">
-        {line}
+        {renderInline(line)}
       </p>
     );
+  });
+}
+
+// Inline links and single-asterisk italics. Matched only on the text between
+// bold markers, so an asterisk inside a bold run is never read as italics.
+const INLINE_TOKEN = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|\*([^*\n]+)\*/g;
+
+/**
+ * Inline markdown for the case-study renderer: **bold**, [text](url) and
+ * *italic*, in that order of precedence. Bold is split first, the same way the
+ * old branches did it, then links and italics are tokenised inside each plain
+ * segment. Unbalanced markers fall through as literal text, the same policy
+ * withBold() in towingShared applies.
+ *
+ * Before this existed the source lines "*Website:* [sujoodmats.com](https://…)"
+ * rendered verbatim on both case-study pages, brackets and all, and the two
+ * pages had no outbound link to the client they were about.
+ */
+function renderInline(text: string): React.ReactNode[] {
+  return text.split('**').flatMap<React.ReactNode>((segment, sIdx) => {
+    if (sIdx % 2 === 1) {
+      return [
+        <strong key={`b${sIdx}`} className="text-lime font-bold">
+          {segment}
+        </strong>,
+      ];
+    }
+    const nodes: React.ReactNode[] = [];
+    let last = 0;
+    INLINE_TOKEN.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = INLINE_TOKEN.exec(segment)) !== null) {
+      if (m.index > last) nodes.push(segment.slice(last, m.index));
+      if (m[1] !== undefined) {
+        nodes.push(
+          <a
+            key={`l${sIdx}-${m.index}`}
+            href={m[2]}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-lime font-bold underline underline-offset-2 hover:text-cream"
+          >
+            {m[1]}
+          </a>,
+        );
+      } else {
+        nodes.push(<em key={`i${sIdx}-${m.index}`}>{m[3]}</em>);
+      }
+      last = m.index + m[0].length;
+    }
+    if (last < segment.length) nodes.push(segment.slice(last));
+    return nodes;
   });
 }

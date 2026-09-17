@@ -57,6 +57,22 @@ const CLUSTER_LINKS: Record<string, { lead: string; anchor: string; href: string
     anchor: 'whether bought towing leads are worth it',
     href: '/towing-jobs/paid-towing-leads',
   },
+  'private-property': {
+    lead: 'Winning and keeping the contract itself, and the statute behind every tow, is its own subject:',
+    anchor: 'getting private property towing contracts',
+    href: '/towing-jobs/private-property-towing-contracts',
+  },
+};
+
+/**
+ * The commercial section hands off twice: once to the general account page and
+ * once to the heavy-duty specialisation of it. Kept separate from CLUSTER_LINKS
+ * so that map stays one-link-per-section and the render below stays simple.
+ */
+const HEAVY_DUTY_LINK = {
+  lead: 'If the accounts you want are heavy recovery, the buyers and the entry ticket are different:',
+  anchor: 'how heavy-duty towing accounts are won',
+  href: '/towing-jobs/heavy-duty-towing-accounts',
 };
 
 export default function TowingJobsPage() {
@@ -263,6 +279,24 @@ export default function TowingJobsPage() {
                     className="font-bold text-ink underline hover:text-lime focus-ring"
                   >
                     {CLUSTER_LINKS[section.id].anchor}
+                  </a>
+                  .
+                </p>
+              )}
+
+              {/* Second hand-off on the commercial section only: heavy recovery
+                  is the specialised case of the account sale, with its own
+                  buyers and a published entry ticket. */}
+              {section.id === 'commercial' && (
+                <p className="font-sans text-stone leading-relaxed border-l-4 border-lime pl-4">
+                  {HEAVY_DUTY_LINK.lead}{' '}
+                  <a
+                    href={HEAVY_DUTY_LINK.href}
+                    onClick={go(HEAVY_DUTY_LINK.href)}
+                    id="pillar-to-heavy-duty-towing-accounts"
+                    className="font-bold text-ink underline hover:text-lime focus-ring"
+                  >
+                    {HEAVY_DUTY_LINK.anchor}
                   </a>
                   .
                 </p>

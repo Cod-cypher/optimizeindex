@@ -15,15 +15,17 @@ import { GOALS } from '../data';
 import { PROUDLY_SERVING, TOWING_BASE, TOWING_JOBS_PATH } from '../routes';
 import { LEGAL_NAME } from '../content/about';
 
-// The first two point at the services page rather than straight into the audit
-// form. Every entry here used to dead-end at /audit, which meant a column
-// labelled SERVICES contained no link to a page describing a service.
+// Every label points at a distinct URL that describes the thing named. An
+// earlier version had two labels on /services and three that dead-ended in
+// the audit form, so a column headed SERVICES linked to one service page,
+// twice. The fragment links land on the card ids /services renders.
 const SERVICE_LINKS = [
-  { label: 'ORGANIC SEO', href: '/services' },
-  { label: 'GENERATIVE GEO', href: '/services' },
-  { label: 'PAID SEARCH ADS', href: '/audit?goal=roi&service=paid-search' },
-  { label: 'PAID SOCIAL ADS', href: '/audit?goal=cac&service=paid-social' },
-  { label: 'CRO TESTING', href: '/audit?goal=profit&service=cro' },
+  { label: 'ALL SERVICES', href: '/services' },
+  { label: 'FOR TOWING COMPANIES', href: TOWING_BASE },
+  { label: 'GOOGLE BUSINESS PROFILE', href: '/services#gmb' },
+  { label: 'SEO', href: '/services#seo' },
+  { label: 'AEO & GEO', href: '/services#geo' },
+  { label: 'FREE AI AUDIT', href: '/audit' },
 ];
 
 const AGENCY_LINKS = [
@@ -40,7 +42,9 @@ export default function SiteFooter() {
   const go = (href: string) => (e: React.MouseEvent) => {
     e.preventDefault();
     navigate(href);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // A fragment link is scrolled to its target by the route effect in App.tsx;
+    // scrolling to the top here would immediately undo that.
+    if (!href.includes('#')) window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const linkClass = 'hover:text-ink transition-colors text-left font-bold block';
@@ -51,8 +55,9 @@ export default function SiteFooter() {
         <div className="col-span-2 space-y-4 text-left">
           <Logo size={38} variant="light" />
           <p className="font-sans text-stone text-xs leading-relaxed max-w-sm">
-            We are SEO and GEO performance engineers. We replace slide decks with profit
-            attribution. Every line of code is written to convert intent into scalable transactions.
+            AI solutions for towing companies and local service businesses missing revenue.
+            AI-driven SEO, Google Business Profile, AEO and GEO, reported in calls and booked work
+            rather than rankings.
           </p>
 
           <div className="pt-2">
