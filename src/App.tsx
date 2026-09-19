@@ -1653,6 +1653,18 @@ export default function App() {
                 <p className="font-sans text-cream/75 mt-6 leading-relaxed text-base md:text-lg">
                   {SMS_PROGRAM_SUMMARY}
                 </p>
+                {/* The consent statement, repeated at the top of the page on
+                    purpose. Automated consent checkers read the first part of
+                    a page and look for the agreement and its disclosures
+                    together; section 2 has them after the script, which is
+                    further down than some of those tools read. */}
+                <div className="mt-6 text-left border-2 border-lime bg-ink/40 px-5 py-4 rounded-xl font-sans text-sm text-cream leading-relaxed" id="sms-consent-summary">
+                  <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-lime mb-2">SMS consent</p>
+                  <p>{SMS_CONSENT_STATEMENT}</p>
+                  <p className="mt-2">
+                    <strong>Reply STOP to opt out. Reply HELP for help.</strong> Message frequency varies, up to 4 messages per month. Msg &amp; data rates may apply.
+                  </p>
+                </div>
               </div>
 
               <div className="space-y-8 bg-paper text-ink border-2 border-ink p-8 md:p-12 rounded-3xl shadow-hard">
