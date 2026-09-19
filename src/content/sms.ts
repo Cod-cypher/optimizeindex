@@ -54,11 +54,19 @@ export const SMS_MESSAGE_TYPES = [
 /**
  * The verbal opt-in script. Read aloud, in full, by a team member on a call
  * with the customer before the first text is sent. Every disclosure the
- * registry expects is in it: purpose, frequency, rates, STOP, HELP, that
- * texting is optional, and confirmation of the number.
+ * registry expects is in it: where the privacy policy and terms are, purpose,
+ * frequency, rates, STOP, HELP, that texting is optional, and confirmation of
+ * the number.
+ *
+ * The URLs come first and are not optional. The campaign was rejected on
+ * 2026-09-17 (Twilio error 30896) because an earlier version of this script
+ * asked for consent without directing the customer to the privacy policy and
+ * terms. The reviewer's words: "Ensure agents verbally direct customers to
+ * the exact website URL where the Privacy Policy and Terms & Conditions can
+ * be reviewed prior to obtaining consent."
  */
 export const SMS_OPT_IN_SCRIPT =
-  'Would you like us to text you about your inquiry, quotes, scheduling and support? Message frequency varies, up to 4 messages a month, and message and data rates may apply. You can reply STOP at any time to opt out and HELP for help. Texting is not required to work with us. Can I confirm the mobile number is the one you are calling from?';
+  'Our privacy policy is at optimizeindex.com/privacy-policy and our terms are at optimizeindex.com/terms-of-service. Would you like OptimizeIndex to text you about your inquiry, quotes, scheduling and support? Up to 4 msgs a month. Msg & data rates may apply. Reply HELP for help, STOP to opt out. Texting is not required to work with us. Is that a yes, and what mobile number should we use?';
 
 /**
  * The consent statement, in the form reviewers expect to see it on the page:
@@ -81,7 +89,7 @@ export const SMS_CONSENT_RECORD = [
 export const SMS_OPT_IN_MESSAGE = `${SMS_PROGRAM_NAME}: Thanks for agreeing to receive texts from us about your inquiry, quotes, scheduling and support. Msg frequency varies, up to 4 msgs/month. Msg & data rates may apply. Reply HELP for help, STOP to opt out.`;
 
 /** Sent once in reply to any opt-out keyword, then nothing further. */
-export const SMS_OPT_OUT_MESSAGE = `${SMS_PROGRAM_NAME}: You are unsubscribed and will receive no further texts from us. Reply START to resubscribe. Questions? Email ${CONTACT_EMAIL} or call ${CONTACT_PHONE_DISPLAY}.`;
+export const SMS_OPT_OUT_MESSAGE = `${SMS_PROGRAM_NAME}: You are unsubscribed and will receive no further texts from us. Questions? Email ${CONTACT_EMAIL} or call ${CONTACT_PHONE_DISPLAY}.`;
 
 /** Sent in reply to any help keyword. */
 export const SMS_HELP_MESSAGE = `${SMS_PROGRAM_NAME}: For help, email ${CONTACT_EMAIL} or call ${CONTACT_PHONE_DISPLAY}. Msg frequency varies, up to 4 msgs/month. Msg & data rates may apply. Reply STOP to opt out.`;
@@ -101,9 +109,42 @@ export const SMS_NO_SHARING =
 export const SMS_TWILIO_STATEMENT =
   'We do not sell or share your SMS opt-in data or personal information with third parties for marketing purposes.';
 
+/**
+ * The sentence Twilio's error 30908 documentation says the privacy policy
+ * "must include". A third wording of the same promise, kept verbatim for the
+ * same reason as the two above: a reviewer checking a rejection against that
+ * page searches for this string.
+ */
+export const SMS_PRIVACY_REQUIRED_SENTENCE =
+  'We do not share, sell, or provide your mobile phone number or messaging consent data to third parties or affiliates for marketing or promotional purposes.';
+
+/**
+ * Stated on every surface because it decides which kind of consent is valid.
+ * Twilio's vetting guidance: verbal consent is not sufficient for marketing
+ * content, which needs written consent. This campaign is registered as
+ * conversational and customer-care traffic on the strength of this sentence,
+ * so a promotional text sent under it is a compliance breach, not a judgment
+ * call.
+ */
+export const SMS_NO_MARKETING = `${SMS_PROGRAM_NAME} does not send marketing or promotional text messages. Every text replies to a conversation you started with us.`;
+
+/** How the number itself is obtained, which the registry asks to be stated. */
+export const SMS_NUMBER_COLLECTION =
+  'Your mobile number is collected on that call: the team member confirms the number you are calling from, or the number you gave us when you asked for a call back, before anything is sent to it.';
+
 export const SMS_PROVIDER_SHARING = `Text messaging opt-in data and consent are not shared with any third party other than ${SMS_PROVIDER}, the messaging provider that delivers ${SMS_PROGRAM_NAME}'s texts on our behalf.`;
 
 export const SMS_CARRIER_LIABILITY = 'Mobile carriers are not liable for delayed or undelivered messages.';
 
+/**
+ * The brand name exactly as it appears on the Twilio brand registration
+ * (BN5a1ab020eb3d2e7276535e09d6420b81), which is spelled with a space. The
+ * registry requires the privacy policy and terms to name the registered
+ * brand, so this spelling has to appear on those pages even though the site
+ * writes the name as one word everywhere else. If the brand is ever renamed
+ * in Twilio, change this to match, character for character.
+ */
+export const SMS_BRAND_DISPLAY = 'Optimize Index';
+
 /** One line for the page intro and the top of both policy sections. */
-export const SMS_PROGRAM_SUMMARY = `${SMS_PROGRAM_NAME}, a trade name of ${LEGAL_NAME}, sends text messages to customers and prospective customers who have asked, on a phone call with us, to hear from us by text.`;
+export const SMS_PROGRAM_SUMMARY = `${SMS_PROGRAM_NAME} (registered with mobile carriers as ${SMS_BRAND_DISPLAY}), a trade name of ${LEGAL_NAME}, sends text messages to customers and prospective customers who have asked, on a phone call with us, to hear from us by text.`;

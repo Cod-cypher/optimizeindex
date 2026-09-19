@@ -45,6 +45,9 @@ import {
   SMS_RATES,
   SMS_NO_SHARING,
   SMS_TWILIO_STATEMENT,
+  SMS_PRIVACY_REQUIRED_SENTENCE,
+  SMS_NO_MARKETING,
+  SMS_NUMBER_COLLECTION,
   SMS_PROVIDER_SHARING,
   SMS_CARRIER_LIABILITY,
 } from './content/sms';
@@ -1551,7 +1554,7 @@ export default function App() {
                     By opting in, you agree to receive text messages from {SMS_PROGRAM_NAME} about your inquiries, quotes, service information, scheduling, appointment updates, and customer support. {SMS_FREQUENCY} {SMS_RATES} Reply STOP to any {SMS_PROGRAM_NAME} text message to opt out; you will receive one message confirming it and no further texts after that. Reply HELP for help, or contact us at <a href={`mailto:${CONTACT_EMAIL}`} className="underline font-bold text-ink">{CONTACT_EMAIL}</a> or {CONTACT_PHONE_DISPLAY}.
                   </p>
                   <p className="font-sans text-sm text-stone leading-relaxed">
-                    {SMS_TWILIO_STATEMENT} {SMS_NO_SHARING} {SMS_PROVIDER_SHARING} The full program terms are on our <a href="/sms-program" onClick={(e) => { e.preventDefault(); navigateTo('sms-program'); }} className="underline font-bold text-ink">text messaging program</a> page.
+                    {SMS_NO_MARKETING} {SMS_PRIVACY_REQUIRED_SENTENCE} {SMS_TWILIO_STATEMENT} {SMS_NO_SHARING} {SMS_PROVIDER_SHARING} The full program terms are on our <a href="/sms-program" onClick={(e) => { e.preventDefault(); navigateTo('sms-program'); }} className="underline font-bold text-ink">text messaging program</a> page.
                   </p>
                 </section>
 
@@ -1656,7 +1659,7 @@ export default function App() {
                 <section className="space-y-3 text-left">
                   <h2 className="font-display font-extrabold text-xl text-ink">1. What we text about</h2>
                   <p className="font-sans text-sm text-stone leading-relaxed">
-                    The {SMS_PROGRAM_NAME} program is for conversations you have already started with us. It is not a broadcast list, and we do not text anyone who has not asked us to. Messages are about:
+                    The {SMS_PROGRAM_NAME} program is for conversations you have already started with us. It is not a broadcast list, and we do not text anyone who has not asked us to. {SMS_NO_MARKETING} Messages are about:
                   </p>
                   <ul className="list-disc pl-5 space-y-1.5 font-sans text-sm text-stone leading-relaxed">
                     {SMS_MESSAGE_TYPES.map((t) => (
@@ -1668,7 +1671,7 @@ export default function App() {
                 <section className="space-y-3 text-left border-t border-ink/10 pt-8">
                   <h2 className="font-display font-extrabold text-xl text-ink">2. How you opt in</h2>
                   <p className="font-sans text-sm text-stone leading-relaxed">
-                    Consent is given verbally, on a phone call with a member of our team, and only there. Giving us your phone number through a form on this site, or in the chat, does not enrol you in text messages; it is a number for us to call you back on. Before the first text is sent, the person you are speaking with will ask you this, in these words:
+                    Consent is given verbally, on a phone call with a member of our team, and only there. Giving us your phone number through a form on this site, or in the chat, does not enrol you in text messages; it is a number for us to call you back on. {SMS_NUMBER_COLLECTION} Before the first text is sent, the person you are speaking with will ask you this, in these words:
                   </p>
                   <blockquote className="border-l-4 border-lime bg-cream/60 px-5 py-4 rounded-r-xl font-sans text-sm text-ink leading-relaxed">
                     “{SMS_OPT_IN_SCRIPT}”
@@ -1814,10 +1817,10 @@ export default function App() {
                 <section className="space-y-3 text-left border-t border-ink/10 pt-8" id="sms">
                   <h2 className="font-display font-extrabold text-xl text-ink">5. SMS Terms</h2>
                   <p className="font-sans text-sm text-stone leading-relaxed">
-                    {SMS_PROGRAM_SUMMARY} {SMS_PROGRAM_NAME} sends text messages only after you have given that consent, and texting is never a condition of working with us. Texts cover your inquiries, quotes, service information, scheduling, appointment updates, and customer support.
+                    {SMS_PROGRAM_SUMMARY} {SMS_PROGRAM_NAME} sends text messages only after you have given that consent, and texting is never a condition of working with us. Texts cover your inquiries, quotes, service information, scheduling, appointment updates, and customer support. {SMS_NO_MARKETING}
                   </p>
                   <p className="font-sans text-sm text-stone leading-relaxed">
-                    {SMS_FREQUENCY} {SMS_RATES} Reply STOP to opt out at any time; you will receive one message confirming that you have been unsubscribed. Reply HELP for assistance, or contact <a href={`mailto:${CONTACT_EMAIL}`} className="underline font-bold text-ink">{CONTACT_EMAIL}</a> or {CONTACT_PHONE_DISPLAY}. {SMS_CARRIER_LIABILITY}
+                    {SMS_FREQUENCY} {SMS_RATES} <strong>Reply STOP to opt out at any time</strong>; you will receive one message confirming that you have been unsubscribed. <strong>Reply HELP for assistance</strong>, or contact <a href={`mailto:${CONTACT_EMAIL}`} className="underline font-bold text-ink">{CONTACT_EMAIL}</a> or {CONTACT_PHONE_DISPLAY}. {SMS_CARRIER_LIABILITY}
                   </p>
                   <p className="font-sans text-sm text-stone leading-relaxed">
                     How {SMS_PROGRAM_NAME} handles your mobile number and consent is explained in the Text Messaging (SMS) section of the <a href="/privacy-policy#sms" onClick={(e) => { e.preventDefault(); navigateTo('privacy-policy'); }} className="underline font-bold text-ink">Privacy Policy</a>, and the program is described in full on the <a href="/sms-program" onClick={(e) => { e.preventDefault(); navigateTo('sms-program'); }} className="underline font-bold text-ink">text messaging program</a> page.

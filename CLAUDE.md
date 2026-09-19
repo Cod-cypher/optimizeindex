@@ -385,10 +385,18 @@ number to call back — it is not consent to text. That is why no form carries
 an SMS checkbox, and why none should be added: adding one would turn web-form
 opt-in into a second opt-in method the campaign was not registered with.
 `SMS_OPT_IN_SCRIPT` is read aloud in full before the first text, and
-`SMS_CONSENT_RECORD` is what gets logged.
+`SMS_CONSENT_RECORD` is what gets logged. **The script must name the privacy
+policy and terms URLs before asking for consent.** The first submission was
+rejected on 2026-09-17 for leaving them out (Twilio error 30896), and each
+vetting submission is paid for.
 
 **`SMS_NO_SHARING` is quoted verbatim, not paraphrased.** Reviewers search
-for that sentence.
+for that sentence. Same for `SMS_PRIVACY_REQUIRED_SENTENCE` and
+`SMS_TWILIO_STATEMENT`; three wordings of one promise, each from a different
+Twilio document. The terms' HELP and STOP instructions are in `<strong>`
+because the CTIA checklist asks for them in bold. `SMS_BRAND_DISPLAY` is the
+brand name as Twilio spells it ("Optimize Index"); it must appear on the
+privacy and terms pages exactly, so it lives in `SMS_PROGRAM_SUMMARY`.
 
 `src/content/sms.ts` imports `CONTACT_EMAIL` from `routes.ts`, so `routes.ts`
 must not import from it — the `/sms-program` path is a literal there for that
