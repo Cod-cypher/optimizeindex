@@ -31,7 +31,10 @@ import {
 } from "./server/proposals/public";
 import { proposalAdminRoutes, UPLOAD_DIR } from "./server/proposals/routes";
 import nodemailer from "nodemailer";
-import { REDIRECTS, SITE_ORIGIN } from "./src/routes";
+import { REDIRECTS, ROUTES, SITE_ORIGIN } from "./src/routes";
+
+/** Every path the marketing site serves at 200, for the punctuation-strip redirect. */
+const KNOWN_ROUTE_PATHS = new Set<string>([...ROUTES.map((r) => r.path), ...Object.keys(REDIRECTS)]);
 import type { AuditCategory, AuditResult } from "./shared/auditTypes";
 import {
   chatAdminRoutes,
@@ -308,6 +311,18 @@ async function startServer() {
     // Trailing slashes on anything but the root are a second URL for the same page.
     if (req.path.length > 1 && req.path.endsWith("/")) {
       res.redirect(301, req.path.replace(/\/+$/, "") + req.originalUrl.slice(req.path.length));
+      return;
+    }
+
+    // Trailing punctuation that a URL extractor swept up from prose:
+    // "…/sms-program." at the end of a sentence, "…/privacy-policy)" inside
+    // parentheses. Twilio's automated A2P consent check does exactly this to
+    // the URLs in a campaign's message flow, got a 404 for every one of them,
+    // and reported that the opt-in page "didn't load". Only real routes are
+    // rescued, so this cannot turn an arbitrary 404 into a 200.
+    const stripped = req.path.replace(/[.,;:!?)\]}'"]+$/, "");
+    if (stripped !== req.path && stripped.length > 1 && KNOWN_ROUTE_PATHS.has(stripped)) {
+      res.redirect(301, stripped + req.originalUrl.slice(req.path.length));
       return;
     }
 
