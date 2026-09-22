@@ -13,6 +13,12 @@
  * table in CLAUDE.md, and a page that could not justify its own SERP row was not
  * built (see the deferred list there).
  *
+ * Direct calls carries two pages. more-direct-towing-calls is organised by what
+ * the operator configures; towing-near-me-searches is organised by the query
+ * the public types. Same channel, different axis — that is what keeps them
+ * apart under the similarity gate, and it is the only channel deep enough to
+ * need it.
+ *
  * The rule that keeps them distinct
  * ---------------------------------
  * Import nothing from towing.ts's shared copy factories — GBP_FAQS, aiFaqs(),
@@ -57,18 +63,21 @@ import { commercialAccounts } from './commercialAccounts';
 import { directCalls } from './directCalls';
 import { heavyDutyAccounts } from './heavyDutyAccounts';
 import { motorClub } from './motorClub';
+import { nearMeSearches } from './nearMeSearches';
 import { paidLeads } from './paidLeads';
 import { privatePropertyContracts } from './privatePropertyContracts';
 
 /**
  * Order is the order they appear in the pillar's hub block and in its ItemList
  * schema. Direct calls and commercial accounts lead because they are the two
- * channels an operator has most agency over; heavy-duty follows commercial
- * because it is the specialised case of it; property contracts sit with the
- * other work someone else controls the terms of.
+ * channels an operator has most agency over; the near-me page follows direct
+ * calls because it is the query-side view of the same channel; heavy-duty
+ * follows commercial because it is the specialised case of it; property
+ * contracts sit with the other work someone else controls the terms of.
  */
 export const TOWING_JOBS_CLUSTER: TowingJobsChild[] = [
   directCalls,
+  nearMeSearches,
   commercialAccounts,
   heavyDutyAccounts,
   motorClub,

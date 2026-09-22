@@ -208,6 +208,7 @@ the three cannot drift.
 ├── /towing-jobs/commercial-towing-accounts    B2B acquisition
 ├── /towing-jobs/heavy-duty-towing-accounts    heavy recovery buyers + DOT quick-clearance programs
 ├── /towing-jobs/more-direct-towing-calls      cash-call playbook + measurement
+├── /towing-jobs/towing-near-me-searches       the consumer queries, one by one; site structure
 ├── /towing-jobs/motor-club-towing             evaluating network dispatch
 ├── /towing-jobs/private-property-towing-contracts  the contract, the statute, the manager
 └── /towing-jobs/paid-towing-leads             buying leads vs owning demand
@@ -226,6 +227,7 @@ whose `<title>` carries it. Do not retitle the state pages toward it.
 | `/towing-jobs` | The six channels compared. Breadth, not depth. | — |
 | `…/commercial-towing-accounts` | The B2B sales process | Local-search mechanics → link to `/towing-companies` |
 | `…/more-direct-towing-calls` | The operational playbook + call-quality measurement | Service description → `/towing-companies`; channel comparison → pillar |
+| `…/towing-near-me-searches` | The consumer queries ("towing near me", emergency, 24 hour, flatbed, motorcycle, heavy duty, long distance, roadside) taken one at a time: what Google resolves each against, which an operator can win, and which deserve a page on the operator's own site; the doorway-page test; Google's service-area and one-profile-per-location rules | Profile configuration steps, review cadence, call tracking, how wide to set the service area → `…/more-direct-towing-calls`; the heavy-duty buyer → `…/heavy-duty-towing-accounts`; the service offering → `/towing-companies` |
 | `…/motor-club-towing` | Evaluating network work | The other five channels → pillar |
 | `…/paid-towing-leads` | Bought leads, and owning demand instead | Organic/GBP how-to → `/towing-companies` |
 | `…/heavy-duty-towing-accounts` | Who buys heavy recovery (carriers, adjusters, DOT programs) and what each qualifies on; TRIP / RISC / MIT from their own specs | The generic B2B sales process, COIs, net terms → `…/commercial-towing-accounts`; corridor-page mechanics → `/towing-companies` heavy-duty section |
@@ -237,9 +239,15 @@ It survives only by being **procedural** where both others are explanatory. If a
 section explains *why* reviews matter rather than *how* to run the cadence, it has
 drifted; cut it and link instead.
 
+`towing-near-me-searches` is the second page on the same channel and sits directly on
+`more-direct-towing-calls`. They are kept apart by **axis**: direct-calls is organised by
+what the operator configures, near-me by the query the public types. If a near-me section
+starts walking through profile fields — category, hours, services list, photos — it has
+drifted; cut it and refer across.
+
 ### SERP validation record
 
-Checked **2026-09-03**; the two 2026-09-17 rows were validated the day they were built. Re-validate before publishing new pages in this cluster.
+Checked **2026-09-03**; the 2026-09-17 and 2026-09-22 rows were validated the day they were built. Re-validate before publishing new pages in this cluster.
 
 | Page | Target query | SERP intent | Dominant result type | Why our page matches |
 |---|---|---|---|---|
@@ -249,6 +257,8 @@ Checked **2026-09-03**; the two 2026-09-17 rows were validated the day they were
 | paid-towing-leads | *are towing leads worth buying* | Investigational, heavily commercial | **100% lead vendors** — Contractor Webmasters, Top7Seven, RoadsideAndTowingLeads, WDLG, SixtyFourLeads, AllLocalPros. Only TowMarX is editorial | Nothing ranking is neutral; every result sells the thing being evaluated. An independent page that declines to sell leads is the differentiator, and the FTC lead-generation guidance is a citation none of them carry. |
 | heavy-duty-towing-accounts | *how to get heavy duty towing accounts* (2026-09-17) | **Mixed** — thin operator informational + local commercial | Towing companies' own heavy-duty / fleet-account pages (Smith, Geyers, Mortons, TCTR), a payments vendor (RoadSync), start-a-business guides (UpFlip, Indeed), Tow Academy | Nothing ranking explains who buys heavy recovery or that state DOTs run certified quick-clearance programs with published equipment, training and response specs. TRIP, RISC and MIT cited from their own documents; no invented rates. |
 | private-property-towing-contracts | *how to get private property towing contracts* (2026-09-17) | Informational, operator-side | Towing companies' own listicles (Freeway Towing, Chavez, B&D), an insurance broker's guide (Wexford), forums, a US Legal Forms template, one Texas admin rule | Intent matches. None of the ranking pages cite the statute that governs the tow, which is the first thing a property manager asks about. Page is organised by who awards / how won / what it obliges, with CA, FL, WA, PA and MI rules from primary sources and IN / GA named as gaps. |
+| towing-near-me-searches | *how to rank for towing near me* (2026-09-22) | Operator-informational | Agency guides — BizIQ, TowMarX, Ranktracker, Townsquare, CinchLocal, Savo — all prescribing GBP work plus a page per service and per city | Every ranking guide recommends the city × service page tree; none quotes Google's doorway policy or says when such a page earns its URL. The consumer forms of the seven service queries ("flatbed towing", "emergency towing"…) return only operators, Yelp and motor clubs — unwinnable and the wrong visitor — so the page takes those queries as its subject instead. Relevance / distance / prominence, the 2-hour service-area ceiling and the doorway examples cited from Google's own pages. |
+| ~~towing-services/* and locations/{state}/{city}/{service}~~ | *towing near me*, *emergency towing*, *flatbed towing*, *24 hour towing*… (2026-09-22) | **Consumer, local** | Map pack, then operators' own service pages, Yelp, AAA | **No match — rejected.** Resolved by GBP distance to a real business; we have none. The visitor is a stranded motorist we cannot serve. The tree is Google's own doorway example and would fail the 85% similarity gate. Agency-side city forms ("towing seo company Orlando") return national vertical agencies, not city pages. Of the seven service names only heavy duty (already covered) and roadside assistance (deferred, below) have an operator-side SERP. |
 | ~~hiring-tow-truck-drivers~~ | *how to hire tow truck drivers* | **Employment** — not employer | Indeed (#1), Indeed again, ZipRecruiter ×2, Towing.com Careers. Only 3 of 8 serve employers | **No match — deferred.** Google resolves even employer-phrased towing queries to job listings. Also topically off-axis: the cluster is about acquiring work, not staff. |
 
 ### Terminology
@@ -269,6 +279,17 @@ longer deferred.
 2. **Tow truck insurance** — high volume, weak commercial fit, reads as filler.
 3. **Hiring tow truck drivers** — see the SERP row above. Revisit only if a narrower
    long-tail such as *tow truck driver retention* shows a non-employment SERP.
+4. **Roadside assistance operators** — *how to get more roadside assistance calls*
+   (checked 2026-09-22) is operator-informational: Genius Roadside, Townsquare, Max
+   Conversion, WDLG — agency guides and lead vendors. Roadside-only operators (jump starts,
+   lockouts, tyres, fuel; often no tow truck) are a distinct segment with a real SERP. Build
+   it only as a **segment** page — what differs for a business with no truck — never as a
+   paraphrase of `more-direct-towing-calls`, which it would otherwise sit directly on.
+
+**Rejected, do not re-propose:** a consumer-facing service × location tree
+(`/towing-services/emergency-towing`, `/locations/florida/orlando/flatbed-towing`…) for
+"towing near me"-type queries. See the struck SERP row above. It is the right structure for
+a *client's* towing site, and `towing-near-me-searches` now says so in public.
 
 ---
 
