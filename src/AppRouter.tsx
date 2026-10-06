@@ -25,9 +25,10 @@ import TowingJobsPage from './pages/TowingJobsPage';
 import TowingJobsChildPage from './pages/TowingJobsChildPage';
 import ProudlyServingPage from './pages/ProudlyServingPage';
 import AboutPage from './pages/AboutPage';
+import TowingOnboardingPage from './pages/TowingOnboardingPage';
 import { getTowingState } from './content/towing';
 import { getTowingJobsChild } from './content/towingJobsCluster';
-import { TOWING_BASE, PROUDLY_SERVING, TOWING_JOBS_PATH } from './routes';
+import { TOWING_BASE, PROUDLY_SERVING, TOWING_JOBS_PATH, TOWING_ONBOARDING_PATH } from './routes';
 import type { PublicProposal } from '../shared/proposalTypes';
 
 import ChatWidget from './components/chat/ChatWidget';
@@ -106,6 +107,10 @@ function renderView(location: Location) {
     crawler or an assistant who the business is.
   */
   if (towingPath === '/about') return <AboutPage />;
+
+  // The client setup form. Eager for the same reason: a lazy import would
+  // pre-render an empty div where the form should be.
+  if (towingPath === TOWING_ONBOARDING_PATH) return <TowingOnboardingPage />;
 
   if (towingPath === PROUDLY_SERVING) return <ProudlyServingPage />;
   if (towingPath === TOWING_JOBS_PATH) return <TowingJobsPage />;

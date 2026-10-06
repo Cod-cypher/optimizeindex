@@ -1612,7 +1612,9 @@ export default function App() {
 
               <nav aria-label="Site pages" className="mt-10 pt-8 border-t border-cream/20">
                 <ul className="flex flex-wrap justify-center gap-x-6 gap-y-2 font-mono text-[11px] uppercase tracking-wide text-cream/75">
-                  {ROUTES.map((r) => (
+                  {/* noindex routes are private (the client onboarding form)
+                      and must not be advertised to whoever lands on a 404. */}
+                  {ROUTES.filter((r) => !r.noindex).map((r) => (
                     <li key={r.path}>
                       <a
                         href={r.path}

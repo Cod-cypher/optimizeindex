@@ -30,6 +30,7 @@ import {
   toPublicProposal,
 } from "./server/proposals/public";
 import { proposalAdminRoutes, UPLOAD_DIR } from "./server/proposals/routes";
+import { onboardingRoutes } from "./server/onboarding/routes";
 import nodemailer from "nodemailer";
 import { REDIRECTS, ROUTES, SITE_ORIGIN } from "./src/routes";
 
@@ -51,13 +52,17 @@ import { hasApiKey, modelName } from "./server/chat/openai";
 const LEAD_NOTIFY_EMAIL = "vickigms1@gmail.com";
 
 // Lead types with their own notification recipients. The towing assessment
-// form on /towing-jobs goes straight to the team addresses.
+// form on /towing-jobs and the client onboarding form on /towing-onboarding go
+// straight to the team addresses.
 //
 // When SMTP is not configured the FormSubmit fallback applies, and that
 // requires a one-time activation per recipient address before it will deliver.
 const LEAD_NOTIFY_OVERRIDES: Record<string, string[]> = {
   towing_jobs_assessment: ["ali@optimizeindex.com", "contact@optimizeindex.com"],
   chat_widget: ["ali@optimizeindex.com", "contact@optimizeindex.com"],
+  // Not a lead (see server/onboarding/routes.ts), but the same people set the
+  // client up, so it shares this map through sendTeamMail().
+  towing_onboarding: ["ali@optimizeindex.com", "contact@optimizeindex.com"],
 };
 
 function notifyRecipients(type: string): string[] {
@@ -196,56 +201,111 @@ async function emailLead(lead: LeadInput): Promise<boolean> {
   );
 
   const results = await Promise.all(
-    recipients.map(async (to) => {
-      try {
-        const res = await fetch(`https://formsubmit.co/ajax/${to}`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-            // Required. FormSubmit rejects any request without an Origin or
-            // Referer with {"success":"false"} and the misleading message
-            // "open this page through a web server" - which is what a
-            // server-to-server fetch looks like to it, since Node sends
-            // neither header. Without these, no lead email is ever delivered.
-            Origin: SITE_ORIGIN,
-            Referer: `${SITE_ORIGIN}/`,
-          },
-          body: JSON.stringify({
-            _subject: `New OptimizeIndex lead: ${lead.company || lead.name || lead.website || "unknown"} (${lead.type})`,
-            _template: "table",
-            ...lead,
-          }),
-        });
-
-        if (!res.ok) {
-          console.error(`[Leads] Email forward to ${to} failed with status ${res.status}`);
-          return false;
-        }
-
-        // FormSubmit answers 200 even when it refuses to send - an unactivated
-        // address, a missing Origin, a rate limit. Checking res.ok alone
-        // recorded those as delivered, so leads were silently never emailed.
-        // The body is the only place the real outcome appears.
-        const body = (await res.json().catch(() => null)) as
-          | { success?: string | boolean; message?: string }
-          | null;
-        const sent = body !== null && String(body.success) === "true";
-
-        if (!sent) {
-          console.error(
-            `[Leads] Email forward to ${to} was refused by FormSubmit: ${body?.message ?? "no message"}`,
-          );
-          return false;
-        }
-        return true;
-      } catch (err) {
-        console.error(`[Leads] Email forward to ${to} failed:`, err);
-        return false;
-      }
-    }),
+    recipients.map((to) =>
+      formSubmitSend(to, {
+        _subject: `New OptimizeIndex lead: ${lead.company || lead.name || lead.website || "unknown"} (${lead.type})`,
+        _template: "table",
+        ...lead,
+      }),
+    ),
   );
 
+  return results.some(Boolean);
+}
+
+/** One FormSubmit message to one recipient. True only when FormSubmit says it sent. */
+async function formSubmitSend(to: string, fields: Record<string, string>, log = "Leads"): Promise<boolean> {
+  try {
+    const res = await fetch(`https://formsubmit.co/ajax/${to}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        // Required. FormSubmit rejects any request without an Origin or
+        // Referer with {"success":"false"} and the misleading message
+        // "open this page through a web server" - which is what a
+        // server-to-server fetch looks like to it, since Node sends
+        // neither header. Without these, no lead email is ever delivered.
+        Origin: SITE_ORIGIN,
+        Referer: `${SITE_ORIGIN}/`,
+      },
+      body: JSON.stringify(fields),
+    });
+
+    if (!res.ok) {
+      console.error(`[${log}] Email forward to ${to} failed with status ${res.status}`);
+      return false;
+    }
+
+    // FormSubmit answers 200 even when it refuses to send - an unactivated
+    // address, a missing Origin, a rate limit. Checking res.ok alone
+    // recorded those as delivered, so leads were silently never emailed.
+    // The body is the only place the real outcome appears.
+    const body = (await res.json().catch(() => null)) as
+      | { success?: string | boolean; message?: string }
+      | null;
+    const sent = body !== null && String(body.success) === "true";
+
+    if (!sent) {
+      console.error(
+        `[${log}] Email forward to ${to} was refused by FormSubmit: ${body?.message ?? "no message"}`,
+      );
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error(`[${log}] Email forward to ${to} failed:`, err);
+    return false;
+  }
+}
+
+/**
+ * Mails a formatted message to the inbox LEAD_NOTIFY_OVERRIDES names for
+ * `type`, through the same SMTP-then-FormSubmit path as a lead.
+ *
+ * For notifications that are written for a person rather than dumped as a
+ * key/value table — the towing onboarding email. FormSubmit renders its own
+ * table, so on that fallback the plain-text part travels as a single field.
+ */
+async function sendTeamMail(
+  type: string,
+  msg: { subject: string; html: string; text: string; replyTo?: string },
+): Promise<boolean> {
+  const recipients = notifyRecipients(type);
+
+  if (smtpConfigured) {
+    try {
+      await transport().sendMail({
+        from: MAIL_FROM,
+        to: recipients.join(", "),
+        replyTo: msg.replyTo || undefined,
+        subject: msg.subject,
+        text: msg.text,
+        html: msg.html,
+      });
+      console.log(`[Mail] Emailed ${type} to ${recipients.join(", ")} via SMTP`);
+      return true;
+    } catch (err) {
+      console.error(`[Mail] SMTP send of ${type} failed:`, err);
+      return false;
+    }
+  }
+
+  console.warn(`[Mail] SMTP not configured - sending ${type} through FormSubmit`);
+  const results = await Promise.all(
+    recipients.map((to) =>
+      formSubmitSend(
+        to,
+        {
+          _subject: msg.subject,
+          _template: "table",
+          ...(msg.replyTo ? { _replyto: msg.replyTo } : {}),
+          message: msg.text,
+        },
+        "Mail",
+      ),
+    ),
+  );
   return results.some(Boolean);
 }
 
@@ -796,6 +856,17 @@ async function startServer() {
     // The lead was captured via at least one channel — report success to the visitor.
     res.json({ ok: true, id: dbId || "backup" });
   });
+
+  // The towing client setup form. Not a lead, so not /api/leads — see the
+  // header of server/onboarding/routes.ts.
+  app.use(
+    "/api/onboarding",
+    onboardingRoutes(prisma, {
+      sendMail: (msg) => sendTeamMail("towing_onboarding", msg),
+      backup: backupLeadToFile,
+      clientIp,
+    }),
+  );
 
   /* -----------------------------------------------------------------------
      CHAT WIDGET

@@ -38,7 +38,11 @@ export interface RouteMeta {
   description: string;
   /** Sitemap priority. Omitted for routes that should not be indexed. */
   priority?: number;
-  /** Set on the 404 page so it never enters the index. */
+  /**
+   * Set on pages that must never enter the index: the 404, and the client
+   * onboarding form. Keeps a route out of the sitemap, robots and llms.txt
+   * checks, and off the 404 page's list of site pages.
+   */
   noindex?: boolean;
   /** Page-specific structured data, merged with the sitewide graph. */
   jsonLd?: Record<string, unknown>[];
@@ -239,6 +243,15 @@ export const PROUDLY_SERVING = '/proudly-serving';
  * automatically. The breadcrumb still places it under the pillar.
  */
 export const TOWING_JOBS_PATH = '/towing-jobs';
+
+/**
+ * The setup form a towing client fills in after paying.
+ *
+ * Not part of the vertical's content: it targets no query and is noindex, so
+ * it sits outside both prefixes verify-seo.ts pools for the towing guardrails.
+ * Single segment, so it joins the reserved proposal slugs automatically.
+ */
+export const TOWING_ONBOARDING_PATH = '/towing-onboarding';
 
 /**
  * `Service` narrowed by audience and, on the state pages, by area.
@@ -524,6 +537,16 @@ export const ROUTES: RouteMeta[] = [
     description:
       'How the OptimizeIndex text messaging program works: what we text about, how you opt in on a call, message frequency, and how to reply STOP or HELP.',
     priority: 0.3,
+  },
+  {
+    // Sent to clients directly, linked from nothing. noindex and no priority
+    // keep it out of the index and the sitemap; it is not in llms.txt, so the
+    // chat assistant does not know to send prospects here either.
+    path: TOWING_ONBOARDING_PATH,
+    title: 'Towing Client Onboarding | OptimizeIndex',
+    description:
+      'The setup form for OptimizeIndex towing clients: business details, fleet, service area, dispatch, the jobs you want and your Google Business Profile.',
+    noindex: true,
   },
 ];
 

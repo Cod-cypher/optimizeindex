@@ -70,6 +70,71 @@ model Lead {
   @@index([auditId])
 }
 
+/// One submission of the towing client setup form at /towing-onboarding.
+///
+/// Its own table rather than a Lead row: the person filling it in has already
+/// bought, so counting them as a lead would inflate the pipeline, and the
+/// answers are worth querying one by one — which clients run rotators, who
+/// covers which ZIP codes — rather than as a text blob.
+///
+/// Column names are the field ids in ONBOARDING_SECTIONS
+/// (src/content/onboarding.ts), and server/onboarding/routes.ts writes them by
+/// id. Required questions are NOT NULL here. A new question there needs a
+/// column here and a migration, or every write fails over to leads.json.
+model TowingOnboarding {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  // 1. Business information
+  businessName    String
+  businessAddress String
+  website         String?
+  contactName     String
+  phone           String
+  email           String
+
+  // 2. Fleet and towing capabilities
+  truckCount   String
+  services     String[]
+  truckTypes   String[]
+  cannotHandle String?
+
+  // 3. Service area and ZIP codes
+  zipListStatus String
+  zipCodes      String?
+  radius        String?
+  excludedAreas String?
+
+  // 4. Availability and dispatch
+  hours        String
+  afterHours   String?
+  callAnswerer String
+  callRouting  String?
+
+  // 5. Job preferences and Google Business Profile
+  wantedJobs    String[]
+  hasProfile    String?
+  profileLink   String?
+  profileAccess String
+  notes         String?
+
+  /// 6. The final-confirmation checkbox. The server refuses a submission
+  /// without it, so every row has one: when the client attested that the
+  /// service areas and job types listed reflect the work they can accept.
+  confirmedAt DateTime
+
+  // Context
+  submittedFrom  String?
+  visitorId      String?
+  sessionId      String?
+  userAgent      String?
+  ipAddress      String?
+  emailForwarded Boolean @default(false)
+
+  @@index([createdAt])
+  @@index([email])
+}
+
 // One row per instant audit run from the homepage hero. Written whether or
 // not the visitor ever hands over an email — the domains people check are
 // lead intelligence on their own, and the row doubles as a 6-hour cache so a

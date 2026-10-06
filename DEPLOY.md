@@ -85,8 +85,8 @@ npm run mail:test -- --send   # also delivers one test message
 ```
 
 Recipients are set in `server.ts` (`LEAD_NOTIFY_OVERRIDES`): the towing
-assessment form goes to ali@ and contact@, everything else to the default
-inbox.
+assessment form, the chat widget and the towing client onboarding form go to
+ali@ and contact@, everything else to the default inbox.
 
 Build and prepare the database client:
 
