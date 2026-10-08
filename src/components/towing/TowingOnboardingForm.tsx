@@ -1,18 +1,16 @@
 /**
- * The towing client setup form, rendered on /towing-onboarding.
+ * The towing business setup form, rendered on /towing-onboarding.
  *
  * Generated from ONBOARDING_SECTIONS in src/content/onboarding.ts, so a new
  * question is one entry there and nothing here. One long form rather than
- * TowingJobsLeadForm's steps: a client who has already bought is filling this
- * in once, with the answers to hand, and needs to see all of it to know what
- * to gather.
+ * TowingJobsLeadForm's steps: it is filled in once, with the answers to hand,
+ * and the operator needs to see all of it to know what to gather.
  *
  * Posts to /api/onboarding/towing (server/onboarding/routes.ts), not to
- * submitLead(). The person filling this in has already bought: as a lead they
- * would fire a GA4 generate_lead, inflate the pipeline and mark the analytics
- * funnel converted. The server stores every answer in its own column of the
- * TowingOnboarding table and emails the team a formatted copy, and it
- * re-validates everything this component checks.
+ * submitLead(), so it fires no GA4 generate_lead and does not mark the
+ * analytics funnel converted. The server stores every answer in its own
+ * column of the TowingOnboarding table and emails the team a formatted copy,
+ * and it re-validates everything this component checks.
  */
 
 import React, { useEffect, useRef, useState } from 'react';

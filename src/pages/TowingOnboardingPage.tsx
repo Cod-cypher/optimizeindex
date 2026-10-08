@@ -1,5 +1,5 @@
 /**
- * /towing-onboarding — the setup form a towing client fills in after paying.
+ * /towing-onboarding — the towing business setup form.
  *
  * Layout only. The copy is in src/content/onboarding.ts and the form's
  * behaviour in src/components/towing/TowingOnboardingForm.tsx.
@@ -8,10 +8,11 @@
  * renderToString emits the Suspense fallback for a lazy component, which here
  * would be an empty div where the form should be.
  *
- * noindex, out of the sitemap and llms.txt, and linked from nothing on the
- * site — it is sent to people who have already bought. Exactly one h1 and no
- * skipped heading level all the same, because scripts/verify-seo.ts checks
- * every route in ROUTES whether it is indexed or not.
+ * Reached from the header's "Become a Tow Provider" button (SiteNav), but
+ * noindex and out of the sitemap and llms.txt: it is a form, with no search
+ * intent of its own. Exactly one h1 and no skipped heading level all the same,
+ * because scripts/verify-seo.ts checks every route in ROUTES whether it is
+ * indexed or not.
  */
 
 import SiteNav from '../components/SiteNav';

@@ -52,16 +52,16 @@ import { hasApiKey, modelName } from "./server/chat/openai";
 const LEAD_NOTIFY_EMAIL = "vickigms1@gmail.com";
 
 // Lead types with their own notification recipients. The towing assessment
-// form on /towing-jobs and the client onboarding form on /towing-onboarding go
-// straight to the team addresses.
+// form on /towing-jobs and the setup form on /towing-onboarding go straight to
+// the team addresses.
 //
 // When SMTP is not configured the FormSubmit fallback applies, and that
 // requires a one-time activation per recipient address before it will deliver.
 const LEAD_NOTIFY_OVERRIDES: Record<string, string[]> = {
   towing_jobs_assessment: ["ali@optimizeindex.com", "contact@optimizeindex.com"],
   chat_widget: ["ali@optimizeindex.com", "contact@optimizeindex.com"],
-  // Not a lead (see server/onboarding/routes.ts), but the same people set the
-  // client up, so it shares this map through sendTeamMail().
+  // Not sent through /api/leads (see server/onboarding/routes.ts), but the same
+  // people handle it, so it shares this map through sendTeamMail().
   towing_onboarding: ["ali@optimizeindex.com", "contact@optimizeindex.com"],
 };
 

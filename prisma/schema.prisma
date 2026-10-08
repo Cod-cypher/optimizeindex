@@ -70,12 +70,12 @@ model Lead {
   @@index([auditId])
 }
 
-/// One submission of the towing client setup form at /towing-onboarding.
+/// One submission of the towing business setup form at /towing-onboarding,
+/// from a client or from a new towing company via "Become a Tow Provider".
 ///
-/// Its own table rather than a Lead row: the person filling it in has already
-/// bought, so counting them as a lead would inflate the pipeline, and the
-/// answers are worth querying one by one — which clients run rotators, who
-/// covers which ZIP codes — rather than as a text blob.
+/// Its own table rather than a Lead row: the answers are worth querying one by
+/// one — who runs rotators, who covers which ZIP codes — rather than as a
+/// text blob.
 ///
 /// Column names are the field ids in ONBOARDING_SECTIONS
 /// (src/content/onboarding.ts), and server/onboarding/routes.ts writes them by

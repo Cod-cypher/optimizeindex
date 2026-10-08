@@ -1,12 +1,12 @@
 /**
- * POST /api/onboarding/towing — the towing client setup form.
+ * POST /api/onboarding/towing — the towing business setup form.
  *
- * Its own endpoint and table rather than /api/leads and Lead. The person
- * submitting has already bought, so as a lead they would inflate the pipeline,
- * mark the analytics funnel as converted and fire a GA4 generate_lead. And the
- * answers are worth reading one at a time — which clients run rotators, who
- * covers which ZIP codes — which /api/leads' closed key list and 5,000-char
- * comments field do not allow.
+ * Its own endpoint and table rather than /api/leads and Lead. The answers are
+ * worth reading one at a time — who runs rotators, who covers which ZIP codes —
+ * which /api/leads' closed key list and 5,000-char comments field do not
+ * allow. Built for clients who had already bought; since the header's "Become
+ * a Tow Provider" button links here, new towing companies submit it too, and
+ * neither is counted as a GA4 conversion or marked converted in the funnel.
  *
  * Validated against ONBOARDING_SECTIONS, the same definitions the form renders
  * from: a single choice must be one of its options, a multi-choice is filtered

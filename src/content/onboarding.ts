@@ -1,5 +1,9 @@
 /**
- * /towing-onboarding — the setup form a towing client fills in after paying.
+ * /towing-onboarding — the towing business setup form.
+ *
+ * Reached from the header's "Become a Tow Provider" button, so it is filled in
+ * by new towing companies as well as by clients who have already bought. The
+ * intro and the thank-you are worded for both; neither assumes a purchase.
  *
  * Transcribed from OptimizeIndex_Towing_Client_Onboarding.pdf, the paper
  * version of the same form, section for section and option for option. Three
@@ -7,8 +11,8 @@
  *
  *   - The PDF says the answers configure "your lead-generation system". Lead
  *     generation is on the roadmap, not the price list (ABOUT_ROADMAP in
- *     about.ts, and the Positioning section of CLAUDE.md), so the intro says
- *     the answers set up the account instead.
+ *     about.ts, and the Positioning section of CLAUDE.md), so the intro does
+ *     not name what the answers are used for.
  *   - "Which jobs would you most like to receive?" reads as though we send the
  *     jobs. It asks which jobs they most want more of, which is how
  *     TowingJobsLeadForm already puts the same question.
@@ -336,11 +340,11 @@ export const ONBOARDING_SECTIONS: OnboardingSection[] = [
 ];
 
 export const ONBOARDING_INTRO = {
-  eyebrow: 'Client onboarding · Towing',
+  eyebrow: 'Tow provider sign-up',
   /** Rendered as one h1; the accent half carries the highlight. */
   h1Lead: 'Towing Business',
   h1Accent: 'Setup Form',
-  lede: 'Please provide the details below so we can set up your account around your fleet, your service area and the jobs your company can handle.',
+  lede: 'Tell us about your towing business: your fleet, your service area and the jobs your company can handle. Our team reviews every submission and will contact you about next steps.',
   facts: [
     `${ONBOARDING_SECTIONS.length + 1} sections`,
     'Required unless marked optional',
@@ -366,7 +370,7 @@ export const ONBOARDING_SUBMIT = {
 
 export const ONBOARDING_SUCCESS = {
   title: 'Thank you. We have your details.',
-  body: 'Thank you for choosing OptimizeIndex. Our team will review your details and follow up if anything else is needed to begin setup.',
+  body: 'Our team will review what you sent and contact you about next steps. If you already work with us, we will use it to begin your setup.',
 };
 
 export const ONBOARDING_ERRORS = {

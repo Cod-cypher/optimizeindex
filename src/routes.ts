@@ -245,7 +245,7 @@ export const PROUDLY_SERVING = '/proudly-serving';
 export const TOWING_JOBS_PATH = '/towing-jobs';
 
 /**
- * The setup form a towing client fills in after paying.
+ * The towing business setup form, behind the header's "Become a Tow Provider".
  *
  * Not part of the vertical's content: it targets no query and is noindex, so
  * it sits outside both prefixes verify-seo.ts pools for the towing guardrails.
@@ -539,13 +539,13 @@ export const ROUTES: RouteMeta[] = [
     priority: 0.3,
   },
   {
-    // Sent to clients directly, linked from nothing. noindex and no priority
-    // keep it out of the index and the sitemap; it is not in llms.txt, so the
-    // chat assistant does not know to send prospects here either.
+    // Reached from the header's "Become a Tow Provider" button. A form with no
+    // search intent of its own, so noindex and no priority keep it out of the
+    // index and the sitemap, and it is not in llms.txt.
     path: TOWING_ONBOARDING_PATH,
-    title: 'Towing Client Onboarding | OptimizeIndex',
+    title: 'Tow Provider Sign-Up | OptimizeIndex',
     description:
-      'The setup form for OptimizeIndex towing clients: business details, fleet, service area, dispatch, the jobs you want and your Google Business Profile.',
+      'Sign up as a tow provider with OptimizeIndex: your business details, fleet, service area, dispatch, the jobs you want and your Google Business Profile.',
     noindex: true,
   },
 ];

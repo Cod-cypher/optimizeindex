@@ -100,7 +100,7 @@ export const SERVICES: Service[] = [
     id: 'cro',
     index: '09',
     title: 'Conversion Optimization',
-    description: 'We run high-velocity A/B testing on your landing pages to remove checkout friction. Scale your conversion rate by 2x without adding a single dollar of traffic spend.'
+    description: 'We find where visitors drop off before they call or book (slow pages, a buried phone number, forms that ask too much) and test fixes, so more of the people who already find you get in touch. Measured against your own baseline, not promised in advance.'
   },
   {
     id: 'creative',

@@ -69,13 +69,12 @@ import Logo from './components/Logo';
 import SiteNav from './components/SiteNav';
 import SiteFooter from './components/SiteFooter';
 
-// The four services shown on the homepage: the Google Business Profile → SEO
-// → AEO → GEO ladder the process section describes, in that order. SEO is
-// back in the second slot (Conversion Optimization held it for a while)
-// because the title now names SEO and the page should show it. Listed by id
-// rather than SERVICES.slice(0, 4) so the selection doesn't silently depend
-// on the order of the data file.
-const HOME_SERVICE_IDS = ['gmb', 'seo', 'aeo', 'geo'];
+// The four services shown on the homepage. Conversion Optimization holds the
+// second slot in place of SEO, which /services still lists; note the process
+// section further down still walks the Google Business Profile → SEO → AEO →
+// GEO ladder. Listed by id rather than SERVICES.slice(0, 4) so the selection
+// doesn't silently depend on the order of the data file.
+const HOME_SERVICE_IDS = ['gmb', 'cro', 'aeo', 'geo'];
 
 // Every path that resolves to a real page. Aliases are 301'd server-side
 // (see REDIRECTS in routes.ts) but are listed here so a client-side visit to
@@ -1612,8 +1611,9 @@ export default function App() {
 
               <nav aria-label="Site pages" className="mt-10 pt-8 border-t border-cream/20">
                 <ul className="flex flex-wrap justify-center gap-x-6 gap-y-2 font-mono text-[11px] uppercase tracking-wide text-cream/75">
-                  {/* noindex routes are private (the client onboarding form)
-                      and must not be advertised to whoever lands on a 404. */}
+                  {/* noindex routes stay off this list: it is a map of the
+                      site's pages, and the onboarding form has its own
+                      button in the header. */}
                   {ROUTES.filter((r) => !r.noindex).map((r) => (
                     <li key={r.path}>
                       <a

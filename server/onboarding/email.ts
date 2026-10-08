@@ -139,7 +139,7 @@ export function towingOnboardingEmail(answers: OnboardingAnswers): { subject: st
   const followUps = FOLLOW_UPS.filter((r) => answers[r.field] === r.answer).map((r) => r.note);
   const confirmNumber = ONBOARDING_SECTIONS.length + 1;
 
-  const subject = `New towing client onboarding: ${business}`.replace(/\s+/g, " ");
+  const subject = `New tow provider sign-up: ${business}`.replace(/\s+/g, " ");
 
   const followUpHtml = followUps.length
     ? `<tr><td style="padding:22px 28px 0">` +
@@ -156,7 +156,7 @@ export function towingOnboardingEmail(answers: OnboardingAnswers): { subject: st
     `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;margin:0 auto;background:#FFFFFF;border:1.5px solid ${C.ink};border-radius:14px;border-collapse:separate;overflow:hidden">` +
     // Header: who they are and how to reach them, before anything else.
     `<tr><td style="background:${C.forest};padding:22px 28px">` +
-    `<div style="font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:${C.lime}">New towing client onboarding</div>` +
+    `<div style="font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:${C.lime}">New tow provider sign-up</div>` +
     `<div style="font-size:24px;font-weight:800;line-height:1.25;color:${C.cream};margin-top:8px">${esc(business)}</div>` +
     `<div style="font-size:15px;line-height:1.6;color:${C.cream};margin-top:8px">${esc(contact)}` +
     ` &middot; ${link(telHref(phone), phone, C.lime)} &middot; ${link(`mailto:${email}`, email, C.lime)}</div>` +
@@ -176,7 +176,7 @@ export function towingOnboardingEmail(answers: OnboardingAnswers): { subject: st
 
   // Plain-text part, in the same order, for clients that do not render HTML.
   const lines = [
-    "NEW TOWING CLIENT ONBOARDING",
+    "NEW TOW PROVIDER SIGN-UP",
     business,
     `${contact} · ${phone} · ${email}`,
     address,

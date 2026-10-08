@@ -17,7 +17,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { ArrowRight, Menu, X } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Logo from './Logo';
-import { TOWING_BASE } from '../routes';
+import { TOWING_BASE, TOWING_ONBOARDING_PATH } from '../routes';
 
 interface NavLink {
   label: string;
@@ -115,20 +115,27 @@ export default function SiteNav({
               <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
             </a>
             <a
-              href="/audit"
+              href={TOWING_ONBOARDING_PATH}
               onClick={(e) => {
                 e.preventDefault();
-                navigate('/audit');
+                navigate(TOWING_ONBOARDING_PATH);
               }}
-              className={`group hidden sm:flex px-4 py-2 text-[11px] font-mono font-bold uppercase rounded-full border-1.5 border-ink transition-all duration-200 cursor-pointer focus-ring items-center gap-1.5 ${
-                location.pathname === '/audit'
+              className={`group hidden sm:flex px-4 py-2 text-[11px] font-mono font-bold uppercase whitespace-nowrap rounded-full border-1.5 border-ink transition-all duration-200 cursor-pointer focus-ring items-center gap-1.5 ${
+                location.pathname === TOWING_ONBOARDING_PATH
                   ? 'bg-lime text-ink shadow-hard'
                   : 'bg-ink text-cream hover:bg-lime hover:text-ink hover:shadow-hard hover:-translate-y-0.5'
               }`}
-              aria-current={location.pathname === '/audit' ? 'page' : undefined}
-              id="nav-audit-btn"
+              aria-current={location.pathname === TOWING_ONBOARDING_PATH ? 'page' : undefined}
+              id="nav-tow-provider-btn"
             >
-              <span>Free Audit</span>
+              {/* "Become a" drops out at md only: that is the one width where
+                  the four nav links share the bar with this button, and the
+                  full label is twice the length of the "Free Audit" it
+                  replaced. Below md the links are in the drawer; from lg there
+                  is room again. */}
+              <span>
+                <span className="md:hidden lg:inline">Become a </span>Tow Provider
+              </span>
               <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
             </a>
 
@@ -184,16 +191,16 @@ export default function SiteNav({
                   Get Free Quote &rarr;
                 </a>
                 <a
-                  href="/audit"
+                  href={TOWING_ONBOARDING_PATH}
                   onClick={(e) => {
                     e.preventDefault();
                     setOpen(false);
-                    navigate('/audit');
+                    navigate(TOWING_ONBOARDING_PATH);
                   }}
                   className="py-3.5 px-5 bg-lime text-ink font-mono text-xs font-bold uppercase rounded-full border-1.5 border-ink hover:bg-lime/90 transition-all shadow-hard text-center"
-                  id="mobile-nav-audit"
+                  id="mobile-nav-tow-provider"
                 >
-                  Free Audit &rarr;
+                  Become a Tow Provider &rarr;
                 </a>
               </div>
             </nav>
