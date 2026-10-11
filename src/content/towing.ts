@@ -387,9 +387,9 @@ function buyersGuideFor(
 ------------------------------------------------------------------------- */
 
 export const TOWING_PILLAR: TowingPillar = {
-  // Created in d5914d8; last substantive change in 642a3ea (the intro rewrite).
+  // Created in d5914d8; last substantive change in 6565c27 (SEO plan phases 1-4).
   published: '2026-08-27T06:13:50+05:00',
-  updated: '2026-09-17T21:54:36+05:00',
+  updated: '2026-10-12T02:34:42+05:00',
   metros: [],
   intro:
     'OptimizeIndex builds AI solutions for towing companies that are missing revenue: AI-driven SEO, Google Business Profile and AI-assistant visibility that get you found on Google, Google Maps and in AI answers, and turn that into direct calls. We report on calls and booked jobs rather than rankings, because a tow operator gets paid for tows and not for impressions.',
@@ -559,10 +559,9 @@ export const TOWING_PILLAR: TowingPillar = {
 const california: TowingState = {
   slug: 'california',
   state: 'California',
-  // Created in d5914d8; last substantive change in c2e6059 (the repositioning).
-  // 642a3ea only swapped the H1/title literals for stateHeadline(), same text.
+  // Created in d5914d8; last substantive change in 6565c27 (SEO plan phases 1-4).
   published: '2026-08-27T06:13:50+05:00',
-  updated: '2026-08-28T02:43:53+05:00',
+  updated: '2026-10-12T02:34:42+05:00',
   metros: ['Los Angeles', 'San Diego', 'San Jose', 'Sacramento', 'Fresno', 'the Inland Empire'],
   h1Override: stateHeadline('California'),
   titleOverride: stateHeadline('California'),
@@ -736,9 +735,9 @@ const california: TowingState = {
 const florida: TowingState = {
   slug: 'florida',
   state: 'Florida',
-  // Created in d5914d8; last substantive change in c2e6059.
+  // Created in d5914d8; last substantive change in 6565c27 (SEO plan phases 1-4).
   published: '2026-08-27T06:13:50+05:00',
-  updated: '2026-08-28T02:43:53+05:00',
+  updated: '2026-10-12T02:34:42+05:00',
   metros: ['Miami', 'Tampa', 'Orlando', 'Jacksonville', 'Fort Lauderdale', 'St. Petersburg'],
   h1Override: stateHeadline('Florida'),
   titleOverride: stateHeadline('Florida'),
@@ -904,9 +903,9 @@ const florida: TowingState = {
 const georgia: TowingState = {
   slug: 'georgia',
   state: 'Georgia',
-  // Created in d5914d8; last substantive change in c2e6059.
+  // Created in d5914d8; last substantive change in 6565c27 (SEO plan phases 1-4).
   published: '2026-08-27T06:13:50+05:00',
-  updated: '2026-08-28T02:43:53+05:00',
+  updated: '2026-10-12T02:34:42+05:00',
   metros: ['Atlanta', 'Savannah', 'Augusta', 'Columbus', 'Macon'],
   h1Override: stateHeadline('Georgia'),
   titleOverride: stateHeadline('Georgia'),
@@ -1072,9 +1071,9 @@ const georgia: TowingState = {
 const pennsylvania: TowingState = {
   slug: 'pennsylvania',
   state: 'Pennsylvania',
-  // Created in d5914d8; last substantive change in c2e6059.
+  // Created in d5914d8; last substantive change in 6565c27 (SEO plan phases 1-4).
   published: '2026-08-27T06:13:50+05:00',
-  updated: '2026-08-28T02:43:53+05:00',
+  updated: '2026-10-12T02:34:42+05:00',
   metros: ['Philadelphia', 'Pittsburgh', 'Allentown', 'Erie', 'Harrisburg', 'Scranton'],
   h1Override: stateHeadline('Pennsylvania'),
   titleOverride: stateHeadline('Pennsylvania'),
@@ -1231,9 +1230,9 @@ const pennsylvania: TowingState = {
 const indiana: TowingState = {
   slug: 'indiana',
   state: 'Indiana',
-  // Created in d5914d8; last substantive change in c2e6059.
+  // Created in d5914d8; last substantive change in 6565c27 (SEO plan phases 1-4).
   published: '2026-08-27T06:13:50+05:00',
-  updated: '2026-08-28T02:43:53+05:00',
+  updated: '2026-10-12T02:34:42+05:00',
   metros: ['Indianapolis', 'Fort Wayne', 'Evansville', 'South Bend', 'Gary'],
   h1Override: stateHeadline('Indiana'),
   titleOverride: stateHeadline('Indiana'),
@@ -1416,10 +1415,9 @@ const indiana: TowingState = {
 const michigan: TowingState = {
   slug: 'michigan',
   state: 'Michigan',
-  // Created in c2e6059; last substantive change in 7156b93 (the chat-widget
-  // paragraph in mi-what-ai-agency-does).
+  // Created in c2e6059; last substantive change in 6565c27 (SEO plan phases 1-4).
   published: '2026-08-28T02:43:53+05:00',
-  updated: '2026-09-09T21:53:21+05:00',
+  updated: '2026-10-12T02:34:42+05:00',
   metros: ['Detroit', 'Grand Rapids', 'Warren', 'Sterling Heights', 'Ann Arbor', 'Lansing', 'Flint'],
   h1Override: stateHeadline('Michigan'),
   titleOverride: stateHeadline('Michigan'),
@@ -1656,10 +1654,9 @@ const michigan: TowingState = {
 const washington: TowingState = {
   slug: 'washington',
   state: 'Washington',
-  // Created in 23c728c. 642a3ea only swapped the H1/title literals for
-  // stateHeadline(), same text, so the content has not changed since.
+  // Created in 23c728c; last substantive change in 6565c27 (SEO plan phases 1-4).
   published: '2026-09-02T01:09:34+05:00',
-  updated: '2026-09-02T01:09:34+05:00',
+  updated: '2026-10-12T02:34:42+05:00',
   metros: ['Seattle', 'Tacoma', 'Spokane', 'Vancouver', 'Bellevue', 'Everett', 'Yakima'],
   h1Override: stateHeadline('Washington'),
   titleOverride: stateHeadline('Washington'),

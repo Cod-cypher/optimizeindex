@@ -47,9 +47,9 @@ export const motorClub: TowingJobsChild = {
     'An operator-side look at motor club work: how dispatch works, what you give up on rate and customer ownership, and how to judge it on profit rather than volume.',
   lede:
     'Motor club work is dispatch from a roadside assistance network — AAA, Agero and similar — where a member calls the club and the club sends you. It fills a schedule reliably and at a rate you did not set. Whether that is worth it depends on something specific to your operation: what the truck would otherwise be doing at that hour.',
-  // From git: created in 1e4a682, with no later commit to this file.
+  // From git: created in 1e4a682; last substantive change in 6565c27 (SEO plan phases 1-4).
   published: '2026-09-03T01:11:19+05:00',
-  updated: '2026-09-03T01:11:19+05:00',
+  updated: '2026-10-12T02:34:42+05:00',
 
   sections: [
     {

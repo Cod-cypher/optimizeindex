@@ -295,7 +295,7 @@ export const TOWING_JOBS = {
    * would claim a fresh review on every deploy.
    */
   published: '2026-09-02T22:10:52+05:00',
-  updated: '2026-09-17T21:54:36+05:00',
+  updated: '2026-10-12T02:34:42+05:00',
 
   mix: MIX,
   decisions: DECISIONS,

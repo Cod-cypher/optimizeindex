@@ -47,9 +47,9 @@ export const directCalls: TowingJobsChild = {
     'A practical setup for winning more cash calls: service area, hours, tap-to-call, review cadence, call tracking, and how to tell a real job from a wrong number.',
   lede:
     'Direct calls — what most operators call cash calls — are the ones that reach you without a motor club, a rotation list or a broker in between. They are won at the moment someone searches, and almost everything that decides them is configuration rather than persuasion: whether you appear, whether the profile is accurate, whether the phone is one tap away, and whether you can tell afterwards which of those changed anything.',
-  // From git: created in 1e4a682, with no later commit to this file.
+  // From git: created in 1e4a682; last substantive change in 6565c27 (SEO plan phases 1-4).
   published: '2026-09-03T01:11:19+05:00',
-  updated: '2026-09-03T01:11:19+05:00',
+  updated: '2026-10-12T02:34:42+05:00',
 
   sections: [
     {

@@ -25,9 +25,9 @@ export const commercialAccounts: TowingJobsChild = {
     'Commercial towing accounts are sold, not searched. Who buys them, how to approach, what a fleet buyer checks before signing, and how billing usually works.',
   lede:
     'A commercial towing account is a standing arrangement with a business that owns or manages vehicles — a dealership, body shop, rental branch, carrier or property manager — that calls you first and settles on terms rather than at the roadside. These are won by sales rather than by search, and the buyer is evaluating you against a short list before the first call ever comes in.',
-  // From git: created in 1e4a682, with no later commit to this file.
+  // From git: created in 1e4a682; last substantive change in 6565c27 (SEO plan phases 1-4).
   published: '2026-09-03T01:11:19+05:00',
-  updated: '2026-09-03T01:11:19+05:00',
+  updated: '2026-10-12T02:34:42+05:00',
 
   sections: [
     {

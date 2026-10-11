@@ -385,10 +385,10 @@ const towingRoutes: RouteMeta[] = [
     description:
       'We serve towing operators in every US state. Seven states have their own page on what differs there: rate rules, truck classes, freight and weather.',
     priority: 0.7,
-    // acb5820 created the hub; 0eb7f9a added its link to /towing-jobs. Bump
-    // `updated` in the commit that ships the 2026-10-12 coverage wording.
+    // acb5820 created the hub; 0eb7f9a added its link to /towing-jobs;
+    // last substantive change in 6565c27 (SEO plan phases 1-4) (coverage wording).
     published: '2026-09-02T01:30:42+05:00',
-    updated: '2026-09-02T22:10:52+05:00',
+    updated: '2026-10-12T02:34:42+05:00',
     jsonLd: [
       // No BreadcrumbList: this page shows no visible trail, and structured
       // data has to describe what is on the page.
@@ -544,7 +544,7 @@ export const ROUTES: RouteMeta[] = [
     priority: 1.0,
     // a066589 swapped the homepage's second service card.
     published: '2026-07-15T03:42:23+05:00',
-    updated: '2026-10-08T05:59:44+05:00',
+    updated: '2026-10-12T02:34:42+05:00',
   },
   {
     path: '/services',
@@ -554,7 +554,7 @@ export const ROUTES: RouteMeta[] = [
     priority: 0.9,
     // a066589 rewrote the Conversion Optimization description listed here.
     published: '2026-07-15T03:42:23+05:00',
-    updated: '2026-10-08T05:59:44+05:00',
+    updated: '2026-10-12T02:34:42+05:00',
     // No BreadcrumbList: a single-level page with no visible trail.
     jsonLd: [faqPage(SERVICES_FAQS)],
   },
@@ -566,7 +566,7 @@ export const ROUTES: RouteMeta[] = [
     priority: 0.9,
     // aaca486 is the last commit to change the case-studies list view.
     published: '2026-07-15T03:42:23+05:00',
-    updated: '2026-08-25T05:03:32+05:00',
+    updated: '2026-10-12T02:34:42+05:00',
   },
   ...caseStudyRoutes,
   ...towingRoutes,
@@ -578,10 +578,10 @@ export const ROUTES: RouteMeta[] = [
     description:
       'OptimizeIndex, a trade name of Idea Brothers LLC, builds AI solutions for towing and roadside operators, including an AI voice agent that answers calls.',
     priority: 0.7,
-    // 755a1b1 created the page; it has not changed in git since. Bump
-    // `updated` in the commit that ships the 2026-10-12 rewrite of about.ts.
+    // 755a1b1 created the page;
+    // last substantive change in 6565c27 (SEO plan phases 1-4) (the about.ts rewrite).
     published: '2026-09-10T23:59:21+05:00',
-    updated: '2026-09-10T23:59:21+05:00',
+    updated: '2026-10-12T02:34:42+05:00',
     jsonLd: [
       /*
         AboutPage rather than a second Organization node. The sitewide graph
@@ -609,7 +609,7 @@ export const ROUTES: RouteMeta[] = [
     priority: 0.9,
     // aaca486 added the audit FAQs and is the last change to this view.
     published: '2026-07-15T03:42:23+05:00',
-    updated: '2026-08-25T05:03:32+05:00',
+    updated: '2026-10-12T02:34:42+05:00',
     // No BreadcrumbList: a single-level page with no visible trail.
     jsonLd: [faqPage(AUDIT_FAQS)],
   },
@@ -621,7 +621,7 @@ export const ROUTES: RouteMeta[] = [
     priority: 0.9,
     // aaca486 added the quote FAQs and is the last change to this view.
     published: '2026-07-15T03:42:23+05:00',
-    updated: '2026-08-25T05:03:32+05:00',
+    updated: '2026-10-12T02:34:42+05:00',
     // No BreadcrumbList: a single-level page with no visible trail.
     jsonLd: [faqPage(QUOTE_FAQS)],
   },
@@ -633,7 +633,7 @@ export const ROUTES: RouteMeta[] = [
     priority: 0.3,
     // 5d46225 is the last change to the policy text (SMS section 5).
     published: '2026-07-15T03:42:23+05:00',
-    updated: '2026-09-20T04:01:56+05:00',
+    updated: '2026-10-12T02:34:42+05:00',
   },
   {
     path: '/terms-of-service',

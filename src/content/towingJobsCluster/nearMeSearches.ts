@@ -60,9 +60,9 @@ export const nearMeSearches: TowingJobsChild = {
     'Which of "towing near me", "24 hour towing", "flatbed towing" and the other searches a tow operator can win, and when a city or service page earns its URL.',
   lede:
     '"Towing near me" is decided by where the searcher is standing, and no page on your website changes that. Google documents three inputs to a local result — relevance, distance and prominence — and the middle one is fixed the moment the search happens. What you control is whether your business is understood to do the thing being searched for, and how credible it looks in the few seconds it is on screen. This page takes the searches the public actually types, one at a time, and says which of them you can win, with what, and when a page of your own is worth having.',
-  // From git: created in 3ed5277, with no later commit to this file.
+  // From git: created in 3ed5277; last substantive change in 6565c27 (SEO plan phases 1-4).
   published: '2026-09-22T05:45:22+05:00',
-  updated: '2026-09-22T05:45:22+05:00',
+  updated: '2026-10-12T02:34:42+05:00',
 
   sections: [
     {

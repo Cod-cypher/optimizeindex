@@ -80,9 +80,9 @@ export const privatePropertyContracts: TowingJobsChild = {
     'Who awards private property towing contracts, what a manager is buying, the posting and notice rules that make a tow lawful, and what the contract obliges.',
   lede:
     'A private property towing contract is an agreement with whoever controls a lot, a garage or a residential complex to remove vehicles that are parked there without authority. The property does not pay you; the vehicle owner does, at rates the state often caps. What the property is buying is a problem handled without becoming a bigger one, and the operator who understands the statute better than the manager does is the one who tends to get the signature.',
-  // From git: created in 642a3ea, with no later commit to this file.
+  // From git: created in 642a3ea; last substantive change in 6565c27 (SEO plan phases 1-4).
   published: '2026-09-17T21:54:36+05:00',
-  updated: '2026-09-17T21:54:36+05:00',
+  updated: '2026-10-12T02:34:42+05:00',
 
   sections: [
     {

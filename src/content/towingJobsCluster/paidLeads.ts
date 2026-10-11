@@ -46,9 +46,9 @@ export const paidLeads: TowingJobsChild = {
     'Shared versus exclusive leads, pay-per-call, how to vet a vendor, and the difference between renting demand each month and owning it. No vendor pricing claims.',
   lede:
     'Buying towing leads means paying a third party for contact with a motorist who needs a tow — sometimes as a form submission passed to several operators at once, sometimes as a live call routed to your phone. It can fill a schedule quickly. What it does not do is build anything you keep, and almost every published comparison of the two is written by someone selling one of them.',
-  // From git: created in 1e4a682, with no later commit to this file.
+  // From git: created in 1e4a682; last substantive change in 6565c27 (SEO plan phases 1-4).
   published: '2026-09-03T01:11:19+05:00',
-  updated: '2026-09-03T01:11:19+05:00',
+  updated: '2026-10-12T02:34:42+05:00',
 
   sections: [
     {

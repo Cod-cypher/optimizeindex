@@ -77,9 +77,9 @@ export const heavyDutyAccounts: TowingJobsChild = {
     "Who buys heavy recovery, why equipment is the entry ticket, and how Georgia's TRIP, Florida's RISC and Washington's MIT certify and pay operators.",
   lede:
     'Heavy-duty towing accounts are won by being qualified before the incident: the motor carrier, the insurer and the state quick-clearance program each decide who they will call while nothing is wrong, and the decision turns on equipment class, trained people, response you can prove and an invoice that survives an adjuster. Almost none of it is a search problem, and the part that is comes last.',
-  // From git: created in 642a3ea, with no later commit to this file.
+  // From git: created in 642a3ea; last substantive change in 6565c27 (SEO plan phases 1-4).
   published: '2026-09-17T21:54:36+05:00',
-  updated: '2026-09-17T21:54:36+05:00',
+  updated: '2026-10-12T02:34:42+05:00',
 
   sections: [
     {
