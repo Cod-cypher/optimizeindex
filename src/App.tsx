@@ -61,6 +61,7 @@ import { submitLead } from './lib/leads';
 import LeadModal from './components/LeadModal';
 import FaqSection from './components/FaqSection';
 import HeroAudit from './components/audit/HeroAudit';
+import InteractiveChart from './components/InteractiveChart';
 import Starburst from './components/Starburst';
 // Statically imported, like the towing pages that also render it: the case
 // studies are pre-rendered and a lazy import would bake in a Suspense fallback.
@@ -77,12 +78,16 @@ import SiteFooter from './components/SiteFooter';
 // doesn't silently depend on the order of the data file.
 const HOME_SERVICE_IDS = ['gmb', 'cro', 'aeo', 'geo'];
 
-// The two client results shown as cards in the homepage hero, read from
-// CASE_STUDIES so the figure, baseline, client and tool come from the study
-// itself. They replaced an invented "+312% revenue" forecast chart, which no
-// client data stood behind. A real client series can go back in that spot only
-// with the client's consent and the measurement period stated.
+// The two client results shown as small cards on the corners of the hero's
+// chart panel, read from CASE_STUDIES so the figure, client and tool come from
+// the study itself. They stay small on purpose: the panel is the centrepiece,
+// and neither result should dominate the hero. The panel itself is an
+// illustration with no figures (HERO_CHART in data.ts).
 const HERO_RESULT_IDS = ['jade-title-services', 'sujood-mats'];
+const [HERO_TOP_RESULT, HERO_BOTTOM_RESULT] = HERO_RESULT_IDS.map((id) => CASE_STUDIES.find((s) => s.id === id));
+// The cards are 190-210px wide, so the tool gets its short name, as it always had.
+const heroTool = (study: Parameters<typeof verifiedIn>[0]) =>
+  verifiedIn(study).replace(/^Google Analytics 4$/i, 'GA4').replace(/^Google Search Console$/i, 'Search Console');
 
 // Every path that resolves to a real page. Aliases are 301'd server-side
 // (see REDIRECTS in routes.ts) but are listed here so a client-side visit to
@@ -417,63 +422,55 @@ export default function App() {
 
             </div>
 
-            {/* Collage Column (42%) — the idle-state visual: the two published
-                client results, each linking to the study that backs it. */}
+            {/* Collage Column (42%) — the idle-state visual: the chart panel,
+                with the two published client results as small cards on its
+                corners. */}
             {!auditActive && (
-            <div className="lg:col-span-5 relative w-full flex items-center justify-center lg:justify-end">
-              <div className="relative w-full max-w-[430px] pt-6 flex flex-col gap-6">
+            <div className="lg:col-span-5 relative w-full h-[450px] flex items-center justify-center lg:justify-end">
 
-                {/* Starburst Sticker (overlaps the first card's top-right
-                    corner, where the card has no text) */}
-                <Starburst
-                  text="FREE AUDIT"
-                  ariaLabel="Start your free audit"
-                  className="absolute -right-3 -top-4 z-20 scale-90 md:scale-100 rotate-[8deg]"
-                  size={96}
-                  rotationSpeed={30}
-                  onClick={() => {
-                    document.getElementById('hero-audit-input')?.focus();
-                  }}
-                />
+              {/* Starburst Sticker, beside the panel's left edge. `relative`,
+                  not `absolute`: the old Starburst forced relative on its root,
+                  so this is where the sticker has always sat. */}
+              <Starburst
+                text="FREE AUDIT"
+                ariaLabel="Start your free audit"
+                className="relative left-4 top-2 z-20 scale-90 md:scale-100 rotate-[-8deg]"
+                size={96}
+                rotationSpeed={30}
+                onClick={() => {
+                  document.getElementById('hero-audit-input')?.focus();
+                }}
+              />
 
-                {HERO_RESULT_IDS.map((id) => CASE_STUDIES.find((s) => s.id === id)).map((study, i) => {
-                  if (!study) return null;
-                  const light = i % 2 === 0;
-                  return (
-                    <a
-                      key={study.id}
-                      href={`/case-study/${study.id}`}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        navigate(`/case-study/${study.id}`);
-                      }}
-                      className={`block border-2 border-ink rounded-2xl p-6 text-left shadow-hard-lg hover:shadow-hard-hover transition-shadow focus-ring ${
-                        light ? 'bg-paper text-ink rotate-[1.5deg]' : 'bg-ink text-cream rotate-[-1.5deg]'
-                      }`}
-                      id={`hero-result-${study.id}`}
-                    >
-                      <span className={`block font-mono text-[10px] font-bold uppercase tracking-widest ${light ? 'text-stone' : 'text-lime'}`}>
-                        Client result
-                      </span>
-                      <span className={`block font-display font-black text-4xl md:text-5xl tracking-tight mt-1 ${light ? 'text-ink' : 'text-lime'}`}>
-                        {study.stat}
-                      </span>
-                      <span className="block font-mono text-xs uppercase mt-1">
-                        {study.metric}
-                      </span>
-                      {study.baseline && (
-                        <span className={`block font-sans text-sm mt-2 ${light ? 'text-stone' : 'text-cream/80'}`}>
-                          {study.baseline}
-                        </span>
-                      )}
-                      <span className={`block font-mono text-[10px] uppercase tracking-wide mt-4 ${light ? 'text-forest' : 'text-cream/75'}`}>
-                        ✓ {study.client} · {verifiedIn(study)}
-                      </span>
-                    </a>
-                  );
-                })}
-
+              {/* Main Forest Panel Base (holds the chart) */}
+              <div className="w-full max-w-[430px] h-[340px] bg-forest border-2 border-ink shadow-hard-lg rounded-2xl p-5 relative flex flex-col justify-between overflow-hidden z-10 select-none">
+                <InteractiveChart />
               </div>
+
+              {/* Overlapping White Card (top-right, half-on/half-off) */}
+              {HERO_TOP_RESULT && (
+                <div
+                  id={`hero-result-${HERO_TOP_RESULT.id}`}
+                  className="absolute right-[-10px] top-[15px] bg-paper border-1.5 border-ink px-4 py-2.5 rounded-xl shadow-hard z-20 rotate-[6deg] max-w-[190px] text-left select-none pointer-events-none"
+                >
+                  <p className="font-mono text-[9px] text-stone uppercase">CLIENT RESULT</p>
+                  <p className="font-display font-black text-sm text-ink uppercase leading-tight">{HERO_TOP_RESULT.stat} {HERO_TOP_RESULT.metric}</p>
+                  <p className="font-mono text-[8px] text-forest mt-1 uppercase">✓ {HERO_TOP_RESULT.client} · {heroTool(HERO_TOP_RESULT)}</p>
+                </div>
+              )}
+
+              {/* Overlapping Ink Card (bottom-left, anchors right) */}
+              {HERO_BOTTOM_RESULT && (
+                <div
+                  id={`hero-result-${HERO_BOTTOM_RESULT.id}`}
+                  className="absolute left-[20px] bottom-[15px] bg-ink border-1.5 border-ink px-4 py-3 rounded-xl shadow-hard z-20 rotate-[-4deg] max-w-[210px] text-left select-none pointer-events-none"
+                >
+                  <p className="font-mono text-[9px] text-lime uppercase">CLIENT RESULT</p>
+                  <p className="font-display font-black text-sm text-lime uppercase leading-tight">{HERO_BOTTOM_RESULT.stat} {HERO_BOTTOM_RESULT.metric}</p>
+                  <p className="font-mono text-[8px] text-cream/60 mt-1">{HERO_BOTTOM_RESULT.client} · {heroTool(HERO_BOTTOM_RESULT)}</p>
+                </div>
+              )}
+
             </div>
             )}
 

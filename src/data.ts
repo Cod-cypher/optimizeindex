@@ -498,6 +498,36 @@ export const PROCESS_STEPS: ProcessStep[] = [
   }
 ];
 
+/**
+ * The homepage hero chart: an illustration of how an engagement builds, one
+ * node per PROCESS_STEPS entry (same order), and what we report at each step.
+ *
+ * It replaced a "live forecast" that showed invented revenue (+312%, $184,000,
+ * "LAST UPDATE: TODAY"). Nothing here may carry a figure, a date or a dollar
+ * value: the panel is labelled as an illustration, and a real client series
+ * goes here only with the client's consent and its measurement period.
+ * `level` only sets the height of the curve (0-100) and is never displayed.
+ */
+// Kept as short as the figures it replaced: the panel is 340px tall and, on a
+// phone, under 300px wide, so every line here has to fit on one line.
+export const HERO_CHART = {
+  title: 'How it builds',
+  badge: 'Calls & jobs',
+  idleLabel: 'What we report',
+  idleValue: 'Booked jobs',
+  idleNote: 'not rankings',
+  idleHint: 'Illustration: tap or hover a step',
+  hoverHint: 'Hover the steps',
+  footnote: 'Illustration · not client data',
+  steps: [
+    { label: 'Research', reports: 'The searches customers use', level: 12 },
+    { label: 'Profile', reports: 'Calls, directions, site clicks', level: 30 },
+    { label: 'Search', reports: 'Search clicks and enquiries', level: 50 },
+    { label: 'Answers', reports: 'Questions your pages answer', level: 69 },
+    { label: 'AI search', reports: 'How AI describes you', level: 88 },
+  ],
+};
+
 /*
   There is deliberately no TESTIMONIALS list. The one that used to be here
   carried three anonymous quotes ("Manufacturing Executive", "E-commerce
