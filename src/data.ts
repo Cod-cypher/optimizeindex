@@ -504,8 +504,8 @@ export const PROCESS_STEPS: ProcessStep[] = [
  *
  * It replaced a "live forecast" that showed invented revenue (+312%, $184,000,
  * "LAST UPDATE: TODAY"). Nothing here may carry a figure, a date or a dollar
- * value: the panel is labelled as an illustration, and a real client series
- * goes here only with the client's consent and its measurement period.
+ * value, so the curve claims no result; a real client series goes here only
+ * with the client's consent and its measurement period.
  * `level` only sets the height of the curve (0-100) and is never displayed.
  */
 // Kept as short as the figures it replaced: the panel is 340px tall and, on a
@@ -516,9 +516,8 @@ export const HERO_CHART = {
   idleLabel: 'What we report',
   idleValue: 'Booked jobs',
   idleNote: 'not rankings',
-  idleHint: 'Illustration: tap or hover a step',
-  hoverHint: 'Hover the steps',
-  footnote: 'Illustration · not client data',
+  idleHint: 'Five steps, from research to AI search',
+  hoverHint: 'Tap or hover the steps',
   steps: [
     { label: 'Research', reports: 'The searches customers use', level: 12 },
     { label: 'Profile', reports: 'Calls, directions, site clicks', level: 30 },

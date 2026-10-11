@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { TrendingUp, MousePointerClick, Info, Award } from 'lucide-react';
+import { TrendingUp, MousePointerClick, Award } from 'lucide-react';
 import { HERO_CHART } from '../data';
 
 /**
@@ -96,7 +96,7 @@ export default function InteractiveChart() {
 
       {/* SVG Container */}
       {/* min-h 120, not 160: at 160 the panel's fixed 340px clipped the
-          footer, and with it the "not client data" label. */}
+          footer. */}
       <div className="relative flex-1 min-h-[120px] flex items-center justify-center bg-ink/30 border border-cream/5 rounded-xl p-2 select-none overflow-visible">
         <svg
           viewBox={`0 0 ${width} ${height}`}
@@ -223,15 +223,12 @@ export default function InteractiveChart() {
         </AnimatePresence>
       </div>
 
-      {/* Footer */}
-      <div className="flex items-center justify-between border-t border-cream/10 pt-3 mt-2 text-[9px] font-mono text-cream/60">
+      {/* Footer. Right-aligned: the hero's bottom-left card covers the
+          left end of this row. */}
+      <div className="flex items-center justify-end border-t border-cream/10 pt-3 mt-2 text-[9px] font-mono text-cream/60">
         <span className="flex items-center gap-1 uppercase">
           <MousePointerClick className="w-3 h-3 text-lime" />
           {HERO_CHART.hoverHint}
-        </span>
-        <span className="flex items-center gap-1 uppercase">
-          <Info className="w-3 h-3" />
-          {HERO_CHART.footnote}
         </span>
       </div>
     </div>
