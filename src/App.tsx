@@ -78,13 +78,12 @@ import SiteFooter from './components/SiteFooter';
 // doesn't silently depend on the order of the data file.
 const HOME_SERVICE_IDS = ['gmb', 'cro', 'aeo', 'geo'];
 
-// The two client results shown as small cards on the corners of the hero's
-// chart panel, read from CASE_STUDIES so the figure, client and tool come from
-// the study itself. They stay small on purpose: the panel is the centrepiece,
-// and neither result should dominate the hero. The panel itself is an
-// illustration with no figures (HERO_CHART in data.ts).
-const HERO_RESULT_IDS = ['jade-title-services', 'sujood-mats'];
-const [HERO_TOP_RESULT, HERO_BOTTOM_RESULT] = HERO_RESULT_IDS.map((id) => CASE_STUDIES.find((s) => s.id === id));
+// The hero's example client: both small cards on the corners of the chart
+// panel come from this one study (the headline figure on one, its baseline on
+// the other), read from CASE_STUDIES so they cannot drift from the study page.
+// They stay small on purpose: the panel is the centrepiece. The panel itself is
+// an illustration with no figures (HERO_CHART in data.ts).
+const HERO_STUDY = CASE_STUDIES.find((s) => s.id === 'jade-title-services');
 // The cards are 190-210px wide, so the tool gets its short name, as it always had.
 const heroTool = (study: Parameters<typeof verifiedIn>[0]) =>
   verifiedIn(study).replace(/^Google Analytics 4$/i, 'GA4').replace(/^Google Search Console$/i, 'Search Console');
@@ -447,27 +446,29 @@ export default function App() {
                 <InteractiveChart />
               </div>
 
-              {/* Overlapping White Card (top-right, half-on/half-off) */}
-              {HERO_TOP_RESULT && (
+              {/* Overlapping White Card (top-right, half-on/half-off): the
+                  example client's headline figure */}
+              {HERO_STUDY && (
                 <div
-                  id={`hero-result-${HERO_TOP_RESULT.id}`}
+                  id={`hero-result-${HERO_STUDY.id}`}
                   className="absolute right-[-10px] top-[15px] bg-paper border-1.5 border-ink px-4 py-2.5 rounded-xl shadow-hard z-20 rotate-[6deg] max-w-[190px] text-left select-none pointer-events-none"
                 >
                   <p className="font-mono text-[9px] text-stone uppercase">CLIENT RESULT</p>
-                  <p className="font-display font-black text-sm text-ink uppercase leading-tight">{HERO_TOP_RESULT.stat} {HERO_TOP_RESULT.metric}</p>
-                  <p className="font-mono text-[8px] text-forest mt-1 uppercase">✓ {HERO_TOP_RESULT.client} · {heroTool(HERO_TOP_RESULT)}</p>
+                  <p className="font-display font-black text-sm text-ink uppercase leading-tight">{HERO_STUDY.stat} {HERO_STUDY.metric}</p>
+                  <p className="font-mono text-[8px] text-forest mt-1 uppercase">✓ {HERO_STUDY.client} · {heroTool(HERO_STUDY)}</p>
                 </div>
               )}
 
-              {/* Overlapping Ink Card (bottom-left, anchors right) */}
-              {HERO_BOTTOM_RESULT && (
+              {/* Overlapping Ink Card (bottom-left, anchors right): the same
+                  client's figure in absolute terms */}
+              {HERO_STUDY?.baseline && (
                 <div
-                  id={`hero-result-${HERO_BOTTOM_RESULT.id}`}
+                  id={`hero-result-${HERO_STUDY.id}-baseline`}
                   className="absolute left-[20px] bottom-[15px] bg-ink border-1.5 border-ink px-4 py-3 rounded-xl shadow-hard z-20 rotate-[-4deg] max-w-[210px] text-left select-none pointer-events-none"
                 >
                   <p className="font-mono text-[9px] text-lime uppercase">CLIENT RESULT</p>
-                  <p className="font-display font-black text-sm text-lime uppercase leading-tight">{HERO_BOTTOM_RESULT.stat} {HERO_BOTTOM_RESULT.metric}</p>
-                  <p className="font-mono text-[8px] text-cream/60 mt-1">{HERO_BOTTOM_RESULT.client} · {heroTool(HERO_BOTTOM_RESULT)}</p>
+                  <p className="font-display font-black text-sm text-lime uppercase leading-tight">{HERO_STUDY.baseline}</p>
+                  <p className="font-mono text-[8px] text-cream/60 mt-1">{HERO_STUDY.client} · {heroTool(HERO_STUDY)}</p>
                 </div>
               )}
 
