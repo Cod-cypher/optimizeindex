@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   ArrowRight, 
@@ -29,7 +29,7 @@ import {
   Target,
 } from 'lucide-react';
 
-import { GOALS, SERVICES, CASE_STUDIES, PROCESS_STEPS, AUDIT_FAQS, QUOTE_FAQS } from './data';
+import { GOALS, SERVICES, CASE_STUDIES, PROCESS_STEPS, AUDIT_FAQS, QUOTE_FAQS, verifiedIn } from './data';
 import { SERVICES_FAQS } from './content/services';
 import {
   SMS_PROGRAM_NAME,
@@ -51,19 +51,20 @@ import {
   SMS_PROVIDER_SHARING,
   SMS_CARRIER_LIABILITY,
 } from './content/sms';
-import { ROUTES, getRouteMeta, canonicalFor, CONTACT_EMAIL, CONTACT_PHONE_DISPLAY } from './routes';
-import { buildHeadTags } from './lib/head';
+import { ROUTES, canonicalFor, caseStudyTrail, CONTACT_EMAIL, CONTACT_PHONE_DISPLAY } from './routes';
 import { GoalId, CaseStudy } from './types';
 import { submitLead } from './lib/leads';
-import { trackPageView } from './lib/analytics';
-import { trackPageViewStart } from './lib/tracker';
+// Head tags and SPA page views are no longer synced here: useRouteHead() in
+// src/lib/useRouteHead.ts does both for every page, from AppRouter.
 
 // Subcomponents
 import LeadModal from './components/LeadModal';
 import FaqSection from './components/FaqSection';
 import HeroAudit from './components/audit/HeroAudit';
-import InteractiveChart from './components/InteractiveChart';
 import Starburst from './components/Starburst';
+// Statically imported, like the towing pages that also render it: the case
+// studies are pre-rendered and a lazy import would bake in a Suspense fallback.
+import { Byline } from './pages/towingShared';
 import Marquee from './components/Marquee';
 import Logo from './components/Logo';
 import SiteNav from './components/SiteNav';
@@ -75,6 +76,13 @@ import SiteFooter from './components/SiteFooter';
 // GEO ladder. Listed by id rather than SERVICES.slice(0, 4) so the selection
 // doesn't silently depend on the order of the data file.
 const HOME_SERVICE_IDS = ['gmb', 'cro', 'aeo', 'geo'];
+
+// The two client results shown as cards in the homepage hero, read from
+// CASE_STUDIES so the figure, baseline, client and tool come from the study
+// itself. They replaced an invented "+312% revenue" forecast chart, which no
+// client data stood behind. A real client series can go back in that spot only
+// with the client's consent and the measurement period stated.
+const HERO_RESULT_IDS = ['jade-title-services', 'sujood-mats'];
 
 // Every path that resolves to a real page. Aliases are 301'd server-side
 // (see REDIRECTS in routes.ts) but are listed here so a client-side visit to
@@ -257,36 +265,14 @@ export default function App() {
   const [localLeads, setLocalLeads] = useState<any[]>([]);
   const [showLeadDrawer, setShowLeadDrawer] = useState(false);
 
-  // Analytics: send SPA page views on route change. The initial load is
-  // covered by the gtag config snippet (GA4) and initTracker (first-party),
-  // so skip the first render.
-  const isFirstPageView = useRef(true);
-  useEffect(() => {
-    if (isFirstPageView.current) {
-      isFirstPageView.current = false;
-      return;
-    }
-    trackPageView(location.pathname + location.search);
-    trackPageViewStart(location.pathname + location.search);
-  }, [location.pathname, location.search]);
+  // Page views and head tags are handled once, for every page, by
+  // useRouteHead() in AppRouter — this component used to do both, which left
+  // the towing, hub and about pages with a stale head and no page views after
+  // a client-side navigation.
 
-  // Initialize currentView based on URL params on location changes
+  // Apply query parameters and scroll on location changes
   useEffect(() => {
-    // 1. Sync every head tag — title, description, canonical, og:*, twitter:*
-    // and JSON-LD — from the same source the prerenderer used, so a client-side
-    // navigation leaves the head exactly as a fresh load of that URL would.
-    const meta = getRouteMeta(location.pathname);
-    for (const tag of buildHeadTags(meta)) {
-      const existing = document.head.querySelector(tag.selector);
-      const template = document.createElement('template');
-      template.innerHTML = tag.html;
-      const next = template.content.firstElementChild;
-      if (!next) continue;
-      if (existing) existing.replaceWith(next);
-      else document.head.appendChild(next);
-    }
-
-    // 2. Parse query parameters
+    // 1. Parse query parameters
     const serviceParam = searchParams.get('service');
     const goalParam = searchParams.get('goal');
 
@@ -299,7 +285,7 @@ export default function App() {
       setAuditGoal(goalParam as GoalId);
     }
 
-    // 3. Handle hash scroll or top scroll
+    // 2. Handle hash scroll or top scroll
     const hash = location.hash;
     if (hash) {
       setTimeout(() => {
@@ -378,8 +364,11 @@ export default function App() {
               {!auditActive && (
                 <div className="inline-flex items-center gap-2 px-3 py-1 bg-paper border-1.5 border-ink rounded-full shadow-hard -rotate-1">
                   <span className="w-2 h-2 rounded-full bg-lime border border-ink animate-pulse" />
+                  {/* Same scope as ENTITY_DESCRIPTION and the footer: towing
+                      first, in the present tense, and no promise about which
+                      industries come next. */}
                   <span className="font-sans text-[13px] font-bold text-ink">
-                    AI for local & trade businesses
+                    AI for towing & local service businesses
                   </span>
                 </div>
               )}
@@ -428,44 +417,63 @@ export default function App() {
 
             </div>
 
-            {/* Collage Column (42%) — the idle-state visual */}
+            {/* Collage Column (42%) — the idle-state visual: the two published
+                client results, each linking to the study that backs it. */}
             {!auditActive && (
-            <div className="lg:col-span-5 relative w-full h-[450px] flex items-center justify-center lg:justify-end">
+            <div className="lg:col-span-5 relative w-full flex items-center justify-center lg:justify-end">
+              <div className="relative w-full max-w-[430px] pt-6 flex flex-col gap-6">
 
-              {/* Starburst Sticker (overlaps top-left) */}
-              <Starburst
-                text="FREE AUDIT"
-                className="absolute left-4 top-2 z-20 scale-90 md:scale-100 rotate-[-8deg] cursor-pointer"
-                size={96}
-                rotationSpeed={30}
-                onClick={() => {
-                  document.getElementById('hero-audit-input')?.focus();
-                }}
-              />
+                {/* Starburst Sticker (overlaps the first card's top-right
+                    corner, where the card has no text) */}
+                <Starburst
+                  text="FREE AUDIT"
+                  ariaLabel="Start your free audit"
+                  className="absolute -right-3 -top-4 z-20 scale-90 md:scale-100 rotate-[8deg]"
+                  size={96}
+                  rotationSpeed={30}
+                  onClick={() => {
+                    document.getElementById('hero-audit-input')?.focus();
+                  }}
+                />
 
-              {/* Main Forest Panel Base (holds Interactive Chart) */}
-              <div className="w-full max-w-[430px] h-[340px] bg-forest border-2 border-ink shadow-hard-lg rounded-2xl p-5 relative flex flex-col justify-between overflow-hidden z-10 select-none">
-                <InteractiveChart />
+                {HERO_RESULT_IDS.map((id) => CASE_STUDIES.find((s) => s.id === id)).map((study, i) => {
+                  if (!study) return null;
+                  const light = i % 2 === 0;
+                  return (
+                    <a
+                      key={study.id}
+                      href={`/case-study/${study.id}`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        navigate(`/case-study/${study.id}`);
+                      }}
+                      className={`block border-2 border-ink rounded-2xl p-6 text-left shadow-hard-lg hover:shadow-hard-hover transition-shadow focus-ring ${
+                        light ? 'bg-paper text-ink rotate-[1.5deg]' : 'bg-ink text-cream rotate-[-1.5deg]'
+                      }`}
+                      id={`hero-result-${study.id}`}
+                    >
+                      <span className={`block font-mono text-[10px] font-bold uppercase tracking-widest ${light ? 'text-stone' : 'text-lime'}`}>
+                        Client result
+                      </span>
+                      <span className={`block font-display font-black text-4xl md:text-5xl tracking-tight mt-1 ${light ? 'text-ink' : 'text-lime'}`}>
+                        {study.stat}
+                      </span>
+                      <span className="block font-mono text-xs uppercase mt-1">
+                        {study.metric}
+                      </span>
+                      {study.baseline && (
+                        <span className={`block font-sans text-sm mt-2 ${light ? 'text-stone' : 'text-cream/80'}`}>
+                          {study.baseline}
+                        </span>
+                      )}
+                      <span className={`block font-mono text-[10px] uppercase tracking-wide mt-4 ${light ? 'text-forest' : 'text-cream/75'}`}>
+                        ✓ {study.client} · {verifiedIn(study)}
+                      </span>
+                    </a>
+                  );
+                })}
+
               </div>
-
-              {/* Overlapping White Card (top-right, half-on/half-off) */}
-              <div className="absolute right-[-10px] top-[15px] bg-paper border-1.5 border-ink px-4 py-2.5 rounded-xl shadow-hard z-20 rotate-[6deg] max-w-[190px] text-left select-none pointer-events-none">
-                <p className="font-mono text-[9px] text-stone uppercase">CLIENT RESULT</p>
-                <p className="font-display font-black text-sm text-ink">+4,900% ORGANIC TRAFFIC</p>
-                <p className="font-mono text-[8px] text-forest mt-1">✓ JADE TITLE SERVICES · GA4</p>
-              </div>
-
-              {/* Overlapping Ink Card (bottom-left, anchors right) */}
-              <div className="absolute left-[20px] bottom-[15px] bg-ink border-1.5 border-ink px-4 py-3 rounded-xl shadow-hard z-20 rotate-[-4deg] max-w-[210px] text-left select-none pointer-events-none">
-                <p className="font-mono text-[9px] text-lime uppercase">CLIENT RESULT</p>
-                {/* Swapped off EcoClean: those figures had no live case study
-                    page behind them once that study was commented out, so the
-                    card was asserting a result a visitor could not verify.
-                    Sujood Mats is verified in Search Console and has a page. */}
-                <p className="font-display font-black text-sm text-lime leading-tight">+185% SEARCH &amp; MAP CLICKS</p>
-                <p className="font-mono text-[8px] text-cream/60 mt-1">Sujood Mats · Search Console</p>
-              </div>
-
             </div>
             )}
 
@@ -819,6 +827,19 @@ export default function App() {
                     id="services-towing-link"
                   >
                     See how this works for towing companies.
+                  </a>{' '}
+                  {/* The contextual /about link: who delivers all of this,
+                      and the list of what we do not do or promise. */}
+                  <a
+                    href="/about"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      navigate('/about');
+                    }}
+                    className="font-bold text-ink underline hover:text-lime focus-ring"
+                    id="services-about-link"
+                  >
+                    Who OptimizeIndex is, and what we will not promise.
                   </a>
                 </p>
               </div>
@@ -907,11 +928,32 @@ export default function App() {
                   <span className="w-1.5 h-1.5 rounded-full bg-lime animate-pulse" />
                   CASE STUDIES REPOSITORY
                 </span>
+                {/* States the title's topic ("AI Case Studies & Client
+                    Results"), led by AI, with no "SEO" or "marketing" — the
+                    gate fails either word in an h1. */}
                 <h1 className="font-display font-black text-4xl md:text-5xl lg:text-6xl text-cream tracking-tight mt-4 leading-[1.1]">
-                  Our Full <span className="font-serif-accent italic text-lime bg-ink px-2.5 py-0.5 rounded-sm shadow-hard inline-block -rotate-1">Portfolio</span> of Organic Proof
+                  AI search <span className="font-serif-accent italic text-lime bg-ink px-2.5 py-0.5 rounded-sm shadow-hard inline-block -rotate-1">case studies</span> and client results
                 </h1>
+                {/* Scope, said plainly: both published studies are earlier work
+                    outside towing, which is where our focus is now. They stay
+                    because they are real and their figures can be checked. */}
                 <p className="font-sans text-cream/75 mt-6 leading-relaxed text-base md:text-lg">
-                  The complete archive of campaigns we've executed for e-commerce, local service, and B2B companies. Every number is verified in the client's own analytics — no fluff.
+                  Results from our earlier client work outside towing: an e-commerce brand and a B2B
+                  title services company. Every number is verified in the client's own analytics, and
+                  each study names the tool it came from. For who we are and what we focus on today,
+                  read{' '}
+                  <a
+                    href="/about"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      navigate('/about');
+                    }}
+                    className="font-bold text-lime underline hover:text-cream focus-ring"
+                    id="cases-about-link"
+                  >
+                    about OptimizeIndex
+                  </a>
+                  .
                 </p>
               </div>
 
@@ -1075,20 +1117,38 @@ export default function App() {
                 <div className="absolute inset-0 opacity-5 pointer-events-none bg-[linear-gradient(to_right,#F6F1E6_1px,transparent_1px),linear-gradient(to_bottom,#F6F1E6_1px,transparent_1px)] bg-[size:24px_24px]" />
 
                 <div className="max-w-4xl mx-auto px-6 md:px-12 relative z-10">
-                  {/* Back to Case Studies Button */}
-                  <div className="mb-12">
-                    <a
-                      href="/case-studies"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        navigateTo('case-studies');
-                      }}
-                      className="inline-flex items-center gap-2 px-5 py-2.5 bg-paper text-ink border-2 border-ink font-mono text-xs font-bold uppercase rounded-full hover:bg-cream transition-all cursor-pointer focus-ring shadow-hard hover:shadow-hard-hover"
-                      id="case-detail-page-back-btn"
-                    >
-                      <span>← Back to Case Studies</span>
-                    </a>
-                  </div>
+                  {/* The visible trail behind the page's BreadcrumbList. Both
+                      come from caseStudyTrail() in routes.ts, so the markup
+                      only ever describes a trail a reader can see. It replaces
+                      the old "Back to Case Studies" button, which the second
+                      crumb now does. No heading inside: it must stay out of
+                      the outline verify-seo checks. */}
+                  <nav aria-label="Breadcrumb" className="mb-12">
+                    <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] font-bold uppercase tracking-wide text-cream/75">
+                      {caseStudyTrail(currentCaseStudy).map((crumb, i, trail) => (
+                        <li key={crumb.path} className="flex items-center gap-2">
+                          {i > 0 && <span aria-hidden="true">/</span>}
+                          {i < trail.length - 1 ? (
+                            <a
+                              href={crumb.path}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                navigate(crumb.path);
+                              }}
+                              className="hover:text-lime hover:underline underline-offset-2 transition-colors focus-ring rounded-sm"
+                              id={i === trail.length - 2 ? 'case-detail-page-back-btn' : undefined}
+                            >
+                              {crumb.name}
+                            </a>
+                          ) : (
+                            <span aria-current="page" className="text-cream">
+                              {crumb.name}
+                            </span>
+                          )}
+                        </li>
+                      ))}
+                    </ol>
+                  </nav>
 
                   {/* Header block */}
                   <div className="mb-12 text-left">
@@ -1108,6 +1168,12 @@ export default function App() {
                         {currentCaseStudy.stat} {currentCaseStudy.metric}
                       </span>
                     </h1>
+                    {/* The same byline the towing guides carry. Byline() is
+                        styled for the cream pages, so its colours are lifted
+                        here for the forest background. */}
+                    <div className="mt-5 [&_*]:text-cream/80! [&_a]:text-lime!">
+                      <Byline />
+                    </div>
                   </div>
 
                   {/* Stat Banner */}
@@ -1199,8 +1265,10 @@ export default function App() {
                     <span className="font-mono text-[10px] font-bold">100% FREE NO-CONTRACT AUDIT</span>
                   </div>
 
+                  {/* Matches the title's topic (the free AI search audit)
+                      without "SEO", which the gate fails in an h1. */}
                   <h1 className="font-display font-black text-3xl md:text-4xl xl:text-5xl text-cream tracking-tight leading-[1.08]">
-                    Claim your free <span className="font-serif-accent italic text-lime bg-ink px-2.5 py-0.5 rounded-sm shadow-hard inline-block -rotate-1">15-Point</span> Performance Audit
+                    Your free <span className="font-serif-accent italic text-lime bg-ink px-2.5 py-0.5 rounded-sm shadow-hard inline-block -rotate-1">15-point</span> AI search audit
                   </h1>
 
                   <p className="font-sans text-cream/75 mt-4 leading-relaxed text-sm xl:text-base">
@@ -1517,16 +1585,28 @@ export default function App() {
 
               <div className="space-y-8 bg-paper text-ink border-2 border-ink p-8 md:p-12 rounded-3xl shadow-hard">
                 <section className="space-y-3 text-left">
+                  {/* Sections 1 and 2 describe what the code actually collects:
+                      the /api/track analytics (Visitor, Session, PageView and
+                      Event rows in server.ts) and the chat, whose replies come
+                      from OpenAI (server/chat/openai.ts). Pending the owner's
+                      legal review. Section 5 is bound by the SMS campaign
+                      registration and is not part of this wording. */}
                   <h2 className="font-display font-extrabold text-xl text-ink">1. What We Collect</h2>
                   <p className="font-sans text-sm text-stone leading-relaxed">
-                    When you submit a form on this site, we collect the information you provide — your name, email address, phone number, company, website, growth goals, budget range, and any comments. To measure our own marketing (the same discipline we sell), we also record how you found us: the referring site, campaign parameters (UTM tags), the page you landed on, the page you submitted from, and technical details such as your browser type and IP address.
+                    When you submit a form on this site, we collect the information you provide — your name, email address, phone number, company, website, growth goals, budget range, and any comments. With it we record how you found us: the referring site, campaign parameters (UTM tags), the page you landed on and the page you submitted from.
+                  </p>
+                  <p className="font-sans text-sm text-stone leading-relaxed">
+                    If you use the chat assistant, we keep the conversation: the messages you send, the replies you receive, and any name, email address or phone number you give in it, along with your IP address.
+                  </p>
+                  <p className="font-sans text-sm text-stone leading-relaxed">
+                    Whether or not you contact us, the site runs its own analytics alongside Google Analytics 4. It records the pages you view, how far you scroll, the links and buttons you click, when you start filling in a form, your IP address and, where available, your approximate country, your device, browser, operating system, screen size, language and time zone, the referring site, and campaign parameters (UTM tags). A random visitor identifier is kept in your browser's local storage so that a return visit can be recognised as one.
                   </p>
                 </section>
 
                 <section className="space-y-3 text-left border-t border-ink/10 pt-8">
                   <h2 className="font-display font-extrabold text-xl text-ink">2. Analytics & Service Providers</h2>
                   <p className="font-sans text-sm text-stone leading-relaxed">
-                    We use Google Analytics 4 to understand site traffic; it sets cookies and processes usage data under Google's privacy policy. Form submissions are delivered to our team through a trusted third-party email delivery service and stored in our own secured database. We use your information solely to respond to your inquiry, prepare your audit or proposal, and analyze our marketing performance. We never sell, rent, or trade your information to anyone.
+                    We use Google Analytics 4 to understand site traffic; it sets cookies and processes usage data under Google's privacy policy. Our own analytics, described above, is stored in our own database. The chat assistant's replies are generated with OpenAI's models, so the messages you send in the chat are sent to OpenAI to generate those replies. Form submissions are delivered to our team through a trusted third-party email delivery service and stored in our own secured database. We use your information solely to respond to your inquiry, run the chat, prepare your audit or proposal, and understand how visitors find and use this site. We never sell, rent, or trade your information to anyone.
                   </p>
                 </section>
 
@@ -1558,7 +1638,7 @@ export default function App() {
                 </section>
 
                 <div className="pt-8 border-t border-ink/15 text-center flex flex-col md:flex-row items-center justify-between gap-4">
-                  <p className="font-mono text-[10px] text-stone">LAST UPDATED: SEPTEMBER 2026</p>
+                  <p className="font-mono text-[10px] text-stone">LAST UPDATED: OCTOBER 2026</p>
                   <button
                     onClick={() => navigateTo('home')}
                     className="px-6 py-3 bg-lime text-ink font-mono text-xs font-bold uppercase rounded-full hover:bg-lime/90 cursor-pointer shadow-hard"
@@ -1878,8 +1958,10 @@ export default function App() {
                 {/* LEFT: the pitch, kept short so the form clears the fold */}
                 <div className="lg:col-span-5 order-2 lg:order-1">
 
+                  {/* Matches the title's topic (a free AI search proposal),
+                      led by AI and the revenue problem, without "SEO". */}
                   <h1 className="font-display font-black text-3xl md:text-4xl xl:text-5xl text-cream tracking-tight leading-[1.08]">
-                    Ready to grow your <span className="font-serif-accent italic text-lime bg-ink px-2.5 py-0.5 rounded-sm shadow-hard inline-block -rotate-1">revenue?</span>
+                    A free AI search proposal for a business missing <span className="font-serif-accent italic text-lime bg-ink px-2.5 py-0.5 rounded-sm shadow-hard inline-block -rotate-1">revenue</span>
                   </h1>
                   <p className="font-sans text-cream/75 mt-4 leading-relaxed text-sm xl:text-base">
                     Request a custom strategy from the team behind the numbers on this site.
@@ -2193,10 +2275,9 @@ export default function App() {
         {/* PRE-FOOTER INK CTA SECTION */}
         <section className="bg-ink text-cream py-24 px-6 md:px-12 border-b-1.5 border-ink relative overflow-hidden">
           
-          {/* Decorative spinning starburst background */}
-          <div className="absolute right-[-20px] top-[-20px] opacity-20 hidden md:block">
-            <Starburst text="FREE DECK" size={140} rotationSpeed={50} />
-          </div>
+          {/* The "FREE DECK" starburst that sat here was removed: no deck is
+              offered anywhere, so the sticker advertised a thing that does
+              not exist. */}
 
           <div className="max-w-4xl mx-auto text-center space-y-8 relative z-10">
             <span className="font-mono text-xs font-bold text-lime uppercase tracking-widest block">
@@ -2230,7 +2311,7 @@ export default function App() {
             </div>
 
             <p className="font-mono text-[10px] text-cream/60 tracking-wide">
-              15-DAY MONEY BACK GUARANTEE · NO RISK · EXPLAINED IN 24 HOURS
+              15-DAY MONEY BACK GUARANTEE · NO RISK · REPLY WITHIN 24 HOURS
             </p>
           </div>
         </section>

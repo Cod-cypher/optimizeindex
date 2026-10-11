@@ -109,6 +109,17 @@ pm2 startup   # prints a command — run it once so PM2 survives reboots
 curl -s http://127.0.0.1:3002/api/health   # expect {"status":"ok","db":"up",...}
 ```
 
+In production the app listens on **127.0.0.1 only**, so port 3002 is not
+reachable from outside the box and nginx is the single public entry point. Set
+`HOST` in `.env` only if something genuinely needs another interface. The boot
+log prints the address it bound to.
+
+`dist/server.cjs` **refuses to start without `NODE_ENV=production`** (PM2's
+`ecosystem.config.cjs` sets it). A bare `npm start` used to boot the dev
+branch — Vite middleware with an SPA fallback, every path a 200 — so it now
+exits with an error instead. For a one-off production run outside PM2:
+`NODE_ENV=production PORT=3002 node dist/server.cjs`.
+
 ## 4. nginx site
 
 > **Only copy this file on a first install, before certbot has ever run.**
@@ -150,6 +161,64 @@ certbot --nginx -d optimizeindex.com -d www.optimizeindex.com
 
 Choose the redirect option when asked. Certbot auto-renews via systemd timer
 (`systemctl list-timers | grep certbot` to confirm).
+
+## 5a. One hop to https, nothing for unknown hosts
+
+Two nginx changes, both applied **by hand** on a live box (see the warning on
+step 4 — never copy `optimizeindex.conf` over the certbot-edited file):
+
+1. **www block.** In `/etc/nginx/sites-available/optimizeindex.conf`, the
+   `server_name www.optimizeindex.com` block's redirect must go straight to
+   https:
+
+   ```nginx
+   return 301 https://optimizeindex.com$request_uri;
+   ```
+
+   It used to say `http://optimizeindex.com`, which made http://www a two-hop
+   chain. If certbot added `listen 443 ssl` to that block, https://www gets
+   the same single hop.
+
+2. **Default server.** `deploy/nginx-default-server.conf` answers every
+   request whose Host is not one of this box's sites — the bare IP, a stray
+   domain — with no response on port 80 and a refused handshake on 443. It
+   holds no certificate, so certbot never touches it and it can be copied:
+
+   ```bash
+   nginx -v                                                     # needs 1.19.4+ for ssl_reject_handshake
+   grep -rn default_server /etc/nginx/sites-enabled/ /etc/nginx/conf.d/
+   # If Ubuntu's stock site shows up (listen 80 default_server), remove it —
+   # two default servers on one port fail nginx -t:
+   rm /etc/nginx/sites-enabled/default
+   cp /opt/optimizeindex/deploy/nginx-default-server.conf /etc/nginx/sites-available/00-default-server.conf
+   ln -s /etc/nginx/sites-available/00-default-server.conf /etc/nginx/sites-enabled/
+   nginx -t && systemctl reload nginx
+   ```
+
+   It is server-wide, so it applies to sujoodmats too. If any site on this box
+   is meant to answer on the bare IP, decide that before installing it.
+
+The Node app backs both up: in production it 301s www to
+`https://optimizeindex.com` directly, and 301s any Host other than the apex,
+www and loopback to `https://optimizeindex.com`.
+
+**Verify — each redirect is exactly one hop, straight to the https apex:**
+
+```bash
+c() { curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" "$@"; }
+c http://www.optimizeindex.com/services     # 301 https://optimizeindex.com/services
+c https://www.optimizeindex.com/services    # 301 https://optimizeindex.com/services
+c http://optimizeindex.com/services         # 301 https://optimizeindex.com/services
+# A foreign Host gets no site content:
+curl -s -o /dev/null -w "%{http_code}\n" -H "Host: example.com" http://167.233.120.70/   # 000 (empty reply)
+curl -skI https://167.233.120.70/ ; echo "exit $?"                                       # handshake refused, non-zero exit
+# Port 3002 is closed to the outside (run from another machine):
+curl -s -m 5 -o /dev/null -w "%{http_code}\n" http://167.233.120.70:3002/api/health      # 000 (no connection)
+```
+
+If any of the first three prints a second redirect when followed
+(`curl -sIL <url> | grep -i '^location'` shows two lines), a hop is still
+chained.
 
 ## 6. After it's live
 
@@ -298,8 +367,10 @@ The site is **pre-rendered**, not a bare SPA. `npm run build` runs four steps:
 
 1. `vite build` — client bundle
 2. `vite build --ssr src/entry-server.tsx` — server bundle used only at build time
-3. `tsx scripts/prerender.ts` — renders all 9 routes plus a 404 page to static
-   HTML in `dist/`, and regenerates `dist/sitemap.xml`
+3. `tsx scripts/prerender.ts` — renders every route in `src/routes.ts` plus a
+   404 page to static HTML in `dist/client/`, and regenerates
+   `dist/client/sitemap.xml` (each `<lastmod>` from the route's own `updated`
+   date; the step fails if an indexable route has none)
 4. `esbuild server.ts` — the Express server
 
 Nothing extra to run on deploy — the existing `npm run build` covers it. But if
@@ -314,6 +385,44 @@ curl -s https://optimizeindex.com/services | grep -o '<link rel="canonical"[^>]*
 curl -s -o /dev/null -w '%{http_code}\n' https://optimizeindex.com/no-such-page   # expect 404
 ```
 
+**One URL per page.** Every other form of a page's address must redirect to the
+clean path in one hop, or answer 404 when it is not a page at all. Each line
+prints the status and, for a redirect, where it goes:
+
+```bash
+c() { curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" "$@"; }
+c https://optimizeindex.com/index.html            # 301 https://optimizeindex.com/
+c https://optimizeindex.com/services/index.html   # 301 https://optimizeindex.com/services
+c https://optimizeindex.com//services             # 301 https://optimizeindex.com/services
+c https://optimizeindex.com/services/             # 301 https://optimizeindex.com/services
+c https://optimizeindex.com/404.html              # 404
+c https://optimizeindex.com/app-shell.html        # 404
+c https://optimizeindex.com/sms-program.          # 301 https://optimizeindex.com/sms-program  (Twilio's consent check needs this)
+```
+
+Uploaded proposal images carry `X-Robots-Tag: noindex` (pick any file in
+`uploads/`):
+
+```bash
+curl -sI https://optimizeindex.com/uploads/<file>.webp | grep -i '^x-robots-tag'   # x-robots-tag: noindex
+```
+
+Fonts are cached for a year as immutable:
+
+```bash
+curl -sI https://optimizeindex.com/fonts/bricolage-grotesque-200-800-normal-latin.woff2 | grep -i '^cache-control'
+# cache-control: public, max-age=31536000, immutable
+```
+
+`sitemap.xml` carries each page's own `updated` date as `<lastmod>` (set by
+hand from git history in `src/routes.ts` and the content files) and no
+`<priority>`, which Google and Bing ignore:
+
+```bash
+curl -s https://optimizeindex.com/sitemap.xml | grep -c '<priority>'   # 0
+curl -s https://optimizeindex.com/sitemap.xml | grep -m3 '<lastmod>'   # each page's own updated date, not the build date
+```
+
 Route metadata (titles, descriptions, canonicals, JSON-LD) lives in
 `src/routes.ts`. Adding a page means adding it there — the prerenderer and the
 sitemap both read from that list.
@@ -326,7 +435,13 @@ regression.
 
 - `npm run fonts` — re-downloads the self-hosted fonts into `public/fonts/`
   and rewrites `src/fonts.css`. Only needed when the font list changes.
-- `npm run images` — regenerates the derived logo sizes from `public/logo.png`.
+- `npm run images` — regenerates the derived logo sizes, the favicons
+  (`favicon-48.png`, `favicon-192.png`, `favicon.ico`) and the `og-card.png`
+  share card from `public/logo.png`. Needs the optional `sharp` dependency.
+- A changed font must ship under a **new filename**: `/fonts/` is cached for a
+  year as immutable. `npm run fonts` refuses to overwrite a file whose bytes
+  changed; bump `FONT_FILE_VERSION` in `scripts/fetch-fonts.ts` and update the
+  preload href in `index.html`.
 
 Both outputs are committed, so normal builds never touch the network.
 
@@ -477,10 +592,27 @@ curl -s -A "OAI-SearchBot" https://optimizeindex.com/towing-companies/california
 - **`INDEXNOW_KEY`** is not set. Optional — see above. Without it `npm run
   indexnow` exits 0 and does nothing.
 - **`PAGESPEED_API_KEY`** is not set. Without it Google rate-limits the
-  PageSpeed endpoint hard enough that most visitors get no speed data.
+  PageSpeed endpoint hard enough that most visitors get no speed data. Set it
+  in the server `.env` and `pm2 restart optimizeindex`; the audit FAQ already
+  promises PageSpeed data.
 - **nginx config changed** — `deploy/nginx-optimizeindex.conf` adds gzip types,
   a www → apex redirect block, `client_max_body_size 10m` and a `/uploads/`
-  location. Copy it to the server and `nginx -t && systemctl reload nginx`.
+  location. **Apply the differences by hand** — the live file carries certbot's
+  `listen 443` block, and copying the repo file over it takes HTTPS down (see
+  the warning on step 4). Then `nginx -t && systemctl reload nginx`.
   The gzip and redirect parts are optimisations (the app does the redirect
   itself), but **`client_max_body_size` is required** — without it every
   proposal image upload over ~750 KB fails with a 413 before reaching Node.
+- **www redirect target and the default server** (step 5a) — the www block
+  now redirects to `https://` in one hop, and
+  `deploy/nginx-default-server.conf` is new. Neither is applied on the server
+  yet, and the single-hop and foreign-Host curls in 5a have not been run.
+- **The live post-certbot nginx config is not in the repo.** Copy
+  `/etc/nginx/sites-available/optimizeindex.conf` from the server into
+  `deploy/` under a different name (for example
+  `deploy/nginx-optimizeindex.live.conf`) so the 443 block can be reviewed.
+  Never copy in the other direction.
+- **Field Core Web Vitals** — the tracker now sends LCP, INP and CLS as
+  `web_vital` events, stored in the existing `Event` table (no migration).
+  The 75th percentile per landing page and device over 28 days is at
+  `/admin/vitals`. It shows nothing until visitors load pages on the live site.

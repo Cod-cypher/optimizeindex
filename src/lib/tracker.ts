@@ -6,7 +6,14 @@
  * (with time-on-page and scroll depth), and interaction events (CTA clicks,
  * goal selections, phone/email taps, form starts, outbound clicks), then
  * batches them to /api/track. Complements GA4 with data we own in Postgres.
+ *
+ * Also reports field Core Web Vitals (LCP, INP, CLS) as `web_vital` events, so
+ * the 75th percentile per landing page and device can be read in the admin
+ * (/admin/vitals) before Search Console has CrUX data for the site.
  */
+
+import { onCLS, onINP, onLCP } from 'web-vitals/attribution';
+import type { CLSMetricWithAttribution, INPMetricWithAttribution, LCPMetricWithAttribution } from 'web-vitals/attribution';
 
 const VISITOR_KEY = 'oi_vid';
 const SESSION_KEY = 'oi_sid';
@@ -296,6 +303,51 @@ function flush(useBeacon = false) {
   }
 }
 
+/**
+ * Field Core Web Vitals.
+ *
+ * One `web_vital` event per metric report, labelled with the metric name.
+ * `landing` is the path of the hard page load, because that is the page the
+ * metric belongs to (how CrUX attributes it) even after a client-side
+ * navigation has moved window.location on. `target` is the element web-vitals
+ * attributes it to: the LCP element, the largest layout-shift source, or the
+ * element the slowest interaction hit — which is what tells you what to fix.
+ * Device class is already on the session row, so it is not repeated here.
+ *
+ * Registered before the visibilitychange / pagehide listeners in initTracker.
+ * web-vitals reports the final CLS and INP (and LCP, if no input came first)
+ * when the page is hidden, and those reports have to reach the queue before
+ * the hide handler's sendBeacon drains it. web-vitals 6 does this from one
+ * capture-phase `visibilitychange` listener on window, added the first time
+ * any on*() is called; that already runs ahead of our listener on document,
+ * and registering first keeps the order right even if a later version moves
+ * its listener to document.
+ */
+function registerWebVitals(landing: string) {
+  const report = (
+    metric: LCPMetricWithAttribution | INPMetricWithAttribution | CLSMetricWithAttribution,
+    target: string | undefined,
+  ) => {
+    trackEvent('web_vital', metric.name, {
+      // CLS is unitless and small; LCP and INP are milliseconds.
+      value: metric.name === 'CLS' ? Math.round(metric.value * 10000) / 10000 : Math.round(metric.value),
+      rating: metric.rating,
+      id: metric.id,
+      navigationType: metric.navigationType,
+      landing,
+      target: (target || '').slice(0, 300),
+    });
+  };
+
+  try {
+    onLCP((m) => report(m, m.attribution.target));
+    onINP((m) => report(m, m.attribution.interactionTarget));
+    onCLS((m) => report(m, m.attribution.largestShiftTarget));
+  } catch {
+    // An unsupported browser just reports nothing; analytics never breaks the page.
+  }
+}
+
 /** Accessors so lead submissions can be joined to the visitor's journey. */
 export function getVisitorId(): string {
   return visitorId;
@@ -324,6 +376,11 @@ export function initTracker() {
   document.addEventListener('click', onClick, { capture: true, passive: true });
   document.addEventListener('focusin', onFocusIn, { passive: true });
   window.addEventListener('scroll', onScroll, { passive: true });
+
+  // Before the hide listeners below — see registerWebVitals for why the order
+  // matters. initTracker never runs on admin, proposal or chat-join pages
+  // (src/main.tsx), so neither does this.
+  registerWebVitals(window.location.pathname);
 
   // Final flush when the tab hides or closes — sendBeacon survives unload.
   const onHide = () => {

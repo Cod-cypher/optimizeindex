@@ -323,9 +323,57 @@ function clientCountry(req: express.Request): string {
   return String(h["cf-ipcountry"] || h["x-vercel-ip-country"] || h["x-country-code"] || "");
 }
 
+/**
+ * Turns a Host header into a bare, lower-cased hostname: "OptimizeIndex.com:443"
+ * -> "optimizeindex.com", "[::1]:3002" -> "[::1]".
+ */
+function hostnameOf(hostHeader: string): string {
+  const h = hostHeader.trim().toLowerCase();
+  if (h.startsWith("[")) return h.slice(0, h.indexOf("]") + 1);
+  return h.replace(/:\d+$/, "");
+}
+
+/**
+ * The fields a web_vital event may carry, coerced to the types the admin
+ * percentile query expects. Anything else the client sent is dropped, so one
+ * malformed beacon cannot break the cast in that query.
+ */
+function webVitalMetadata(raw: unknown): Prisma.InputJsonObject | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const m = raw as Record<string, unknown>;
+  const value = Number(m.value);
+  if (!Number.isFinite(value) || value < 0) return undefined;
+  const text = (v: unknown, max: number) => (typeof v === "string" ? v.slice(0, max) : "");
+  return {
+    value,
+    rating: text(m.rating, 20),
+    id: text(m.id, 100),
+    navigationType: text(m.navigationType, 30),
+    landing: text(m.landing, 1000),
+    target: text(m.target, 300),
+  };
+}
+
 async function startServer() {
   const app = express();
   const PORT = Number(process.env.PORT) || 3001;
+  const IS_PROD = process.env.NODE_ENV === "production";
+
+  // dist/server.cjs is the production build. Started without
+  // NODE_ENV=production (a bare `npm start`) it would take the dev branch at the
+  // bottom of this function: Vite in middleware mode with an SPA fallback, so
+  // every path answers 200 with the same shell, no 404s and no real titles or
+  // canonicals. Refuse to boot instead of serving that. PM2's
+  // ecosystem.config.cjs sets NODE_ENV, and `npm run dev` runs server.ts
+  // through tsx, so neither is affected.
+  const entryFile = typeof __filename !== "undefined" ? __filename : process.argv[1] || "";
+  if (/server\.cjs$/.test(entryFile) && !IS_PROD) {
+    console.error(
+      "[OptimizeIndex Server] dist/server.cjs is the production build and needs NODE_ENV=production. " +
+        "Start it with NODE_ENV=production (PM2's ecosystem.config.cjs sets it), or use `npm run dev` for development.",
+    );
+    process.exit(1);
+  }
 
   // Resolve the signing secret up front. In production a missing SESSION_SECRET
   // throws here, at boot, rather than at the first login attempt — a server that
@@ -340,6 +388,11 @@ async function startServer() {
   app.use(compression());
   app.use(express.json());
 
+  const SITE_HOST = new URL(SITE_ORIGIN).hostname;
+  // Loopback stays allowed so the production-mode route check in CLAUDE.md
+  // (curl against localhost:3002) and the PM2 health curl keep working.
+  const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
+
   /**
    * Canonical host + legacy URL redirects.
    *
@@ -348,29 +401,54 @@ async function startServer() {
    * the site had four such pairs plus the www host.
    */
   app.use((req, res, next) => {
+    const host = String(req.headers.host || "");
+    const hostname = hostnameOf(host);
+
+    // Any Host that is not ours -> the canonical origin, in production only.
+    // A bare-IP request or a stray domain pointed at this box used to get the
+    // whole site at 200. nginx's default_server blocks
+    // (deploy/nginx-default-server.conf) stop most of these before they get
+    // here; this is the fallback for when they are not installed. Runs before
+    // the /api skip so a foreign Host gets nothing from the API either. Dev is
+    // exempt so the site can still be opened from a phone on the LAN.
+    if (
+      IS_PROD &&
+      hostname !== SITE_HOST &&
+      hostname !== `www.${SITE_HOST}` &&
+      !LOOPBACK_HOSTS.has(hostname)
+    ) {
+      res.redirect(301, `${SITE_ORIGIN}${req.originalUrl.replace(/^\/{2,}/, "/")}`);
+      return;
+    }
+
     if (req.path.startsWith("/api/")) return next();
 
-    const host = String(req.headers.host || "");
     const proto = String(req.headers["x-forwarded-proto"] || req.protocol || "https");
 
-    // www -> apex. nginx serves both hostnames from one block and passes Host
-    // through, so doing it here fixes it without a server-side nginx edit.
-    if (host.toLowerCase().startsWith("www.")) {
-      const target = `${proto}://${host.slice(4)}${req.originalUrl}`;
+    // www -> apex. nginx's www block does this first (straight to https, one
+    // hop); this is the fallback. In production it also goes straight to the
+    // https origin, so an http://www request that reaches Node is still a
+    // single hop.
+    if (hostname.startsWith("www.")) {
+      const target = IS_PROD
+        ? `${SITE_ORIGIN}${req.originalUrl.replace(/^\/{2,}/, "/")}`
+        : `${proto}://${host.slice(4)}${req.originalUrl}`;
       res.redirect(301, target);
       return;
     }
 
-    const alias = REDIRECTS[req.path.replace(/\/+$/, "") || "/"];
-    if (alias) {
-      const query = req.originalUrl.slice(req.path.length); // preserve ?goal=…
-      res.redirect(301, alias + query);
-      return;
-    }
-
-    // Trailing slashes on anything but the root are a second URL for the same page.
-    if (req.path.length > 1 && req.path.endsWith("/")) {
-      res.redirect(301, req.path.replace(/\/+$/, "") + req.originalUrl.slice(req.path.length));
+    // One normalised path, one redirect. In order: collapse repeated slashes
+    // ("//services" served the services page at 200, and "//evil.example/"
+    // used to 301 to the protocol-relative "//evil.example"), drop a trailing
+    // slash (falling back to "/" so "//" never redirects to an empty
+    // Location), then resolve legacy aliases. Doing all three before
+    // redirecting keeps "//old-path/" to a single hop.
+    const query = req.originalUrl.slice(req.path.length); // preserve ?goal=…
+    let target = req.path.replace(/\/{2,}/g, "/");
+    if (target.length > 1) target = target.replace(/\/+$/, "") || "/";
+    target = REDIRECTS[target] ?? target;
+    if (target !== req.path) {
+      res.redirect(301, target + query);
       return;
     }
 
@@ -499,18 +577,30 @@ async function startServer() {
       }
 
       // 4. Events
+      //
+      // web_vital events (LCP, INP, CLS from src/lib/tracker.ts) are stored
+      // like any other event, with their metadata narrowed to the fields the
+      // admin percentile query reads (GET /api/admin/vitals).
       const events = Array.isArray(body.events) ? body.events.slice(0, 200) : [];
       if (events.length > 0) {
         await prisma.event.createMany({
-          data: events.map((ev: Record<string, unknown>) => ({
-            sessionId,
-            visitorId,
-            name: str(ev.name, 50) || "unknown",
-            label: str(ev.label, 300) || null,
-            path: str(ev.path, 1000) || null,
-            metadata: ev.metadata && typeof ev.metadata === "object" ? ev.metadata : undefined,
-            createdAt: ev.createdAt ? new Date(String(ev.createdAt)) : new Date(),
-          })),
+          data: events.map((ev: Record<string, unknown>) => {
+            const name = str(ev.name, 50) || "unknown";
+            return {
+              sessionId,
+              visitorId,
+              name,
+              label: str(ev.label, 300) || null,
+              path: str(ev.path, 1000) || null,
+              metadata:
+                name === "web_vital"
+                  ? webVitalMetadata(ev.metadata)
+                  : ev.metadata && typeof ev.metadata === "object"
+                    ? ev.metadata
+                    : undefined,
+              createdAt: ev.createdAt ? new Date(String(ev.createdAt)) : new Date(),
+            };
+          }),
         });
       }
 
@@ -1009,6 +1099,67 @@ async function startServer() {
     }
   });
 
+  // --- Field Core Web Vitals (admin) -----------------------------------
+
+  /**
+   * 75th percentile of LCP, INP and CLS per landing path and device class over
+   * the last 28 days, from the web_vital events src/lib/tracker.ts sends.
+   *
+   * Mirrors how Google assesses Core Web Vitals: field data, 75th percentile,
+   * a rolling 28-day window (https://web.dev/articles/vitals). `landing` is the
+   * path of the hard page load, which is how CrUX attributes a metric; device
+   * class comes from the session row. Only the latest report per metric id is
+   * counted: web-vitals can report CLS and INP more than once for one page
+   * load as they grow, and counting every report would weight long visits.
+   *
+   * `samples` sits beside every figure because a percentile over a handful of
+   * page loads is noise, and the admin view says so.
+   */
+  app.get("/api/admin/vitals", requireAdmin(prisma), async (_req, res) => {
+    type VitalRow = { metric: string; landing: string; device: string; p75: number; samples: number };
+    try {
+      const rows = await prisma.$queryRaw<VitalRow[]>`
+        WITH latest AS (
+          SELECT DISTINCT ON (e.label, e.metadata->>'id')
+            e.label AS metric,
+            e.metadata->>'landing' AS landing,
+            (e.metadata->>'value')::double precision AS value,
+            e."sessionId" AS session_id
+          FROM "Event" e
+          WHERE e.name = 'web_vital'
+            AND e."createdAt" >= NOW() - INTERVAL '28 days'
+            AND e.label IN ('LCP', 'INP', 'CLS')
+            AND jsonb_typeof(e.metadata->'value') = 'number'
+            AND COALESCE(e.metadata->>'id', '') <> ''
+          ORDER BY e.label, e.metadata->>'id', e."createdAt" DESC
+        )
+        SELECT
+          l.metric,
+          COALESCE(NULLIF(l.landing, ''), '(unknown)') AS landing,
+          COALESCE(NULLIF(s."deviceType", ''), 'unknown') AS device,
+          percentile_cont(0.75) WITHIN GROUP (ORDER BY l.value) AS p75,
+          COUNT(*)::int AS samples
+        FROM latest l
+        LEFT JOIN "Session" s ON s.id = l.session_id
+        GROUP BY 1, 2, 3
+        ORDER BY 2, 3, 1
+      `;
+      res.json({
+        windowDays: 28,
+        rows: rows.map((r) => ({
+          metric: r.metric,
+          landing: r.landing,
+          device: r.device,
+          p75: Number(r.p75),
+          samples: Number(r.samples),
+        })),
+      });
+    } catch (err) {
+      console.error("[Vitals] Percentile query failed:", err);
+      res.status(503).json({ error: "vitals_unavailable" });
+    }
+  });
+
   // --- Admin proposal API -----------------------------------------------
 
   app.use("/api/admin", requireAdmin(prisma), chatAdminRoutes(prisma));
@@ -1024,6 +1175,11 @@ async function startServer() {
    *
    * `dotfiles: "deny"` and the absence of `index` keep this to exactly what was
    * uploaded, nothing more.
+   *
+   * `X-Robots-Tag: noindex` because these are prospects' logos and photos,
+   * uploaded for a private proposal. robots.txt cannot express that for an
+   * image without also hiding the noindex from the crawler, so the header
+   * carries it.
    */
   app.use(
     "/uploads",
@@ -1033,6 +1189,9 @@ async function startServer() {
       dotfiles: "deny",
       maxAge: "1y",
       immutable: true,
+      setHeaders(res) {
+        res.setHeader("X-Robots-Tag", "noindex");
+      },
     }),
   );
 
@@ -1439,8 +1598,52 @@ async function startServer() {
     // serving the whole of dist/ published the entire backend at /server.cjs.
     const distPath = path.join(process.cwd(), "dist", "client");
 
+    /** The pre-rendered 404 page at status 404. */
+    const notFoundFile = path.join(distPath, "404.html");
+    const sendNotFound = (res: express.Response) => {
+      res.status(404).sendFile(fs.existsSync(notFoundFile) ? notFoundFile : path.join(distPath, "index.html"));
+    };
+
+    /**
+     * Duplicate and private URL forms of the static files.
+     *
+     * express.static answers any file under dist/client, so without this
+     * /index.html and /services/index.html served the same pages as / and
+     * /services at 200, /404.html served the 404 page at 200, and
+     * /app-shell.html served the empty portal shell. The clean path is the one
+     * canonical form, so the index.html forms 301 to it (one hop, legacy
+     * aliases resolved), and the two internal files answer as what they are:
+     * not pages. readShell() reads app-shell.html from disk, so the portal is
+     * unaffected.
+     */
+    const ROUTE_PATHS = new Set(ROUTES.map((r) => r.path));
+    app.use((req, res, next) => {
+      if (req.method !== "GET" && req.method !== "HEAD") return next();
+      if (req.path === "/404.html" || req.path === "/app-shell.html") {
+        sendNotFound(res);
+        return;
+      }
+      if (req.path === "/index.html" || req.path.endsWith("/index.html")) {
+        const clean = req.path.slice(0, -"/index.html".length) || "/";
+        const target = ROUTE_PATHS.has(clean) ? clean : REDIRECTS[clean];
+        if (target) {
+          res.redirect(301, target + req.originalUrl.slice(req.path.length));
+        } else {
+          sendNotFound(res);
+        }
+        return;
+      }
+      next();
+    });
+
     // Hashed assets are immutable and can be cached for a year; HTML must
     // revalidate or a pre-render fix would take a year to reach repeat visitors.
+    //
+    // Fonts get the same year-long immutable cache, including the preloaded
+    // display face, which was otherwise revalidated on every view. Their
+    // filenames carry no content hash, so a changed font MUST ship under a new
+    // filename (see scripts/fetch-fonts.ts) or returning visitors keep the old
+    // file for a year.
     app.use(
       express.static(distPath, {
         index: false, // the route resolver below owns HTML, not express.static
@@ -1449,7 +1652,10 @@ async function startServer() {
         // then 301s straight back. Every pre-rendered route was a redirect loop.
         redirect: false,
         setHeaders(res, filePath) {
-          if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+          if (
+            filePath.includes(`${path.sep}assets${path.sep}`) ||
+            filePath.includes(`${path.sep}fonts${path.sep}`)
+          ) {
             res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
           } else if (filePath.endsWith(".html")) {
             res.setHeader("Cache-Control", "public, max-age=0, must-revalidate");
@@ -1545,15 +1751,18 @@ async function startServer() {
         }
       }
 
-      const notFound = path.join(distPath, "404.html");
-      res
-        .status(404)
-        .sendFile(fs.existsSync(notFound) ? notFound : path.join(distPath, "index.html"));
+      sendNotFound(res);
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`[OptimizeIndex Server] Server running on http://localhost:${PORT}`);
+  // Loopback only in production: nginx is the one public entry point, and a
+  // port open on every interface served the whole site to any Host header,
+  // bare IP included. HOST overrides it (e.g. HOST=0.0.0.0 for a box with no
+  // proxy in front). Dev keeps 0.0.0.0 so a phone on the LAN can reach it.
+  const HOST = process.env.HOST || (IS_PROD ? "127.0.0.1" : "0.0.0.0");
+
+  app.listen(PORT, HOST, () => {
+    console.log(`[OptimizeIndex Server] Server running on http://${HOST}:${PORT}`);
     // Say which mail path is live at boot. The failure this prevents is a
     // process started before .env was filled in: it silently falls back to
     // FormSubmit and nobody finds out until a lead does not arrive.

@@ -47,6 +47,9 @@ export const motorClub: TowingJobsChild = {
     'An operator-side look at motor club work: how dispatch works, what you give up on rate and customer ownership, and how to judge it on profit rather than volume.',
   lede:
     'Motor club work is dispatch from a roadside assistance network — AAA, Agero and similar — where a member calls the club and the club sends you. It fills a schedule reliably and at a rate you did not set. Whether that is worth it depends on something specific to your operation: what the truck would otherwise be doing at that hour.',
+  // From git: created in 1e4a682, with no later commit to this file.
+  published: '2026-09-03T01:11:19+05:00',
+  updated: '2026-09-03T01:11:19+05:00',
 
   sections: [
     {
@@ -103,7 +106,7 @@ export const motorClub: TowingJobsChild = {
         'The arithmetic you need is your own. Take a representative month and split every job by source — network, rotation, property, commercial, transport, cash call — then attach the actual revenue and the actual time consumed, including drive time and waiting. Most operators have never seen this laid out and are surprised by it.',
         'Then look at when the network jobs landed. If a meaningful share fell during hours your own callers were also ringing, you were paying to serve someone else\'s customer with capacity you could have sold yourself.',
         'We are not going to publish figures for what network jobs pay against direct calls. Every number in circulation comes from a company selling either the network or the alternative, none of it is verifiable, and a made-up benchmark is worse than none. Your dispatch records are the only honest source for your market.',
-        'For how this channel sits against rotation, property, commercial and transport work, that comparison is the pillar rather than this page.',
+        'For how this channel sits against rotation, property, commercial and transport work, that comparison is our guide to where towing work comes from rather than this page.',
       ],
     },
     {

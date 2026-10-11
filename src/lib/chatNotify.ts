@@ -180,8 +180,8 @@ export function playIncoming(): void {
  *
  * The prefix is stripped from whatever the title currently is before the new
  * one is applied, rather than being restored from a value captured earlier.
- * That matters because this is a client-routed site: App.tsx rewrites the title
- * on navigation, so a saved copy goes stale the moment someone clicks a link
+ * That matters because this is a client-routed site: useRouteHead() rewrites
+ * the title on every navigation, so a saved copy goes stale the moment someone clicks a link
  * with the chat open, and restoring it later would put the wrong page's title
  * back.
  */

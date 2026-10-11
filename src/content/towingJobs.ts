@@ -3,9 +3,9 @@
  *
  * Why this is a separate file from towing.ts
  * ------------------------------------------
- * towing.ts holds shared copy factories — GBP_FAQS, aiFaqs(), buyersGuideFor()
- * — that every state page spreads into itself. They are the largest source of
- * shared text in the vertical, and scripts/verify-seo.ts compares all towing
+ * towing.ts holds GBP_FAQS (pillar-only) and buyersGuideFor(), which assembles
+ * a state's own criteria and holds no prose; aiFaqs() was removed. Shared copy
+ * like that was the largest source of shared text in the vertical, and scripts/verify-seo.ts compares all towing
  * pages pairwise for 5-gram overlap. Keeping this page's content in its own
  * module means none of those factories is in scope by default, which is a
  * structural guard against this page drifting into a paraphrase of the pillar.
@@ -261,7 +261,7 @@ const METRIC_LADDER: MetricRung[] = [
   {
     metric: 'Qualified calls',
     whatItIs: 'Calls that were real jobs in your service area, not wrong numbers or price-shoppers outside it.',
-    caveat: 'Only your phone system and your staff can classify these. We cannot see them from the outside.',
+    caveat: 'Only your phone system and your staff can classify these, and we do not qualify calls for you.',
   },
   {
     metric: 'Booked tows',
@@ -282,6 +282,20 @@ const METRIC_LADDER: MetricRung[] = [
 export const TOWING_JOBS = {
   lede:
     'Search "towing jobs" and you get employment listings. Operators mean something else by it: the calls that fill the board. Tow work reaches a truck through six channels — you apply for some, you sell your way into others, and exactly one is won by being found. This page covers where each one comes from, what it takes to get in, who ends up setting the rate, and which part of the mix is actually a visibility problem.',
+
+  /**
+   * ISO 8601 date-times with offset, from git. `published` is the commit that
+   * created this page (0eb7f9a); `updated` is its last substantive change
+   * (642a3ea, which rewrote the job-seekers answer and added the property and
+   * heavy-duty hand-offs). Drive the visible stamp, Article dates and the
+   * sitemap <lastmod>.
+   *
+   * Bumped by hand when the copy actually changes, to the date of the commit
+   * that changed it, and never generated from the build: an automatic date
+   * would claim a fresh review on every deploy.
+   */
+  published: '2026-09-02T22:10:52+05:00',
+  updated: '2026-09-17T21:54:36+05:00',
 
   mix: MIX,
   decisions: DECISIONS,
@@ -330,7 +344,7 @@ export const TOWING_JOBS = {
         'You sign the property, not the driver. Apartment complexes, retail lots, HOAs and management companies hold the contracts, and the work can become recurring once you have the contract. It also carries compliance obligations that are stricter than most operators expect, and a reputational cost that is real.',
       detail: [
         'Michigan illustrates the compliance half plainly: its Attorney General publishes a consumer alert setting out the posted-notice obligations around private-property towing, along with the routes a motorist can use to complain — the Department of Attorney General, local police, or the state police commercial vehicle division. Rules differ by state, but the shape is common. Property work is a regulated relationship with a vehicle owner you never contracted with, as much as a commercial one with the property.',
-        'The reputational side is worth pricing in before you sign. Private-property towing can attract negative reviews even when the tow is performed correctly, because the vehicle owner may object to the removal itself rather than to how it was carried out. How much of that you see depends on the properties, the volume and the local rules. The pillar covers what to do about it in depth — including why a second Google profile for the impound side is usually not the fix operators hope it is — so this page does not repeat it.',
+        'The reputational side is worth pricing in before you sign. Private-property towing can attract negative reviews even when the tow is performed correctly, because the vehicle owner may object to the removal itself rather than to how it was carried out. How much of that you see depends on the properties, the volume and the local rules. Our towing services overview covers what to do about it in depth — including why a second Google profile for the impound side is usually not the fix operators hope it is — so this page does not repeat it.',
         'The sales motion itself is ordinary B2B. You are selling property managers rather than consumers, responsiveness, paperwork and operational reliability can all matter when they evaluate vendors. Very little about it is a search problem, which is why this section is short.',
       ],
     },
@@ -341,7 +355,7 @@ export const TOWING_JOBS = {
         'You get evaluated. A carrier, dealership or municipality choosing a recovery vendor is doing something a stranded motorist never does — comparing capability before there is an emergency. Tonnage, equipment, corridor coverage and response time decide it, and the decision usually happens on a website.',
       detail: [
         'This is the one channel where the ordinary rules of B2B marketing apply to towing, and the only one where a website earns its keep for reasons unconnected to Google Maps. A fleet dispatcher wants to know what you can lift, where you can reach, and how fast — and wants to know it before an incident, so your equipment roster and corridor coverage are the pages that matter.',
-        'Fleet buyers think in routes rather than towns, which is why pages built around the interstates you actually cover tend to match how they search better than pages built around city names. That approach and the heavy-duty side generally are covered on the pillar.',
+        'Fleet buyers think in routes rather than towns, which is why pages built around the interstates you actually cover tend to match how they search better than pages built around city names. That approach and the heavy-duty side generally are covered in our towing services overview.',
         'Worth being clear about the ticket: this work tends to be larger and tends to recur, so a handful of accounts can outweigh a good deal of consumer volume. It also tends to be slow to win and slow to lose, which cuts both ways.',
       ],
     },
@@ -364,7 +378,7 @@ export const TOWING_JOBS = {
         'It is worth walking that chain slowly, because each link is a different job. The customer has a problem. They search — usually on a phone, often in Maps. They see a small set of businesses. They evaluate that set on whatever is on screen. They call one. Then you book the tow.',
         'Marketing cannot do anything about the first link or the last. What it can affect is the middle: whether you appear in the set, and whether what the customer sees there makes you a credible choice. Being invisible is decisive in a way that being imperfect is not — an operator who never appears is never evaluated, no matter how good the service is.',
         'What sits in the middle is mostly unglamorous. An accurate, complete Google Business Profile in the right categories, with a service area matching real dispatch range and hours that reflect whether a human actually answers overnight. Review volume and recency, which the customer reads before deciding. A website that loads on a phone and answers the questions the map does not. And increasingly, how your business information is represented across the sources AI systems use when answering local-business questions.',
-        'The towing pillar covers each of those properly, and this page will not restate them. What this section is for is the connection: those are not a marketing checklist for its own sake, they are the mechanism by which a stranger with a dead car ends up dialling your number instead of somebody else\'s.',
+        'Our towing services overview covers each of those properly, and this page will not restate them. What this section is for is the connection: those are not a marketing checklist for its own sake, they are the mechanism by which a stranger with a dead car ends up dialling your number instead of somebody else\'s.',
         'Two honest limits. First, none of it guarantees a call — it changes whether you are considered, not whether you are chosen, and no agency including this one can promise the second. Second, what the market looks like differs by state: who caps your rates, where the freight runs, whether winter or storm season drives your peak. We cover that state by state rather than pretending the answer is national.',
       ],
       callCta: 'Talk about shifting your call mix',
@@ -384,10 +398,10 @@ export const TOWING_JOBS = {
       id: 'not-our-job',
       question: 'What we do not do',
       answer:
-        'OptimizeIndex does not find or dispatch towing jobs. We do not broker work, place operators on rotation lists, negotiate motor club contracts, answer your phone, or run dispatch. If that is what you are looking for, we are the wrong vendor and would rather say so now.',
+        'OptimizeIndex does not find or dispatch towing jobs. We do not broker work, place operators on rotation lists, negotiate motor club contracts or run dispatch. We do answer calls for client businesses with an AI voice agent, which qualifies the caller, books the job and hands it to your own dispatcher; the dispatching stays yours. If finding or dispatching work is what you are looking for, we are the wrong vendor and would rather say so now.',
       detail: [
         'We also do not guarantee calls, rankings or revenue. Nobody outside Google can promise a position, and no agency can promise that a stranger with a dead car will dial your number. What can honestly be offered is work on the reasons you are found and the reasons you are chosen, and honest reporting on what followed.',
-        'What we do is one part of one channel: making an operator findable and credible at the moment someone searches, so more of the board can arrive as direct calls you priced yourself. That is a real lever on the mix and it is a narrow one.',
+        'What we do sits on one channel: making an operator findable and credible at the moment someone searches, and answering the call that follows with an AI voice agent, so more of the board can arrive as direct calls you priced yourself. That is a real lever on the mix and it is a narrow one.',
         'We spell this out because "towing jobs" is exactly the search where an operator could reasonably arrive expecting a lead-generation service that sells calls by the job. We do not sell calls. We work on visibility and credibility, and we report on calls and booked tows rather than impressions.',
       ],
     },
@@ -436,7 +450,7 @@ export const TOWING_JOBS = {
     {
       question: 'Do you find towing jobs for operators?',
       answer:
-        'No. OptimizeIndex does not broker or dispatch work, place operators on rotation lists, negotiate motor club contracts, or answer calls. We make a towing company findable and credible in Google, Maps and AI assistants so more of the work arrives as direct calls you price yourself, and we report on calls and booked tows.',
+        'No. OptimizeIndex does not broker or dispatch work, place operators on rotation lists or negotiate motor club contracts. We make a towing company findable and credible in Google, Maps and AI assistants so more of the work arrives as direct calls you price yourself, our AI voice agent can answer those calls and book the job for your dispatcher, and we report on calls and booked tows.',
     },
   ] as Faq[],
 

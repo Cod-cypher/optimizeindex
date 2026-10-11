@@ -13,76 +13,104 @@
  */
 
 import { Fragment } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import FaqSection from '../components/FaqSection';
 import TowingJobsLeadForm from '../components/towing/TowingJobsLeadForm';
 import { TOWING_JOBS, JOB_SOURCE_LABELS } from '../content/towingJobs';
-import { TOWING_STATES, TOWING_UPDATED } from '../content/towing';
+import { TOWING_STATES } from '../content/towing';
 import { TOWING_JOBS_CLUSTER } from '../content/towingJobsCluster';
 import { TOWING_BASE, PROUDLY_SERVING, TOWING_JOBS_PATH } from '../routes';
 import {
   AuditLink,
   CallLink,
+  PageCredit,
   SectionBlock,
+  SectionLinks,
   SourceList,
   TowingLayout,
-  UpdatedStamp,
+  useGo,
+  type SectionLinkMap,
 } from './towingShared';
 
-/**
- * Which pillar section hands off to which supporting page.
- *
- * Anchor text is varied per link rather than repeating one exact-match phrase,
- * for the reason documented at TowingPillarPage.tsx:156-159.
- */
-const CLUSTER_LINKS: Record<string, { lead: string; anchor: string; href: string }> = {
-  commercial: {
-    lead: 'This is the channel that is sold rather than searched, and it has its own process:',
-    anchor: 'winning commercial and fleet accounts',
-    href: '/towing-jobs/commercial-towing-accounts',
-  },
-  'direct-calls': {
-    lead: 'For what to actually configure, and what to count afterwards, see',
-    anchor: 'the cash-call playbook',
-    href: '/towing-jobs/more-direct-towing-calls',
-  },
-  'motor-club': {
-    lead: 'Weighing whether network dispatch earns its place on your board?',
-    anchor: 'We go through the trade-offs in detail',
-    href: '/towing-jobs/motor-club-towing',
-  },
-  'load-boards': {
-    lead: 'Paying a third party for calls is a different question again:',
-    anchor: 'whether bought towing leads are worth it',
-    href: '/towing-jobs/paid-towing-leads',
-  },
-  'private-property': {
-    lead: 'Winning and keeping the contract itself, and the statute behind every tow, is its own subject:',
-    anchor: 'getting private property towing contracts',
-    href: '/towing-jobs/private-property-towing-contracts',
-  },
-};
+const guide = (slug: string) => `${TOWING_JOBS_PATH}/${slug}`;
 
 /**
- * The commercial section hands off twice: once to the general account page and
- * once to the heavy-duty specialisation of it. Kept separate from CLUSTER_LINKS
- * so that map stays one-link-per-section and the render below stays simple.
+ * Which section of this page hands off to which page that takes it further.
+ *
+ * The pattern the pillar, guide and state pages now share (SectionLinks in
+ * towingShared.tsx). Anchors name the destination and are varied per link
+ * rather than repeating one exact-match phrase. The links to the guides keep
+ * the element ids they had before this map was generalised; the links to
+ * /towing-companies are the ones the copy refers to as "our towing services
+ * overview".
  */
-const HEAVY_DUTY_LINK = {
-  lead: 'If the accounts you want are heavy recovery, the buyers and the entry ticket are different:',
-  anchor: 'how heavy-duty towing accounts are won',
-  href: '/towing-jobs/heavy-duty-towing-accounts',
+const HUB_LINKS: SectionLinkMap = {
+  commercial: [
+    {
+      lead: 'This is the channel that is sold rather than searched, and it has its own process:',
+      anchor: 'winning commercial and fleet accounts',
+      href: guide('commercial-towing-accounts'),
+      id: 'pillar-to-commercial-towing-accounts',
+    },
+    {
+      lead: 'If the accounts you want are heavy recovery, the buyers and the entry ticket are different:',
+      anchor: 'how heavy-duty towing accounts are won',
+      href: guide('heavy-duty-towing-accounts'),
+      id: 'pillar-to-heavy-duty-towing-accounts',
+    },
+    {
+      lead: 'Pages built around the interstates you cover are set out in',
+      anchor: 'what corridor pages need, on our towing services overview',
+      href: `${TOWING_BASE}#heavy-duty`,
+    },
+  ],
+  'direct-calls': [
+    {
+      lead: 'For what to actually configure, and what to count afterwards, see',
+      anchor: 'the cash-call playbook',
+      href: guide('more-direct-towing-calls'),
+      id: 'pillar-to-more-direct-towing-calls',
+    },
+    {
+      lead: 'The profile, review and AI-answer work itself is covered in',
+      anchor: 'our towing services overview',
+      href: TOWING_BASE,
+    },
+  ],
+  'motor-club': [
+    {
+      lead: 'Weighing whether network dispatch earns its place on your board? Our guide to',
+      anchor: 'whether motor club towing jobs are worth it',
+      href: guide('motor-club-towing'),
+      tail: ' goes through the trade-offs.',
+      id: 'pillar-to-motor-club-towing',
+    },
+  ],
+  'load-boards': [
+    {
+      lead: 'Paying a third party for calls is a different question again:',
+      anchor: 'whether bought towing leads are worth it',
+      href: guide('paid-towing-leads'),
+      id: 'pillar-to-paid-towing-leads',
+    },
+  ],
+  'private-property': [
+    {
+      lead: 'Winning and keeping the contract itself, and the statute behind every tow, is its own subject:',
+      anchor: 'getting private property towing contracts',
+      href: guide('private-property-towing-contracts'),
+      id: 'pillar-to-private-property-towing-contracts',
+    },
+    {
+      lead: 'The reviews that come with it, and why a second profile is not the answer, are covered in',
+      anchor: 'the impound reviews part of our towing services overview',
+      href: `${TOWING_BASE}#impound-reviews`,
+    },
+  ],
 };
 
 export default function TowingJobsPage() {
-  const navigate = useNavigate();
-
-  const go = (href: string) => (e: React.MouseEvent) => {
-    e.preventDefault();
-    navigate(href);
-    window.scrollTo({ top: 0 });
-  };
+  const go = useGo();
 
   return (
     <TowingLayout>
@@ -140,9 +168,7 @@ export default function TowingJobsPage() {
             <AuditLink label="Free visibility check" />
           </div>
 
-          <div className="mt-6">
-            <UpdatedStamp date={TOWING_UPDATED} />
-          </div>
+          <PageCredit updated={TOWING_JOBS.updated} />
           </div>
 
           {/* The form is an addition to the hero, not a replacement for the
@@ -265,42 +291,14 @@ export default function TowingJobsPage() {
             <Fragment key={section.id}>
               <SectionBlock section={section} />
 
-              {/* Hand-off to the supporting page that takes this channel
-                  further. Lives here rather than in the content file because
-                  section detail[] renders as plain text and cannot carry a
-                  link (towingShared.tsx:112-116). */}
-              {CLUSTER_LINKS[section.id] && (
-                <p className="font-sans text-stone leading-relaxed border-l-4 border-lime pl-4">
-                  {CLUSTER_LINKS[section.id].lead}{' '}
-                  <a
-                    href={CLUSTER_LINKS[section.id].href}
-                    onClick={go(CLUSTER_LINKS[section.id].href)}
-                    id={`pillar-to-${CLUSTER_LINKS[section.id].href.split('/').pop()}`}
-                    className="font-bold text-ink underline hover:text-lime focus-ring"
-                  >
-                    {CLUSTER_LINKS[section.id].anchor}
-                  </a>
-                  .
-                </p>
-              )}
-
-              {/* Second hand-off on the commercial section only: heavy recovery
-                  is the specialised case of the account sale, with its own
-                  buyers and a published entry ticket. */}
-              {section.id === 'commercial' && (
-                <p className="font-sans text-stone leading-relaxed border-l-4 border-lime pl-4">
-                  {HEAVY_DUTY_LINK.lead}{' '}
-                  <a
-                    href={HEAVY_DUTY_LINK.href}
-                    onClick={go(HEAVY_DUTY_LINK.href)}
-                    id="pillar-to-heavy-duty-towing-accounts"
-                    className="font-bold text-ink underline hover:text-lime focus-ring"
-                  >
-                    {HEAVY_DUTY_LINK.anchor}
-                  </a>
-                  .
-                </p>
-              )}
+              {/* Hand-offs to the pages that take this channel further. Here
+                  rather than in the content file because section detail[]
+                  renders as plain text and cannot carry a link. */}
+              <SectionLinks
+                links={HUB_LINKS[section.id]}
+                sectionId={section.id}
+                idPrefix="hub"
+              />
 
               {/* The ladder belongs directly under the measurement answer —
                   the prose makes the argument, the table shows the gap. */}
@@ -450,7 +448,8 @@ export default function TowingJobsPage() {
           </ul>
 
           <p className="font-sans text-stone text-sm mt-6">
-            Every market we work in is listed on the{' '}
+            We work with operators in every state; the seven with a page of their own are gathered,
+            with their metros, on the{' '}
             <a
               href={PROUDLY_SERVING}
               onClick={go(PROUDLY_SERVING)}

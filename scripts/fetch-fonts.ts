@@ -10,6 +10,15 @@
  * had downloaded and parsed — a four-deep blocking chain across two
  * third-party origins, with no preconnect. Serving the files ourselves removes
  * both round trips and the third-party dependency.
+ *
+ * A CHANGED FONT NEEDS A NEW FILENAME. server.ts serves /fonts/ with
+ * `Cache-Control: public, max-age=31536000, immutable`, and these filenames
+ * carry no content hash, so a returning visitor's browser keeps whatever it
+ * downloaded under a name for a year without asking again. If Google ships a
+ * new build of a face, writing it over the old file would leave those visitors
+ * on the old one. So this script refuses to overwrite a file whose bytes
+ * differ: bump FONT_FILE_VERSION below, re-run, then update the preload href
+ * in index.html (and delete the old files from public/fonts/).
  */
 
 import fs from 'node:fs/promises';
@@ -82,10 +91,18 @@ function parseFaces(css: string): FontFace[] {
   return faces;
 }
 
+/**
+ * Appended to every filename when non-empty ("v2" -> "...-latin-v2.woff2").
+ * Empty while the published files are the original downloads. Bump it whenever
+ * the guard in main() reports that a font's bytes changed — see the header.
+ */
+const FONT_FILE_VERSION = '';
+
 function fileNameFor(f: FontFace): string {
   const slug = f.family.toLowerCase().replace(/\s+/g, '-');
   const weight = f.weight.replace(/\s+/g, '-');
-  return `${slug}-${weight}-${f.style}-${f.subset}.woff2`;
+  const version = FONT_FILE_VERSION ? `-${FONT_FILE_VERSION}` : '';
+  return `${slug}-${weight}-${f.style}-${f.subset}${version}.woff2`;
 }
 
 async function main() {
@@ -122,7 +139,18 @@ async function main() {
       const bin = await fetch(face.url, { headers: { 'User-Agent': UA } });
       if (!bin.ok) throw new Error(`Failed to download ${face.url}: ${bin.status}`);
       const buf = Buffer.from(await bin.arrayBuffer());
-      await fs.writeFile(path.join(OUT_DIR, name), buf);
+      const target = path.join(OUT_DIR, name);
+      // Same name, different bytes: browsers holding the year-long immutable
+      // copy would never see the change. Stop and make the rename explicit.
+      const existing = await fs.readFile(target).catch(() => null);
+      if (existing && !existing.equals(buf)) {
+        throw new Error(
+          `${name} already exists with different contents. Font files are cached for a year ` +
+            `as immutable, so a changed font must ship under a new filename: bump FONT_FILE_VERSION ` +
+            `in scripts/fetch-fonts.ts, re-run \`npm run fonts\`, then update the preload href in index.html.`,
+        );
+      }
+      await fs.writeFile(target, buf);
       console.log(`  ${name.padEnd(46)} ${(buf.length / 1024).toFixed(1)} KB`);
     }
 
@@ -152,6 +180,11 @@ async function main() {
     ' * These replace the Google Fonts @import that used to sit at the top of',
     ' * index.css, where it forced the browser to download and parse the whole',
     ' * stylesheet before it could even discover the font request.',
+    ' *',
+    ' * /fonts/ is served with a one-year immutable cache and the filenames carry',
+    ' * no content hash, so a changed font must ship under a new filename. See',
+    ' * FONT_FILE_VERSION in scripts/fetch-fonts.ts, and update the preload href',
+    ' * in index.html to match.',
     ' */',
     '',
   ].join('\n');

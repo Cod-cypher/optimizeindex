@@ -30,7 +30,14 @@ export interface CaseStudy {
   goal: GoalId;
   outcome: string;
   category: string;
+  /** "verified in <tool>". The tool name is read from this by verifiedIn(). */
   dataOrigin: string;
+  /**
+   * The before-and-after the headline percentage was computed from, in the
+   * study's own words. Optional because not every study publishes one; never
+   * filled with an estimate.
+   */
+  baseline?: string;
   fullContent?: string;
 }
 

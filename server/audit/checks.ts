@@ -10,7 +10,7 @@
 
 import type { CheerioAPI } from "cheerio";
 import { URL } from "node:url";
-import type { AuditCheck, AuditCategory, CategoryId } from "../../shared/auditTypes";
+import type { AuditCheck, AuditCategory, AuditSource, CategoryId } from "../../shared/auditTypes";
 import { CATEGORY_WEIGHTS } from "../../shared/auditTypes";
 
 export interface RobotsInfo {
@@ -18,7 +18,10 @@ export interface RobotsInfo {
   text: string;
   sitemaps: string[];
   blocksRoot: boolean;
-  /** AI/LLM crawler name -> allowed to read the homepage. */
+  /**
+   * Crawler name -> allowed to read the homepage, for every crawler in
+   * SEARCH_CRAWLERS and TRAINING_CRAWLERS below.
+   */
   aiBots: Record<string, boolean>;
 }
 
@@ -52,20 +55,145 @@ type CheckDef = {
   category: CategoryId;
   label: string;
   weight: number;
+  /** Default source for every outcome; an outcome may carry its own instead. */
+  source?: AuditSource;
   run: (ctx: ScanContext) => Omit<AuditCheck, "id" | "label" | "weight">;
 };
+
+/* -------------------------------------------------------------------------
+   Primary sources
+
+   Every claim a `why` string makes about how Google or an AI crawler behaves
+   rests on one of these, and the report links it. `checkedAt` is the day the
+   page was read against the wording here; re-read it before changing a claim.
+   Secondary write-ups do not go in this list.
+------------------------------------------------------------------------- */
+
+const CHECKED_AT = "2026-10-12";
+
+const SOURCES = {
+  aiGuide: {
+    label: "Google Search Central: AI optimization guide",
+    url: "https://developers.google.com/search/docs/fundamentals/ai-optimization-guide",
+    checkedAt: CHECKED_AT,
+  },
+  googleCrawlers: {
+    label: "Google's common crawlers (Google-Extended)",
+    url: "https://developers.google.com/search/docs/crawling-indexing/google-common-crawlers",
+    checkedAt: CHECKED_AT,
+  },
+  openaiBots: {
+    label: "OpenAI crawler documentation",
+    url: "https://developers.openai.com/api/docs/bots",
+    checkedAt: CHECKED_AT,
+  },
+  robotsSpec: {
+    label: "How Google interprets robots.txt",
+    url: "https://developers.google.com/search/docs/crawling-indexing/robots/robots_txt",
+    checkedAt: CHECKED_AT,
+  },
+  sitemaps: {
+    label: "Google: Learn about sitemaps",
+    url: "https://developers.google.com/search/docs/crawling-indexing/sitemaps/overview",
+    checkedAt: CHECKED_AT,
+  },
+  titleLinks: {
+    label: "Google: Title links in search results",
+    url: "https://developers.google.com/search/docs/appearance/title-link",
+    checkedAt: CHECKED_AT,
+  },
+  snippets: {
+    label: "Google: Snippets and meta descriptions",
+    url: "https://developers.google.com/search/docs/appearance/snippet",
+    checkedAt: CHECKED_AT,
+  },
+  helpfulContent: {
+    label: "Google: Creating helpful, people-first content",
+    url: "https://developers.google.com/search/docs/fundamentals/creating-helpful-content",
+    checkedAt: CHECKED_AT,
+  },
+  structuredData: {
+    label: "Google: Introduction to structured data",
+    url: "https://developers.google.com/search/docs/appearance/structured-data/intro-structured-data",
+    checkedAt: CHECKED_AT,
+  },
+} satisfies Record<string, AuditSource>;
 
 /* -------------------------------------------------------------------------
    Small helpers
 ------------------------------------------------------------------------- */
 
-const AI_CRAWLERS = [
-  "GPTBot",
-  "OAI-SearchBot",
-  "ClaudeBot",
-  "PerplexityBot",
-  "Google-Extended",
+/**
+ * Crawlers that build a search index, so blocking one removes the site from
+ * that product's results. These are the only crawlers the score depends on.
+ *
+ * OpenAI documents OAI-SearchBot as its search crawler and says sites opted
+ * out of it are not shown in ChatGPT search answers. Anthropic describes
+ * Claude-SearchBot as improving search result quality, Perplexity describes
+ * PerplexityBot as surfacing and linking sites in its search results, and
+ * Apple describes Applebot as powering search in Spotlight, Siri and Safari.
+ */
+const SEARCH_CRAWLERS: { name: string; product: string }[] = [
+  { name: "Googlebot", product: "Google Search" },
+  { name: "Bingbot", product: "Bing" },
+  { name: "OAI-SearchBot", product: "ChatGPT search" },
+  { name: "Claude-SearchBot", product: "Claude's search results" },
+  { name: "PerplexityBot", product: "Perplexity search" },
+  { name: "Applebot", product: "Siri, Spotlight and Safari search" },
 ];
+
+/**
+ * Crawlers and tokens that govern model training (and, for Google-Extended,
+ * Gemini grounding; for CCBot, Common Crawl's open web archive, which its own
+ * page describes as research data rather than naming training). Blocking them
+ * is a legitimate choice about how content is used and has no documented
+ * effect on search, so they are reported, never scored. Google says Google-Extended "does not impact a site's inclusion in
+ * Google Search nor is it used as a ranking signal"; Apple says pages that
+ * disallow Applebot-Extended "can still be included in search results".
+ *
+ * User-triggered fetchers (ChatGPT-User, Claude-User, Perplexity-User) are not
+ * listed at all: they fetch a page because a person asked, not to build an
+ * index, and OpenAI says ChatGPT-User "is not used to determine whether
+ * content may appear in Search".
+ */
+const TRAINING_CRAWLERS: { name: string; product: string }[] = [
+  { name: "GPTBot", product: "OpenAI model training" },
+  { name: "ClaudeBot", product: "Anthropic model training" },
+  { name: "CCBot", product: "Common Crawl's open web archive" },
+  { name: "Applebot-Extended", product: "Apple model training" },
+  {
+    name: "Google-Extended",
+    product: "Gemini Apps grounding and Gemini training; no effect on Google Search",
+  },
+];
+
+const ALL_CRAWLERS = [...SEARCH_CRAWLERS, ...TRAINING_CRAWLERS].map((c) => c.name);
+
+/** Titles that say nothing about the page. Compared lower-cased and trimmed. */
+const GENERIC_TITLES = new Set([
+  "home",
+  "homepage",
+  "home page",
+  "index",
+  "untitled",
+  "untitled document",
+  "untitled page",
+  "new page",
+  "welcome",
+  "default",
+  "document",
+  "my site",
+  "my website",
+]);
+
+/** Placeholder descriptions that site builders ship by default. */
+const GENERIC_DESCRIPTIONS = new Set([
+  "just another wordpress site",
+  "description",
+  "site description",
+  "my website",
+  "welcome",
+]);
 
 function textOf(ctx: ScanContext): string {
   const $ = ctx.$;
@@ -207,7 +335,7 @@ export function parseRobots(text: string, found: boolean): RobotsInfo {
     if (m) sitemaps.push(m[1]);
   }
   const aiBots: Record<string, boolean> = {};
-  for (const bot of AI_CRAWLERS) {
+  for (const bot of ALL_CRAWLERS) {
     aiBots[bot] = found ? robotsAllows(text, bot) : true;
   }
   return {
@@ -311,21 +439,25 @@ const CHECKS: CheckDef[] = [
     category: "technical",
     label: "Google is allowed in",
     weight: 2,
+    source: SOURCES.robotsSpec,
     run: (ctx) => {
+      // Google treats a missing robots.txt (any 4xx but 429) "as if a valid
+      // robots.txt file didn't exist", meaning no crawl restrictions. Absence
+      // is therefore a pass for "Google is allowed in", not a defect.
       if (!ctx.robots.found) {
         return {
-          status: "warn",
-          detail: "No robots.txt found at /robots.txt.",
-          why: "This file tells Google which pages to look at. Without it, Google is guessing.",
-          fix: "Add this small file so Google knows which pages to read and where your page list is.",
+          status: "pass",
+          detail: "No robots.txt found at /robots.txt, so Google treats the site as having no crawl restrictions.",
+          why: "Google reads a missing robots.txt as permission to crawl everything. You only need one to keep crawlers out of something, or to point them at your sitemap.",
+          fix: "Nothing to do here.",
         };
       }
       if (ctx.robots.blocksRoot) {
         return {
           status: "fail",
           detail: "robots.txt blocks Googlebot from crawling the site root.",
-          why: "One line in this file is telling Google to ignore your entire site.",
-          fix: "Remove the line blocking Google. This is urgent — it is hiding your whole site.",
+          why: "One line in this file is telling Google not to read your homepage.",
+          fix: "Remove the line blocking Google. This is urgent: it keeps Google from reading your site.",
         };
       }
       return {
@@ -341,13 +473,14 @@ const CHECKS: CheckDef[] = [
     category: "technical",
     label: "Google has a list of your pages",
     weight: 2,
+    source: SOURCES.sitemaps,
     run: (ctx) => {
       if (!ctx.sitemap.found) {
         return {
-          status: "fail",
+          status: "warn",
           detail: "No XML sitemap found at /sitemap.xml or referenced in robots.txt.",
-          why: "Without this list, new pages can take weeks to show up in Google, or never appear at all.",
-          fix: "Have a page list generated automatically and submit it to Google Search Console.",
+          why: "A sitemap helps Google find your pages, though it does not guarantee they are crawled. Google says a small site (about 500 pages or fewer) that links to every important page from the homepage may not need one.",
+          fix: "Have a page list generated automatically and submit it in Google Search Console.",
         };
       }
       const count = ctx.sitemap.urlCount;
@@ -357,7 +490,7 @@ const CHECKS: CheckDef[] = [
           count != null
             ? `Sitemap found at ${ctx.sitemap.url} listing ${count} URL${count === 1 ? "" : "s"}.`
             : `Sitemap found at ${ctx.sitemap.url}.`,
-        why: "Google gets a direct list of every page you want found.",
+        why: "Google gets a direct list of the pages you want found.",
         fix: "Nothing to do here.",
       };
     },
@@ -486,37 +619,38 @@ const CHECKS: CheckDef[] = [
     category: "content",
     label: "The headline Google shows",
     weight: 4,
+    source: SOURCES.titleLinks,
+    // Fails only when there is nothing useful to show. Google sets no length
+    // limit on <title> and truncates "as needed, typically to fit the device
+    // width", so length is reported as a display note, never as a defect.
     run: (ctx) => {
-      const title = (ctx.$("head title").first().text() || "").trim();
+      const title = (ctx.$("head title").first().text() || "").replace(/\s+/g, " ").trim();
       if (!title) {
         return {
           status: "fail",
           detail: "The page has no title tag.",
-          why: "This is the blue clickable line customers see in Google. Right now there is nothing there.",
+          why: "Google asks for a title on every page. It is the main source for the clickable line customers see in results, and right now there is nothing there.",
           fix: "Write a short headline with what you do and where, plus your business name.",
         };
       }
       const len = title.length;
-      if (len < 30) {
+      const normalized = title.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
+      if (GENERIC_TITLES.has(normalized)) {
         return {
-          status: "warn",
-          detail: `Title is ${len} characters: "${title}"`,
-          why: "You get a fixed amount of space in Google's results and you are only using part of it.",
-          fix: "Make it longer. Lead with what you do and the town you serve, then your name.",
+          status: "fail",
+          detail: `Title is "${title}", which says nothing about the business.`,
+          why: "Google advises against vague titles such as \"Home\". A customer scanning results cannot tell what you do from it.",
+          fix: "Write a short headline with what you do and where, plus your business name.",
         };
       }
-      if (len > 60) {
-        return {
-          status: "warn",
-          detail: `Title is ${len} characters: "${title}"`,
-          why: "Google cuts your headline off partway, so customers never read the end of it.",
-          fix: "Shorten it, and put the most important words first.",
-        };
-      }
+      const note =
+        len > 60
+          ? " Google sets no length limit, but long titles are cut to fit the screen, so the first words matter most."
+          : "";
       return {
         status: "pass",
-        detail: `Title is ${len} characters: "${title}"`,
-        why: "Your headline shows in full, so more people click it.",
+        detail: `Title is ${len} characters: "${title}".${note}`,
+        why: "The page has a specific title, which Google can use as the clickable headline in results.",
         fix: "Nothing to do here.",
       };
     },
@@ -526,31 +660,35 @@ const CHECKS: CheckDef[] = [
     category: "content",
     label: "The description under your headline",
     weight: 3,
+    source: SOURCES.snippets,
+    // Same rule as the title: missing or placeholder fails, length is a note.
+    // Google says there is no limit on a meta description's length, builds
+    // most snippets from page text, and uses the description when it
+    // describes the page more accurately.
     run: (ctx) => {
-      const desc = (ctx.$('meta[name="description"]').first().attr("content") || "").trim();
+      const desc = (ctx.$('meta[name="description"]').first().attr("content") || "").replace(/\s+/g, " ").trim();
       if (!desc) {
         return {
           status: "fail",
           detail: "No meta description on the homepage.",
-          why: "Google will write this line for you from whatever text it finds. It is rarely your best pitch.",
+          why: "Google builds most snippets from your page text, but it uses the meta description when that describes the page more accurately. Without one, you have no say in it.",
           fix: "Write a sentence or two saying what you do and why someone should call you.",
         };
       }
       const len = desc.length;
-      if (len < 70 || len > 160) {
+      const normalized = desc.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
+      if (GENERIC_DESCRIPTIONS.has(normalized)) {
         return {
-          status: "warn",
-          detail: `Meta description is ${len} characters (recommended 70-160): "${desc.slice(0, 120)}${desc.length > 120 ? "…" : ""}"`,
-          why: len < 70
-            ? "A thin description leaves the search snippet doing less selling than it could."
-            : "Google truncates past about 160 characters, cutting off your call to action.",
-          fix: "Rewrite it to a sentence or two with a clear reason to call you.",
+          status: "fail",
+          detail: `Meta description is a placeholder: "${desc}".`,
+          why: "This is the default text a site builder ships with. It tells a customer nothing about you.",
+          fix: "Write a sentence or two saying what you do and why someone should call you.",
         };
       }
       return {
         status: "pass",
-        detail: `Meta description is ${len} characters.`,
-        why: "This is your sales line in Google's results, and it fits.",
+        detail: `Meta description is ${len} characters. Google sets no length limit and trims snippets to fit the screen.`,
+        why: "You have given Google a summary of the page it can use under your headline.",
         fix: "Nothing to do here.",
       };
     },
@@ -617,13 +755,17 @@ const CHECKS: CheckDef[] = [
     category: "content",
     label: "Enough written on the page",
     weight: 3,
+    source: SOURCES.helpfulContent,
+    // The 150 / 300 thresholds are our own heuristic for a page that says
+    // almost nothing. Google says it has no preferred word count, and the
+    // wording below says so rather than implying a ranking rule.
     run: (ctx) => {
       const words = wordCount(ctx);
       if (words < 150) {
         return {
           status: "fail",
           detail: `Roughly ${words} words of text on the homepage.`,
-          why: "There is not enough here for Google to work out what you do or who you serve.",
+          why: "There is not enough here to say what you do or who you serve. Google has no preferred word count; this threshold is our own rough check for a page that says almost nothing.",
           fix: "Add a few paragraphs covering your services, your areas, and why people hire you.",
         };
       }
@@ -631,14 +773,14 @@ const CHECKS: CheckDef[] = [
         return {
           status: "warn",
           detail: `Roughly ${words} words of text on the homepage.`,
-          why: "With this little text you will struggle to rank for anything except your own business name.",
+          why: "Google has no preferred word count. What matters is whether the page answers what customers ask before they book, and this little text probably does not yet.",
           fix: "Add sections answering the questions customers ask before they book.",
         };
       }
       return {
         status: "pass",
         detail: `Roughly ${words} words of text on the homepage.`,
-        why: "Enough on the page for Google to match you to what customers actually search for.",
+        why: "There is enough on the page to describe what you do. Google has no preferred word count, so this is our own rough check, not a target.",
         fix: "Nothing to do here.",
       };
     },
@@ -719,14 +861,14 @@ const CHECKS: CheckDef[] = [
         return {
           status: internal === 0 ? "fail" : "warn",
           detail: `${internal} internal link${internal === 1 ? "" : "s"} and ${external} external on the homepage.`,
-          why: "Your homepage is your strongest page. Links from it are how your service pages get found.",
-          fix: "Link from your homepage to each service and each area you cover.",
+          why: "Links from your homepage are how visitors and search crawlers find your service pages.",
+          fix: "Link from your homepage to each service page.",
         };
       }
       return {
         status: "pass",
         detail: `${internal} internal links and ${external} external links.`,
-        why: "Your strongest page is helping your other pages rank.",
+        why: "Visitors and search crawlers can reach your other pages from here.",
         fix: "Nothing to do here.",
       };
     },
@@ -765,12 +907,25 @@ const CHECKS: CheckDef[] = [
     },
   },
 
-  /* --- AI search & GEO readiness ---------------------------------------- */
+  /* --- AI search readiness -----------------------------------------------
+     Rewritten against the providers' own documentation. Google says AI
+     Overviews and AI Mode need no special files, markup or schema, and that
+     Google Search ignores llms.txt; OpenAI documents GPTBot as a training
+     crawler and OAI-SearchBot as the one behind ChatGPT search. So nothing
+     here scores a file or a markup type that no search product requires, and
+     nothing promises that an assistant will recommend anyone.
+  ------------------------------------------------------------------------- */
   {
     id: "server-rendered",
     category: "geo",
-    label: "AI assistants can read your site",
+    label: "AI tools can read your site without running code",
     weight: 4,
+    // OpenAI's crawler documentation (the linked source) says nothing about
+    // running JavaScript, and SEO-PLAN.md found the same for Anthropic's and
+    // Perplexity's. That absence is the claim, so it is worded as an absence
+    // ("may not"), never as a fact about what the crawlers cannot do. Google
+    // does render JavaScript; this check is about the other crawlers.
+    source: SOURCES.openaiBots,
     run: (ctx) => {
       const words = wordCount(ctx);
       const scripts = ctx.$("script[src]").length + ctx.$("script:not([src])").length;
@@ -778,7 +933,7 @@ const CHECKS: CheckDef[] = [
         return {
           status: "fail",
           detail: `Only ~${words} words are present in the raw HTML, with ${scripts} script tags — the content is rendered by JavaScript.`,
-          why: "ChatGPT and similar assistants cannot run the code your site needs to display. To them it is blank.",
+          why: "ChatGPT and similar assistants may not run JavaScript; their crawler documentation does not say they do. If they don't, this page is close to blank for them.",
           fix: "Have your site send finished pages instead of building them in the browser.",
         };
       }
@@ -786,14 +941,14 @@ const CHECKS: CheckDef[] = [
         return {
           status: "warn",
           detail: `Only ~${words} words are present in the raw HTML before JavaScript runs.`,
-          why: "AI assistants only see this much of your page. The rest never reaches them.",
+          why: "AI assistants may not run JavaScript; their crawler documentation does not say they do. If they don't, this is all of the page they see.",
           fix: "Have your main content sent with the page instead of loaded afterwards.",
         };
       }
       return {
         status: "pass",
         detail: `~${words} words are present in the raw HTML without JavaScript.`,
-        why: "AI assistants can read your page directly.",
+        why: "Your content is in the page itself, so reading it does not depend on a crawler running JavaScript.",
         fix: "Nothing to do here.",
       };
     },
@@ -803,20 +958,21 @@ const CHECKS: CheckDef[] = [
     category: "geo",
     label: "Your details in a format Google reads",
     weight: 3,
+    source: SOURCES.structuredData,
     run: (ctx) => {
       const types = schemaTypes(ctx);
       if (types.size === 0) {
         return {
           status: "fail",
           detail: "No Schema.org JSON-LD found on the page.",
-          why: "This is how Google reads your hours, phone number and services as facts instead of guessing.",
+          why: "Structured data gives Google explicit clues about what a page means: who the business is, what it offers and how to reach it. Google also says no special markup is needed for its AI features, so this is about being understood, not about AI.",
           fix: "Add the hidden details block with your name, phone, hours and services.",
         };
       }
       return {
         status: "pass",
         detail: `Structured data found: ${[...types].slice(0, 6).join(", ")}${types.size > 6 ? `, +${types.size - 6} more` : ""}.`,
-        why: "Google and AI assistants can read your business details as facts.",
+        why: "Google uses the structured data it finds to understand what the page is about.",
         fix: "Nothing to do here.",
       };
     },
@@ -826,6 +982,7 @@ const CHECKS: CheckDef[] = [
     category: "geo",
     label: "Google knows you are a business",
     weight: 3,
+    source: SOURCES.structuredData,
     run: (ctx) => {
       const types = schemaTypes(ctx);
       const entity = hasAnyType(types, [
@@ -841,94 +998,126 @@ const CHECKS: CheckDef[] = [
         return {
           status: "pass",
           detail: `${entity} markup is present.`,
-          why: "Google recognises you as a real business it can name and recommend.",
+          why: "The page states in a standard format which business is behind it.",
           fix: "Nothing to do here.",
         };
       }
       return {
         status: "fail",
         detail: "No Organization or LocalBusiness markup found.",
-        why: "Without this, an AI assistant cannot confidently name you, place you, or recommend you to someone nearby.",
-        fix: "Add a business details block with your name, address, phone and social profiles.",
+        why: "Nothing on the page states in a standard format which business is behind it: your name, logo, phone and website.",
+        fix: "Add a business details block with your name, phone, website and logo, plus your address if customers visit you.",
       };
     },
   },
   {
     id: "answer-schema",
     category: "geo",
-    label: "Set up to answer customer questions",
+    label: "Page-type markup (optional)",
     weight: 2,
+    // Reported, never scored. Google: "Structured data isn't required for
+    // generative AI search, and there's no special schema.org markup you need
+    // to add." Do not turn this into a test for a visible Q&A section, and do
+    // not add a homepage FAQ to satisfy it (SEO-PLAN.md, GAP-03).
+    source: SOURCES.aiGuide,
     run: (ctx) => {
       const types = schemaTypes(ctx);
       const found = hasAnyType(types, ["FAQPage", "QAPage", "HowTo", "Article", "Product", "Service", "BreadcrumbList"]);
-      if (found) {
-        return {
-          status: "pass",
-          detail: `${found} markup is present.`,
-          why: "This is the kind of content AI assistants quote when someone asks a question.",
-          fix: "Nothing to do here.",
-        };
-      }
       return {
-        status: "warn",
-        detail: "No FAQ, HowTo, Article or Product markup found.",
-        why: "Answering common customer questions on the page is what gets you quoted in AI answers.",
-        fix: "Add a questions-and-answers section covering what customers actually ask.",
+        status: "info",
+        detail: found
+          ? `${found} markup is present.`
+          : "No FAQ, Article, Product, Service or breadcrumb markup found.",
+        why: "Optional. Google says there is no special schema markup needed to appear in its AI features. Markup like this can still describe the page and qualify it for some rich results.",
+        fix: "",
       };
     },
   },
   {
     id: "ai-crawlers",
     category: "geo",
-    label: "AI assistants are allowed in",
+    label: "Search crawlers are allowed in",
     weight: 3,
+    source: SOURCES.openaiBots,
+    // Scores only the crawlers that build search indexes (SEARCH_CRAWLERS).
+    // Training crawlers are reported by "ai-training" below and never scored.
     run: (ctx) => {
+      const searchNames = SEARCH_CRAWLERS.map((c) => c.name).join(", ");
       if (!ctx.robots.found) {
         return {
           status: "pass",
-          detail: "No robots.txt, so AI crawlers are allowed by default.",
-          why: "ChatGPT, Claude and Perplexity can read your site.",
+          detail: `No robots.txt, so every crawler is allowed by default, including ${searchNames}.`,
+          why: "The crawlers behind Google, Bing, ChatGPT search, Claude, Perplexity and Apple's search features can all read your site.",
           fix: "Nothing to do here.",
         };
       }
-      const blocked = Object.entries(ctx.robots.aiBots)
-        .filter(([, allowed]) => !allowed)
-        .map(([bot]) => bot);
+      const blocked = SEARCH_CRAWLERS.filter((c) => ctx.robots.aiBots[c.name] === false);
       if (blocked.length === 0) {
         return {
           status: "pass",
-          detail: `robots.txt allows ${AI_CRAWLERS.join(", ")}.`,
-          why: "You can be recommended in AI answers.",
+          detail: `robots.txt allows the search crawlers: ${searchNames}.`,
+          why: "The crawlers behind Google, Bing, ChatGPT search, Claude, Perplexity and Apple's search features can all read your site.",
           fix: "Nothing to do here.",
         };
       }
+      const names = blocked.map((c) => c.name).join(", ");
+      const products = blocked.map((c) => c.product).join(", ");
       return {
         status: "fail",
-        detail: `robots.txt blocks ${blocked.join(", ")}.`,
-        why: "These assistants cannot read your site, so they will never suggest you. They will suggest a competitor.",
-        fix: `Remove the disallow rules for ${blocked.join(", ")} in robots.txt, unless blocking them is deliberate.`,
+        detail: `robots.txt blocks ${names} from your homepage.`,
+        why: `Each of these crawlers feeds a search product (${products}), and blocked here it cannot read your homepage. OpenAI, for example, says sites that block OAI-SearchBot are not shown in ChatGPT search answers.`,
+        fix: `Remove the Disallow rules for ${names} in robots.txt, unless keeping your site out of those results is deliberate.`,
+      };
+    },
+  },
+  {
+    id: "ai-training",
+    category: "geo",
+    label: "AI training crawlers (your choice)",
+    weight: 0,
+    source: SOURCES.googleCrawlers,
+    // Information only. Blocking a training crawler is a decision about how
+    // content is used, with no documented effect on search, so it can never
+    // cost or earn points.
+    run: (ctx) => {
+      const describe = (list: typeof TRAINING_CRAWLERS) =>
+        list.map((c) => `${c.name} (${c.product})`).join("; ");
+      if (!ctx.robots.found) {
+        return {
+          status: "info",
+          detail: `No robots.txt, so training crawlers are allowed by default: ${describe(TRAINING_CRAWLERS)}.`,
+          why: "None of these is a search crawler: they collect content for model training or, for CCBot, an open web archive. Google says Google-Extended does not affect inclusion or ranking in Google Search. Allowing or blocking them is your call.",
+          fix: "",
+        };
+      }
+      const blocked = TRAINING_CRAWLERS.filter((c) => ctx.robots.aiBots[c.name] === false);
+      const allowed = TRAINING_CRAWLERS.filter((c) => ctx.robots.aiBots[c.name] !== false);
+      const parts: string[] = [];
+      if (allowed.length) parts.push(`Allowed: ${describe(allowed)}.`);
+      if (blocked.length) parts.push(`Blocked: ${describe(blocked)}.`);
+      return {
+        status: "info",
+        detail: parts.join(" "),
+        why: "None of these is a search crawler: they collect content for model training or, for CCBot, an open web archive. Google says Google-Extended does not affect inclusion or ranking in Google Search. Allowing or blocking them is your call.",
+        fix: "",
       };
     },
   },
   {
     id: "llms-txt",
     category: "geo",
-    label: "A summary written for AI",
+    label: "An llms.txt file (optional)",
     weight: 1,
-    run: (ctx) =>
-      ctx.llmsTxt
-        ? {
-            status: "pass",
-            detail: "/llms.txt is published.",
-            why: "Tells AI assistants what you do in your own words instead of leaving them to guess.",
-            fix: "Nothing to do here.",
-          }
-        : {
-            status: "warn",
-            detail: "No /llms.txt file found.",
-            why: "A new, simple file that tells AI assistants what your business does and which pages matter.",
-            fix: "Publish a short summary file describing your business for AI assistants.",
-          },
+    // Reported, never scored. Google: llms.txt and similar files "will neither
+    // harm nor help your site's visibility or rankings in Google Search, as
+    // Google Search ignores them."
+    source: SOURCES.aiGuide,
+    run: (ctx) => ({
+      status: "info",
+      detail: ctx.llmsTxt ? "/llms.txt is published." : "No /llms.txt file found.",
+      why: "Optional. Google Search does not use it; some other tools may read it.",
+      fix: "",
+    }),
   },
   {
     id: "author-signals",
@@ -949,7 +1138,7 @@ const CHECKS: CheckDef[] = [
         return {
           status: "pass",
           detail: `Found: ${signals.join(", ")}.`,
-          why: "Being easy to contact is something Google measures when deciding whether to trust you.",
+          why: "Customers can reach you without hunting, and the site shows who stands behind it.",
           fix: "Nothing to do here.",
         };
       }
@@ -958,8 +1147,8 @@ const CHECKS: CheckDef[] = [
         detail: signals.length
           ? `Only found: ${signals.join(", ")}.`
           : "No phone link, email link, address markup or policy pages found.",
-        why: "Customers cannot easily reach you, and Google has little reason to treat you as an established business.",
-        fix: "Add a tap-to-call phone number, your address, and your policy links in the footer.",
+        why: "Customers cannot easily reach you or see who runs the site.",
+        fix: "Add a tap-to-call phone number, your address if customers visit you, and your policy links in the footer.",
       };
     },
   },
@@ -977,6 +1166,10 @@ const CHECKS: CheckDef[] = [
  *
  * These are labels only — the checks, weights and thresholds behind them are
  * unchanged.
+ *
+ * The geo blurb promises nothing about recommendations. Nobody can make an AI
+ * assistant recommend a business, and the audit is the lead magnet for a
+ * company whose positioning rests on not claiming outcomes it cannot control.
  */
 const CATEGORY_META: Record<CategoryId, { label: string; blurb: string }> = {
   technical: {
@@ -992,19 +1185,22 @@ const CATEGORY_META: Record<CategoryId, { label: string; blurb: string }> = {
     blurb: "How long a customer waits before your page shows up.",
   },
   geo: {
-    label: "Showing up in AI answers",
-    blurb: "Whether ChatGPT and Google's AI answers can recommend you.",
+    label: "Ready for AI search",
+    blurb: "Whether AI search tools can read your site. No check can make one recommend you.",
   },
 };
 
 const STATUS_VALUE: Record<string, number> = { pass: 1, warn: 0.5, fail: 0 };
 
-/** Weighted pass ratio, 0-100. "unknown" checks are excluded entirely. */
+/**
+ * Weighted pass ratio, 0-100. "unknown" and "info" checks are excluded
+ * entirely: one could not be measured, the other is not a requirement.
+ */
 export function scoreChecks(checks: AuditCheck[]): number | null {
   let earned = 0;
   let possible = 0;
   for (const c of checks) {
-    if (c.status === "unknown") continue;
+    if (c.status === "unknown" || c.status === "info") continue;
     possible += c.weight;
     earned += c.weight * STATUS_VALUE[c.status];
   }
@@ -1031,6 +1227,7 @@ export function runChecks(ctx: ScanContext): AuditCategory[] {
       id: def.id,
       label: def.label,
       weight: def.weight,
+      ...(def.source ? { source: def.source } : {}),
       ...outcome,
     });
   }

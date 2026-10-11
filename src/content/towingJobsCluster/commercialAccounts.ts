@@ -25,6 +25,9 @@ export const commercialAccounts: TowingJobsChild = {
     'Commercial towing accounts are sold, not searched. Who buys them, how to approach, what a fleet buyer checks before signing, and how billing usually works.',
   lede:
     'A commercial towing account is a standing arrangement with a business that owns or manages vehicles — a dealership, body shop, rental branch, carrier or property manager — that calls you first and settles on terms rather than at the roadside. These are won by sales rather than by search, and the buyer is evaluating you against a short list before the first call ever comes in.',
+  // From git: created in 1e4a682, with no later commit to this file.
+  published: '2026-09-03T01:11:19+05:00',
+  updated: '2026-09-03T01:11:19+05:00',
 
   sections: [
     {
@@ -47,7 +50,7 @@ export const commercialAccounts: TowingJobsChild = {
         'Dealerships generate steady, unglamorous volume — trade-ins, auction runs, dead batteries in the lot, moves between locations. Service managers usually control it and they care most about turnaround, because a car that arrives late is a bay that sits empty.',
         'Repair and body shops are the closest thing to a recurring consumer stream, because the vehicle often has to reach them before any work starts. Body shops in particular deal in vehicles that are not drivable by definition.',
         'Rental branches need vehicles retrieved and repositioned, often on short notice and often outside their own hours. Carriers and fleet operators are the heavy end: larger equipment, corridor coverage, and a dispatcher who will ask about tonnage before anything else.',
-        'Property managers are a different animal and worth treating separately. That work is enforcement rather than service, the vehicle owner is not your customer, and it carries obligations — posted notice, record-keeping — that vary by state. The towing pillar covers what that does to your public reputation; it is a real cost to price in before signing.',
+        'Property managers are a different animal and worth treating separately. That work is enforcement rather than service, the vehicle owner is not your customer, and it carries obligations — posted notice, record-keeping — that vary by state. Our towing services overview covers what that does to your public reputation, and our guide to property contracts covers the statute and the contract itself; both are real costs to price in before signing.',
       ],
     },
     {
@@ -91,7 +94,7 @@ export const commercialAccounts: TowingJobsChild = {
       id: 'billing',
       question: 'How does billing work on a commercial account?',
       answer:
-        'On terms rather than at the scene — commonly net 30, sometimes longer with larger buyers. That is the real cost of commercial work: you finance the job until the invoice clears, so an account that pays slowly can strain cash flow even while it looks profitable on paper.',
+        'On terms rather than at the scene, with the payment period agreed between you and the account before the first tow. That is the real cost of commercial work: you finance the job until the invoice clears, so an account that pays slowly can strain cash flow even while it looks profitable on paper.',
       detail: [
         'Set the terms explicitly and in writing before the first tow, including what happens when an invoice ages. Verbal arrangements are where disputes start, and a business that assumed net 60 while you assumed net 30 is not being difficult — nobody agreed.',
         'Decide what you are willing to carry. A high-volume account on long terms can consume more working capital than a smaller one on shorter terms returns, which is a genuine reason to decline volume. This is arithmetic specific to your business; run it rather than assuming more work is better.',
@@ -106,7 +109,7 @@ export const commercialAccounts: TowingJobsChild = {
       detail: [
         'Be clear about the limit here, because it is where marketing claims get overstated. Nobody wins a fleet contract because a page ranked. These accounts are sold person to person, and an agency that tells you otherwise is selling you something that does not match how the buying works.',
         'What a site does do is answer the questions a buyer has between the meeting and the decision. An equipment page with real capacities. The corridors and areas you genuinely cover. Evidence that you handle the class of work they need. A phone number that reaches someone. That is a specification document, not a brochure.',
-        'It matters more for heavy-duty and fleet work than for consumer roadside, because that buyer genuinely compares before committing rather than tapping the first result in a map. If you want the mechanics of visibility itself, that is a different subject and it lives on our towing marketing overview.',
+        'It matters more for heavy-duty and fleet work than for consumer roadside, because that buyer genuinely compares before committing rather than tapping the first result in a map. If you want the mechanics of visibility itself, that is a different subject and it lives on our towing services overview.',
       ],
     },
   ],

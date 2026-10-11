@@ -33,6 +33,7 @@ import type { PublicProposal } from '../shared/proposalTypes';
 
 import ChatWidget from './components/chat/ChatWidget';
 import type { ChatAgentContext } from '../shared/chatTypes';
+import { useRouteHead } from './lib/useRouteHead';
 
 const AdminApp = lazy(() => import('./admin/AdminApp'));
 const ProposalPage = lazy(() => import('./proposal/ProposalPage'));
@@ -174,6 +175,14 @@ function injectedAgentContext(): ChatAgentContext | undefined {
 
 export default function AppRouter() {
   const location = useLocation();
+
+  /*
+    Head tags and SPA page views for every page, from one place. Called before
+    the early return below because a hook must run on every render; the hook
+    itself does nothing on the agent console, the admin app and a proposal's
+    own page. See src/lib/useRouteHead.ts.
+  */
+  useRouteHead();
 
   /*
     The fourth app this site serves: one live conversation, opened from a link

@@ -9,34 +9,153 @@
  * pairwise similarity across them so drift toward a template is visible.
  */
 
-import { useNavigate } from 'react-router-dom';
 import FaqSection from '../components/FaqSection';
-import {
-  DEMAND_LABELS,
-  SERVICE_LABELS,
-  TOWING_STATES,
-  TOWING_UPDATED,
-  type TowingState,
-} from '../content/towing';
+import { DEMAND_LABELS, SERVICE_LABELS, TOWING_STATES, type TowingState } from '../content/towing';
 import { TOWING_BASE, TOWING_JOBS_PATH } from '../routes';
 import {
   AuditLink,
   CallLink,
+  PageCredit,
   SectionBlock,
+  SectionLinks,
   SourceList,
   TowingLayout,
-  UpdatedStamp,
+  useGo,
+  type SectionLinkMap,
 } from './towingShared';
 
-export default function TowingStatePage({ state }: { state: TowingState }) {
-  const navigate = useNavigate();
-  const siblings = TOWING_STATES.filter((s) => s.slug !== state.slug);
+const guide = (slug: string) => `${TOWING_JOBS_PATH}/${slug}`;
 
-  const go = (href: string) => (e: React.MouseEvent) => {
-    e.preventDefault();
-    navigate(href);
-    window.scrollTo({ top: 0 });
-  };
+/**
+ * State slug → section id → the guides that section actually discusses.
+ *
+ * Only where the section's subject is a guide's subject: heavy recovery on the
+ * freight corridors, impound and property work, rotation against network
+ * dispatch, the profile and review routine. Every state reaches at least one
+ * /towing-jobs/ guide. Anchors are worded per state, because one hand-off line
+ * repeated across seven pages is seven copies of the same shingles in the
+ * similarity gate. A section id the content no longer has renders nothing.
+ */
+const STATE_LINKS: Record<string, SectionLinkMap> = {
+  california: {
+    'ca-rotation': [
+      {
+        lead: 'Rotation is one channel priced by someone else; motor club dispatch is another, and we weigh it in',
+        anchor: 'the case for and against motor club work',
+        href: guide('motor-club-towing'),
+      },
+    ],
+    'ca-reviews': [
+      {
+        lead: 'The request routine itself, from the text dispatch sends to the single follow-up, is in',
+        anchor: 'the review section of our direct-calls guide',
+        href: `${guide('more-direct-towing-calls')}#be-chosen`,
+      },
+    ],
+  },
+  florida: {
+    'fl-rates': [
+      {
+        lead: 'Florida\'s posting, storage-distance and police-notification rules for a private-property tow are set beside other states\' in',
+        anchor: 'the private property towing contracts guide',
+        href: guide('private-property-towing-contracts'),
+      },
+    ],
+    'fl-transport': [
+      {
+        lead: 'Long distance is the towing search where your own page actually gets read; for',
+        anchor: 'which towing searches deserve a page of their own',
+        href: guide('towing-near-me-searches'),
+        tail: ', see our near-me guide.',
+      },
+    ],
+  },
+  georgia: {
+    'ga-reviews': [
+      {
+        lead: 'Signing a property, setting its enforcement terms and keeping it without a dispute cluster is the subject of',
+        anchor: 'how apartment and HOA towing contracts are won',
+        href: guide('private-property-towing-contracts'),
+      },
+    ],
+    'ga-freight': [
+      {
+        lead: 'Georgia\'s TRIP quick-clearance program, and what it asks of a heavy-recovery company, is covered in',
+        anchor: 'the heavy-duty accounts guide',
+        href: `${guide('heavy-duty-towing-accounts')}#dot-programs`,
+      },
+    ],
+  },
+  pennsylvania: {
+    'pa-winter': [
+      {
+        lead: 'The profile settings worth checking before the first storm, one at a time, are in',
+        anchor: 'the setup steps of our direct-calls guide',
+        href: `${guide('more-direct-towing-calls')}#appear`,
+      },
+    ],
+    'pa-two-metros': [
+      {
+        lead: 'For the Philadelphia side, Pennsylvania\'s posting standard for private lots is set out in',
+        anchor: 'our guide to winning property towing contracts',
+        href: guide('private-property-towing-contracts'),
+      },
+    ],
+  },
+  indiana: {
+    'in-corridors': [
+      {
+        lead: 'Carriers, adjusters and what each checks before the first call:',
+        anchor: 'who buys heavy recovery, and how to reach them',
+        href: guide('heavy-duty-towing-accounts'),
+      },
+    ],
+    'in-reviews': [
+      {
+        lead: 'The things that do win fleet work, from the equipment sheet to certificates of insurance, are covered in',
+        anchor: 'what a fleet buyer checks before signing',
+        href: guide('commercial-towing-accounts'),
+      },
+    ],
+  },
+  michigan: {
+    'mi-signage': [
+      {
+        lead: 'Michigan\'s posted-notice rule, set beside the posting standards of other states, is in',
+        anchor: 'how property towing contracts are won and kept',
+        href: guide('private-property-towing-contracts'),
+      },
+    ],
+    'mi-border': [
+      {
+        lead: 'Getting onto a carrier\'s or an adjuster\'s list before the incident is covered in',
+        anchor: 'selling heavy recovery to carriers and adjusters',
+        href: guide('heavy-duty-towing-accounts'),
+      },
+    ],
+  },
+  washington: {
+    'wa-identity': [
+      {
+        lead: 'Why Google wants one profile per location, and when a second base earns a second profile and page, is in',
+        anchor: 'one profile per location, and when a second is right',
+        href: `${guide('towing-near-me-searches')}#one-profile`,
+      },
+    ],
+    'wa-classes': [
+      {
+        lead: 'Washington\'s Major Incident Tow program states its truck requirement in these classes; we go through it in',
+        anchor: 'Washington\'s MIT program, in our heavy-duty guide',
+        href: `${guide('heavy-duty-towing-accounts')}#dot-programs`,
+      },
+    ],
+  },
+};
+
+export default function TowingStatePage({ state }: { state: TowingState }) {
+  const siblings = TOWING_STATES.filter((s) => s.slug !== state.slug);
+  const go = useGo();
+  const links = STATE_LINKS[state.slug] ?? {};
 
   return (
     <TowingLayout>
@@ -90,9 +209,7 @@ export default function TowingStatePage({ state }: { state: TowingState }) {
             <AuditLink label="Free visibility check" />
           </div>
 
-          <div className="mt-6">
-            <UpdatedStamp date={TOWING_UPDATED} />
-          </div>
+          <PageCredit updated={state.updated} />
         </div>
       </section>
 
@@ -168,6 +285,9 @@ export default function TowingStatePage({ state }: { state: TowingState }) {
             <h2 className="font-display font-extrabold text-2xl md:text-3xl text-ink tracking-tight leading-tight">
               {state.buyersGuide.heading}
             </h2>
+            {/* The intro's question count is derived from criteria.length in
+                buyersGuideFor() (src/content/towing.ts), so it cannot miscount
+                when a criterion is added or dropped. */}
             <p className="font-sans text-stone leading-relaxed mt-4 text-base md:text-lg">
               {state.buyersGuide.intro}
             </p>
@@ -206,6 +326,24 @@ export default function TowingStatePage({ state }: { state: TowingState }) {
               ))}
             </ol>
 
+            {/* The scope boundary, said once on the pillar rather than restated
+                on seven pages. It replaced the after-hours criterion and FAQ
+                these pages used to carry; the link lives here because a
+                content string cannot hold one. */}
+            <p className="font-sans text-stone leading-relaxed mt-8 border-l-4 border-lime pl-4">
+              What OptimizeIndex will and will not do for a {state.state} operator is no different
+              from any other state, so it is answered once, in{' '}
+              <a
+                href={`${TOWING_BASE}#towing-faq`}
+                onClick={go(`${TOWING_BASE}#towing-faq`)}
+                id={`${state.slug}-scope-link`}
+                className="font-bold text-ink underline hover:text-lime focus-ring"
+              >
+                the questions on our towing services overview
+              </a>
+              .
+            </p>
+
             <div className="flex flex-wrap gap-3 mt-10">
               <CallLink label="Ask us these questions" source={`${state.slug}-buyers-guide`} />
               <AuditLink label="Free visibility check" />
@@ -216,7 +354,7 @@ export default function TowingStatePage({ state }: { state: TowingState }) {
 
       <div className="bg-cream px-6 md:px-12 py-14">
         <div className="max-w-4xl mx-auto space-y-8">
-          {state.sections.map((section) => (
+          {state.sections.map((section) => [
             <SectionBlock
               key={section.id}
               section={section}
@@ -227,8 +365,14 @@ export default function TowingStatePage({ state }: { state: TowingState }) {
                     ? DEMAND_LABELS[section.demand]
                     : undefined
               }
-            />
-          ))}
+            />,
+            <SectionLinks
+              key={`${section.id}-links`}
+              links={links[section.id]}
+              sectionId={section.id}
+              idPrefix={state.slug}
+            />,
+          ])}
 
           {state.sources && state.sources.length > 0 && <SourceList sources={state.sources} />}
         </div>
@@ -313,15 +457,15 @@ export default function TowingStatePage({ state }: { state: TowingState }) {
             })}
           </ul>
           <p className="font-sans text-stone text-sm mt-6">
-            Or read the national overview:{' '}
+            We work with operators in every state, not only these. Or step back to{' '}
             <a
               href={TOWING_BASE}
               onClick={go(TOWING_BASE)}
               className="font-bold text-ink underline hover:text-lime focus-ring"
             >
-              towing company marketing
+              our towing services overview
             </a>
-            , and{' '}
+            , or to{' '}
             <a
               href={TOWING_JOBS_PATH}
               onClick={go(TOWING_JOBS_PATH)}
@@ -330,7 +474,7 @@ export default function TowingStatePage({ state }: { state: TowingState }) {
             >
               where towing work comes from
             </a>
-            .
+            , channel by channel.
           </p>
         </div>
       </section>

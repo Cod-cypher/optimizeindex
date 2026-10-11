@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Check, AlertTriangle, X, Minus, ChevronDown, Loader2 } from 'lucide-react';
+import { Check, AlertTriangle, X, Minus, Info, ChevronDown, Loader2 } from 'lucide-react';
 import type { AuditCategory, AuditCheck, CheckStatus } from '../../lib/audit';
 import { bandStyle, CHECK_STATUS } from './palette';
 
@@ -14,7 +14,20 @@ const STATUS_ICON: Record<CheckStatus, typeof Check> = {
   warn: AlertTriangle,
   fail: X,
   unknown: Minus,
+  info: Info,
 };
+
+/** "2026-10-12" -> "October 12, 2026", read as a calendar date in any timezone. */
+function formatCheckedAt(iso: string): string {
+  const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
+  if (!y || !m || !d) return iso;
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    timeZone: 'UTC',
+  });
+}
 
 function CheckRow({ check }: { check: AuditCheck }) {
   const [open, setOpen] = useState(false);
@@ -75,6 +88,22 @@ function CheckRow({ check }: { check: AuditCheck }) {
                     What to do
                   </span>
                   {check.fix}
+                </p>
+              )}
+              {/* The primary document the explanation rests on, so a prospect
+                  can read the rule for themselves rather than take our word. */}
+              {check.source && (
+                <p className="font-sans text-[12px] text-stone leading-relaxed">
+                  Source:{' '}
+                  <a
+                    href={check.source.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline underline-offset-2 hover:text-ink focus-ring rounded"
+                  >
+                    {check.source.label}
+                  </a>
+                  , checked {formatCheckedAt(check.source.checkedAt)}
                 </p>
               )}
             </div>

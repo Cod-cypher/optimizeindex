@@ -20,10 +20,10 @@
 import { CASE_STUDIES, SERVICES, AUDIT_FAQS, QUOTE_FAQS } from './data';
 import { LEGAL_NAME } from './content/about';
 import { SERVICES_FAQS } from './content/services';
-import { TOWING_PILLAR, TOWING_STATES, TOWING_UPDATED, stateHeadline } from './content/towing';
+import { TOWING_PILLAR, TOWING_STATES, stateHeadline } from './content/towing';
 import { TOWING_JOBS } from './content/towingJobs';
 import { TOWING_JOBS_CLUSTER } from './content/towingJobsCluster';
-import type { Faq } from './types';
+import type { CaseStudy, Faq } from './types';
 
 export const SITE_ORIGIN = 'https://optimizeindex.com';
 export const SITE_NAME = 'OptimizeIndex';
@@ -36,8 +36,33 @@ export interface RouteMeta {
   path: string;
   title: string;
   description: string;
-  /** Sitemap priority. Omitted for routes that should not be indexed. */
+  /**
+   * Marks a route as indexable. Omitted for routes that should not be indexed.
+   *
+   * No longer written to the sitemap (Google and Bing both ignore <priority>);
+   * it stays because prerender.ts, verify-seo.ts and indexnow.ts all use
+   * `priority != null` as the indexability filter.
+   */
   priority?: number;
+  /**
+   * When the page's content was first published, and when it last changed
+   * substantively. ISO 8601 date-time with offset, e.g.
+   * 2026-09-22T05:45:22+05:00.
+   *
+   * Every indexable route carries both. They feed the sitemap's <lastmod>,
+   * Article datePublished/dateModified and, on the towing pages, the visible
+   * "Last updated" stamp. Towing routes copy them from their content objects;
+   * every other route sets them here.
+   *
+   * Taken from git history (`git log --format=%cI`) and bumped by hand, in the
+   * same commit, when the copy actually changes. Never generated from the build
+   * date: an automatic date would claim a fresh review on every deploy, which
+   * is exactly the kind of unearned freshness signal this codebase refuses to
+   * fabricate. A change to shared chrome (nav, footer, the phone band) is not a
+   * substantive change to the page.
+   */
+  published?: string;
+  updated?: string;
   /**
    * Set on pages that must never enter the index: the 404, and the client
    * onboarding form. Keeps a route out of the sitemap, robots and llms.txt
@@ -54,27 +79,45 @@ export interface RouteMeta {
    treat the business as a named entity it can cite.
 
    Deliberately absent: AggregateRating/Review (there are no real reviews to
-   cite) and PostalAddress (no real address exists in the codebase). Inventing
-   either would be exactly the fabrication this work exists to remove.
+   cite), PostalAddress (no real address exists in the codebase), and any
+   LocalBusiness type, ProfessionalService included (Google reserves
+   LocalBusiness markup for a business with a real physical address, and
+   schema.org marks ProfessionalService deprecated). Inventing any of them
+   would be exactly the fabrication this work exists to remove.
 ------------------------------------------------------------------------- */
 
 /**
  * The entity in one sentence. Consumed by the Organization schema below and
- * mirrored by hand in public/llms.txt (which the chat widget reads at boot),
- * so a change here is a change there too.
+ * copied verbatim, by hand, into line 3 of public/llms.txt (which the chat
+ * widget reads at boot), so a change here is a change there too.
+ *
+ * Written from the owner's answers of 2026-10-12: the AI voice agent (answers,
+ * qualifies, books, hands to the operator's dispatcher) and the chat assistant
+ * on client websites are live for every client; towing and roadside operators
+ * are the current focus (a present-tense focus, not a claim that no other
+ * business is or ever will be served). Identity first, then the mechanisms.
+ * Plain punctuation only, so the llms.txt copy can match it character for
+ * character.
  */
 export const ENTITY_DESCRIPTION =
-  'AI solutions for towing companies and local service businesses that are missing revenue: AI-driven SEO, Google Business Profile, AEO and GEO that get a business found on Google, Google Maps and in AI assistants.';
+  'AI solutions for businesses that are missing revenue, focused on towing and roadside operators: an AI voice agent that answers, qualifies and books their calls, an AI chat assistant for their websites, and AI-driven SEO, Google Business Profile, AEO and GEO that get a business found on Google, Google Maps and in AI assistants.';
 
 const ORGANIZATION = {
   '@type': 'Organization',
   '@id': `${SITE_ORIGIN}/#organization`,
   name: SITE_NAME,
   /*
+    The brand as the mobile carriers have it registered for the SMS program
+    (SMS_BRAND_DISPLAY in src/content/sms.ts). A literal rather than an import:
+    sms.ts imports from this file, and a cycle would evaluate one of the two
+    before its constants exist.
+  */
+  alternateName: 'Optimize Index',
+  /*
     The entity behind the trade name.
 
-    Unlike the two fields deliberately absent below, this one is a fact rather
-    than a flattering guess, and it is the answer to the question a cautious
+    Unlike the fields deliberately absent (see the note above), this one is a
+    fact rather than a flattering guess, and it is the answer to the question a cautious
     buyer and an AI assistant both ask first: who is this actually. Stated in
     the schema and in prose on /about, which is the page that has to carry it.
   */
@@ -92,37 +135,12 @@ const ORGANIZATION = {
     One sentence, repeated verbatim in public/llms.txt and paraphrased in the
     homepage description, so Google, the chat widget and an AI assistant all
     read the same answer to "what is this company". Identity first (AI
-    solutions, the revenue problem), then the mechanisms (SEO, Google Business
-    Profile, AEO, GEO) as the how, which is also what Search Console shows the
-    site being surfaced for.
+    solutions, the revenue problem), then the mechanisms (the voice agent, SEO,
+    Google Business Profile, AEO, GEO) as the how; the search terms are also
+    what Search Console shows the site being surfaced for.
   */
   description: ENTITY_DESCRIPTION,
   areaServed: 'US',
-  // Populate with real profile URLs when they exist — an empty array is
-  // honest, a fabricated one is not.
-  sameAs: [] as string[],
-};
-
-const WEBSITE = {
-  '@type': 'WebSite',
-  '@id': `${SITE_ORIGIN}/#website`,
-  url: SITE_ORIGIN,
-  name: SITE_NAME,
-  publisher: { '@id': `${SITE_ORIGIN}/#organization` },
-  inLanguage: 'en-US',
-};
-
-const PROFESSIONAL_SERVICE = {
-  '@type': 'ProfessionalService',
-  '@id': `${SITE_ORIGIN}/#service`,
-  name: SITE_NAME,
-  url: SITE_ORIGIN,
-  image: `${SITE_ORIGIN}/logo.png`,
-  telephone: CONTACT_PHONE,
-  email: CONTACT_EMAIL,
-  priceRange: '$$',
-  areaServed: 'US',
-  parentOrganization: { '@id': `${SITE_ORIGIN}/#organization` },
   // Derived from the same list /services renders, so the schema cannot offer
   // something the page does not describe or omit something it does. Lead
   // generation and dispatch are not in SERVICES and must not be added here
@@ -131,9 +149,27 @@ const PROFESSIONAL_SERVICE = {
     '@type': 'Offer',
     itemOffered: { '@type': 'Service', name: s.title },
   })),
+  // No sameAs. Add it back, with real profile URLs, when they exist: an empty
+  // array says nothing, and a fabricated one is worse than nothing.
 };
 
-export const SITEWIDE_JSONLD = [ORGANIZATION, WEBSITE, PROFESSIONAL_SERVICE];
+/*
+  Google's site-name documentation asks for WebSite markup with the name, an
+  alternate name and the canonical home URL, which is the root with its
+  trailing slash (canonicalFor('/')).
+*/
+const WEBSITE = {
+  '@type': 'WebSite',
+  '@id': `${SITE_ORIGIN}/#website`,
+  url: `${SITE_ORIGIN}/`,
+  name: SITE_NAME,
+  // Same literal as on ORGANIZATION, for the same reason.
+  alternateName: 'Optimize Index',
+  publisher: { '@id': `${SITE_ORIGIN}/#organization` },
+  inLanguage: 'en-US',
+};
+
+export const SITEWIDE_JSONLD = [ORGANIZATION, WEBSITE];
 
 /**
  * Mirrors the FAQs rendered on the page. Marked-up Q&A is what AI assistants
@@ -177,31 +213,68 @@ const CASE_STUDY_DESCRIPTIONS: Record<string, string> = {
     'How Jade Title Services went from 5 to 250+ monthly organic visitors — a +4,900% increase in traffic and a rebuilt B2B pipeline, verified in GA4.',
 };
 
-const caseStudyRoutes: RouteMeta[] = CASE_STUDIES.map((study) => ({
-  path: `/case-study/${study.id}`,
-  title: `${study.client} Case Study | ${SITE_NAME}`,
-  description:
-    CASE_STUDY_DESCRIPTIONS[study.id] ??
-    `${study.outcome} ${study.stat} ${study.metric}, ${study.dataOrigin}.`.slice(0, 158),
-  priority: 0.8,
-  jsonLd: [
-    {
-      '@type': 'Article',
-      headline: `${study.client}: ${study.stat} ${study.metric}`,
-      description: study.outcome,
-      about: study.category,
-      author: { '@id': `${SITE_ORIGIN}/#organization` },
-      publisher: { '@id': `${SITE_ORIGIN}/#organization` },
-      mainEntityOfPage: `${SITE_ORIGIN}/case-study/${study.id}`,
-      inLanguage: 'en-US',
-    },
-    breadcrumb([
-      { name: 'Home', path: '/' },
-      { name: 'Case Studies', path: '/case-studies' },
-      { name: study.client, path: `/case-study/${study.id}` },
-    ]),
-  ],
-}));
+/*
+  Page dates for the case-study pages, from git history (see RouteMeta).
+
+  Both studies arrived with the first commit (408042c). Their last substantive
+  change is 642a3ea, which made the case-study renderer show links and
+  italics instead of literal markdown characters. These are page dates only:
+  they are not the measurement periods behind the figures, which the owner has
+  not supplied and which must not be guessed.
+*/
+const CASE_STUDY_DATES: Record<string, { published: string; updated: string }> = {
+  'sujood-mats': {
+    published: '2026-07-15T03:42:23+05:00',
+    updated: '2026-09-17T21:54:36+05:00',
+  },
+  'jade-title-services': {
+    published: '2026-07-15T03:42:23+05:00',
+    updated: '2026-09-17T21:54:36+05:00',
+  },
+};
+
+/**
+ * The visible trail on a case-study page, and the BreadcrumbList that mirrors
+ * it. One function so the two cannot drift: App.tsx renders this as
+ * <nav aria-label="Breadcrumb">, and the route below marks up the same items.
+ */
+export function caseStudyTrail(study: CaseStudy): { name: string; path: string }[] {
+  return [
+    { name: 'Home', path: '/' },
+    { name: 'Case Studies', path: '/case-studies' },
+    { name: study.client, path: `/case-study/${study.id}` },
+  ];
+}
+
+const caseStudyRoutes: RouteMeta[] = CASE_STUDIES.map((study) => {
+  const dates = CASE_STUDY_DATES[study.id];
+  return {
+    path: `/case-study/${study.id}`,
+    title: `${study.client} Case Study | ${SITE_NAME}`,
+    description:
+      CASE_STUDY_DESCRIPTIONS[study.id] ??
+      `${study.outcome} ${study.stat} ${study.metric}, ${study.dataOrigin}.`.slice(0, 158),
+    priority: 0.8,
+    published: dates?.published,
+    updated: dates?.updated,
+    jsonLd: [
+      {
+        '@type': 'Article',
+        headline: `${study.client}: ${study.stat} ${study.metric}`,
+        description: study.outcome,
+        // No `about`: the category is a label such as "GMB + SEO + AEO + GEO",
+        // not an entity, and a bare string there is not a Thing.
+        datePublished: dates?.published,
+        dateModified: dates?.updated,
+        author: { '@id': `${SITE_ORIGIN}/#organization` },
+        publisher: { '@id': `${SITE_ORIGIN}/#organization` },
+        mainEntityOfPage: `${SITE_ORIGIN}/case-study/${study.id}`,
+        inLanguage: 'en-US',
+      },
+      breadcrumb(caseStudyTrail(study)),
+    ],
+  };
+});
 
 /* -------------------------------------------------------------------------
    Towing vertical
@@ -271,7 +344,8 @@ function towingService(area?: string) {
     audience: { '@type': 'BusinessAudience', name: 'Towing companies' },
     areaServed: area ? { '@type': 'State', name: area } : 'US',
     inLanguage: 'en-US',
-    dateModified: TOWING_UPDATED,
+    // No dateModified: it is not a Service property. Page dates live on the
+    // route (RouteMeta.updated) and reach the sitemap from there.
   };
 }
 
@@ -305,19 +379,27 @@ const towingRoutes: RouteMeta[] = [
   {
     path: PROUDLY_SERVING,
     title: 'Proudly Serving Towing Companies | OptimizeIndex',
+    // Owner, 2026-10-12: towing operators are served in every US state; seven
+    // states have a page. Nothing here may imply the others are not served,
+    // or claim clients in any particular state.
     description:
-      'The states where we work with towing and recovery operators, each with a page on what actually differs there — rate rules, truck classes, freight and weather.',
+      'We serve towing operators in every US state. Seven states have their own page on what differs there: rate rules, truck classes, freight and weather.',
     priority: 0.7,
+    // acb5820 created the hub; 0eb7f9a added its link to /towing-jobs. Bump
+    // `updated` in the commit that ships the 2026-10-12 coverage wording.
+    published: '2026-09-02T01:30:42+05:00',
+    updated: '2026-09-02T22:10:52+05:00',
     jsonLd: [
-      breadcrumb([
-        { name: 'Home', path: '/' },
-        { name: 'Proudly Serving', path: PROUDLY_SERVING },
-      ]),
+      // No BreadcrumbList: this page shows no visible trail, and structured
+      // data has to describe what is on the page.
+      //
       // Truthful: an ordered list of the state pages this hub links to. No
-      // ratings, no reviews, nothing that cannot be substantiated.
+      // ratings, no reviews, nothing that cannot be substantiated. Named for
+      // what it is, the pages, not "markets served": operators are served in
+      // every state, not only these seven.
       {
         '@type': 'ItemList',
-        name: 'Towing markets served',
+        name: 'State pages for towing companies',
         itemListElement: TOWING_STATES.map((s, i) => ({
           '@type': 'ListItem',
           position: i + 1,
@@ -337,12 +419,11 @@ const towingRoutes: RouteMeta[] = [
     description:
       'Towing SEO and AI search for towing companies: Google Business Profile, reviews, local rankings and how AI assistants describe you. Measured in booked tows.',
     priority: 0.9,
+    published: TOWING_PILLAR.published,
+    updated: TOWING_PILLAR.updated,
     jsonLd: [
       towingService(),
-      breadcrumb([
-        { name: 'Home', path: '/' },
-        { name: 'Towing Companies', path: TOWING_BASE },
-      ]),
+      // No BreadcrumbList: the pillar shows no visible trail.
       faqPage(TOWING_PILLAR.faqs),
     ],
   },
@@ -352,6 +433,8 @@ const towingRoutes: RouteMeta[] = [
     description:
       'Where towing jobs come from — motor club, rotation, private property, fleet and direct calls — and how to shift the mix toward work you price yourself.',
     priority: 0.8,
+    published: TOWING_JOBS.published,
+    updated: TOWING_JOBS.updated,
     jsonLd: [
       towingService(),
       // Nested under the pillar even though the URL is top-level: the page is
@@ -393,13 +476,18 @@ const towingRoutes: RouteMeta[] = [
     title: c.title,
     description: c.description,
     priority: 0.7,
+    published: c.published,
+    updated: c.updated,
     jsonLd: [
       {
         '@type': 'Article',
         headline: c.h1,
         description: c.description,
         inLanguage: 'en-US',
-        dateModified: TOWING_UPDATED,
+        datePublished: c.published,
+        dateModified: c.updated,
+        // The byline on the page reads "By OptimizeIndex" and links to /about;
+        // the author here is the same Organization node.
         author: { '@id': `${SITE_ORIGIN}/#organization` },
         publisher: { '@id': `${SITE_ORIGIN}/#organization` },
         mainEntityOfPage: `${SITE_ORIGIN}${TOWING_JOBS_PATH}/${c.slug}`,
@@ -421,6 +509,8 @@ const towingRoutes: RouteMeta[] = [
     title: `${s.titleOverride ?? stateHeadline(s.state)} | ${SITE_NAME}`,
     description: TOWING_STATE_DESCRIPTIONS[s.slug],
     priority: 0.8,
+    published: s.published,
+    updated: s.updated,
     jsonLd: [
       towingService(s.state),
       breadcrumb([
@@ -433,6 +523,15 @@ const towingRoutes: RouteMeta[] = [
   })),
 ];
 
+/*
+  Titles: every title except the homepage's is "<topic> | OptimizeIndex", one
+  brand form, at the end. The homepage keeps the brand first; its wording waits
+  for Search Console query data.
+
+  Page dates on the routes below come from git history (see RouteMeta). The
+  App-rendered pages all arrived with the first commit (408042c); each
+  `updated` is the last commit that changed that page's own content.
+*/
 export const ROUTES: RouteMeta[] = [
   {
     path: '/',
@@ -443,6 +542,9 @@ export const ROUTES: RouteMeta[] = [
     description:
       'AI solutions for businesses missing revenue: AI-driven SEO, Google Business Profile, AEO and GEO that get you found on Google, Google Maps and in AI assistants.',
     priority: 1.0,
+    // a066589 swapped the homepage's second service card.
+    published: '2026-07-15T03:42:23+05:00',
+    updated: '2026-10-08T05:59:44+05:00',
   },
   {
     path: '/services',
@@ -450,10 +552,11 @@ export const ROUTES: RouteMeta[] = [
     description:
       'SEO, Google Business Profile, Answer Engine Optimization and Generative Engine Optimization, plus paid, content and CRO work: what each does and who it is for.',
     priority: 0.9,
-    jsonLd: [
-      breadcrumb([{ name: 'Home', path: '/' }, { name: 'Services', path: '/services' }]),
-      faqPage(SERVICES_FAQS),
-    ],
+    // a066589 rewrote the Conversion Optimization description listed here.
+    published: '2026-07-15T03:42:23+05:00',
+    updated: '2026-10-08T05:59:44+05:00',
+    // No BreadcrumbList: a single-level page with no visible trail.
+    jsonLd: [faqPage(SERVICES_FAQS)],
   },
   {
     path: '/case-studies',
@@ -461,18 +564,24 @@ export const ROUTES: RouteMeta[] = [
     description:
       'Real client results with real attribution — how we grew organic visibility and lead volume for local and B2B businesses, verified in GA4 and Search Console.',
     priority: 0.9,
-    jsonLd: [
-      breadcrumb([{ name: 'Home', path: '/' }, { name: 'Case Studies', path: '/case-studies' }]),
-    ],
+    // aaca486 is the last commit to change the case-studies list view.
+    published: '2026-07-15T03:42:23+05:00',
+    updated: '2026-08-25T05:03:32+05:00',
   },
   ...caseStudyRoutes,
   ...towingRoutes,
   {
     path: '/about',
-    title: 'About OptimizeIndex | AI Built for Towing Work',
+    // From the owner's answers of 2026-10-12: towing and roadside operators are
+    // the current focus. Brand at the end, like every other inner page.
+    title: 'About: AI for Towing and Roadside Operators | OptimizeIndex',
     description:
-      'OptimizeIndex is the trade name of Idea Brothers LLC. We build AI for towing and roadside operators — our own assistants, voice agents and infrastructure.',
+      'OptimizeIndex, a trade name of Idea Brothers LLC, builds AI solutions for towing and roadside operators, including an AI voice agent that answers calls.',
     priority: 0.7,
+    // 755a1b1 created the page; it has not changed in git since. Bump
+    // `updated` in the commit that ships the 2026-10-12 rewrite of about.ts.
+    published: '2026-09-10T23:59:21+05:00',
+    updated: '2026-09-10T23:59:21+05:00',
     jsonLd: [
       /*
         AboutPage rather than a second Organization node. The sitewide graph
@@ -489,19 +598,20 @@ export const ROUTES: RouteMeta[] = [
         inLanguage: 'en-US',
         mainEntity: { '@id': `${SITE_ORIGIN}/#organization` },
       },
-      breadcrumb([{ name: 'Home', path: '/' }, { name: 'About', path: '/about' }]),
+      // No BreadcrumbList: a single-level page with no visible trail.
     ],
   },
   {
     path: '/audit',
     title: 'Free SEO & AI Search Audit | OptimizeIndex',
     description:
-      'A free 15-point SEO and AI search audit: crawlability, on-page content, speed, and whether AI assistants can read and cite your site. Fix plan within 24 hours.',
+      'A free 15-point SEO and AI search audit: crawlability, on-page content, speed, and whether AI assistants can read your site. Fix plan within 24 hours.',
     priority: 0.9,
-    jsonLd: [
-      breadcrumb([{ name: 'Home', path: '/' }, { name: 'Free Audit', path: '/audit' }]),
-      faqPage(AUDIT_FAQS),
-    ],
+    // aaca486 added the audit FAQs and is the last change to this view.
+    published: '2026-07-15T03:42:23+05:00',
+    updated: '2026-08-25T05:03:32+05:00',
+    // No BreadcrumbList: a single-level page with no visible trail.
+    jsonLd: [faqPage(AUDIT_FAQS)],
   },
   {
     path: '/quote',
@@ -509,24 +619,31 @@ export const ROUTES: RouteMeta[] = [
     description:
       'Get a free SEO and AI search quote: tell us your goal and get a proposal with scope, timeline and expected impact. No contracts, 15-day money-back guarantee.',
     priority: 0.9,
-    jsonLd: [
-      breadcrumb([{ name: 'Home', path: '/' }, { name: 'Get a Quote', path: '/quote' }]),
-      faqPage(QUOTE_FAQS),
-    ],
+    // aaca486 added the quote FAQs and is the last change to this view.
+    published: '2026-07-15T03:42:23+05:00',
+    updated: '2026-08-25T05:03:32+05:00',
+    // No BreadcrumbList: a single-level page with no visible trail.
+    jsonLd: [faqPage(QUOTE_FAQS)],
   },
   {
     path: '/privacy-policy',
-    title: 'Privacy Policy | OptimizeIndex Agency',
+    title: 'Privacy Policy | OptimizeIndex',
     description:
       'How OptimizeIndex collects, uses and protects your data — including analytics, cookies, and the information you submit through our audit and quote forms.',
     priority: 0.3,
+    // 5d46225 is the last change to the policy text (SMS section 5).
+    published: '2026-07-15T03:42:23+05:00',
+    updated: '2026-09-20T04:01:56+05:00',
   },
   {
     path: '/terms-of-service',
-    title: 'Terms of Service | OptimizeIndex Agency',
+    title: 'Terms of Service | OptimizeIndex',
     description:
       'The terms governing your use of the OptimizeIndex website and services, including our no-contract policy and the 15-day money-back guarantee.',
     priority: 0.3,
+    // 5d46225 is the last change to the terms text (SMS section 5).
+    published: '2026-07-15T03:42:23+05:00',
+    updated: '2026-09-20T04:01:56+05:00',
   },
   {
     // The path is a literal rather than SMS_PROGRAM_PATH from content/sms.ts,
@@ -537,6 +654,9 @@ export const ROUTES: RouteMeta[] = [
     description:
       'How the OptimizeIndex text messaging program works: what we text about, how you opt in on a call, message frequency, and how to reply STOP or HELP.',
     priority: 0.3,
+    // 867a547 created the page; 1efa0c3 added the consent summary at its top.
+    published: '2026-09-17T22:57:50+05:00',
+    updated: '2026-09-20T04:16:45+05:00',
   },
   {
     // Reached from the header's "Become a Tow Provider" button. A form with no

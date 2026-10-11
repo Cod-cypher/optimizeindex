@@ -172,8 +172,15 @@ export async function runPsi(url: string): Promise<PsiOutcome> {
         lighthouse.performance != null
           ? `Google scores this site ${lighthouse.performance}/100 on mobile.`
           : "Google couldn't produce a performance score.",
-      why: "Mobile speed is a confirmed ranking factor, and every second of load time costs conversions.",
+      // Was "a confirmed ranking factor ... every second costs conversions",
+      // neither of which Google's page says. What it does say is quoted below.
+      why: "This is a lab score from Google's PageSpeed Insights. Google recommends good Core Web Vitals for success with Search, and a slow page can lose a visitor before they reach your phone number.",
       fix: "Compress and lazy-load images, defer non-critical JavaScript, and enable server-side caching.",
+      source: {
+        label: "Google: Understanding Core Web Vitals and Google search results",
+        url: "https://developers.google.com/search/docs/appearance/core-web-vitals",
+        checkedAt: "2026-10-12",
+      },
     },
     {
       id: "lcp",

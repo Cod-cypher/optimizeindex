@@ -14,30 +14,210 @@
  * finish the article to find the conversion path.
  */
 
-import { useNavigate } from 'react-router-dom';
 import FaqSection from '../components/FaqSection';
 import TowingJobsLeadForm from '../components/towing/TowingJobsLeadForm';
-import { TOWING_UPDATED } from '../content/towing';
 import { TOWING_JOBS_CLUSTER, type TowingJobsChild } from '../content/towingJobsCluster';
 import { TOWING_BASE, TOWING_JOBS_PATH } from '../routes';
 import {
   AuditLink,
   CallLink,
+  PageCredit,
   SectionBlock,
+  SectionLinks,
   SourceList,
   TowingLayout,
-  UpdatedStamp,
+  useGo,
+  type SectionLinkMap,
 } from './towingShared';
 
-export default function TowingJobsChildPage({ child }: { child: TowingJobsChild }) {
-  const navigate = useNavigate();
-  const siblings = TOWING_JOBS_CLUSTER.filter((c) => c.slug !== child.slug);
+const guide = (slug: string) => `${TOWING_JOBS_PATH}/${slug}`;
 
-  const go = (href: string) => (e: React.MouseEvent) => {
-    e.preventDefault();
-    navigate(href);
-    window.scrollTo({ top: 0 });
-  };
+/**
+ * Guide slug → section id → the hand-offs rendered straight after that section.
+ *
+ * Each entry is the link for a destination the section's own copy already
+ * names in words ("our towing services overview", "the cash-call playbook"),
+ * because section detail[] renders as plain text and cannot carry one. Anchors
+ * describe the destination and are worded per page, so no two of the sixteen
+ * towing pages share a hand-off line. A section id that no longer exists
+ * simply renders nothing.
+ */
+const CHILD_LINKS: Record<string, SectionLinkMap> = {
+  'more-direct-towing-calls': {
+    'the-chain': [
+      {
+        lead: 'Motor club, rotation, property and commercial work, set side by side with who sets the rate on each:',
+        anchor: 'our guide to where towing work comes from',
+        href: TOWING_JOBS_PATH,
+      },
+    ],
+    'be-chosen': [
+      {
+        lead: 'Why impound and private-property tows draw one-stars that no service quality prevents, and what a reply can still do, is in',
+        anchor: 'the impound reviews section of our towing services overview',
+        href: `${TOWING_BASE}#impound-reviews`,
+      },
+    ],
+    'what-to-count': [
+      {
+        lead: 'Every rung from impressions to revenue, and what each one fails to prove, is laid out in',
+        anchor: 'the measurement ladder on our towing jobs guide',
+        href: `${TOWING_JOBS_PATH}#measurement`,
+      },
+    ],
+  },
+  'towing-near-me-searches': {
+    'query-by-query': [
+      {
+        lead: 'The configuration that decides the map-pack searches is walked through in',
+        anchor: 'our guide to getting more direct towing calls',
+        href: `${guide('more-direct-towing-calls')}#appear`,
+      },
+      {
+        lead: 'The second heavy-duty buyer, who qualifies operators before anything goes wrong, has a guide of its own:',
+        anchor: 'winning heavy-duty towing accounts',
+        href: guide('heavy-duty-towing-accounts'),
+      },
+    ],
+    'one-profile': [
+      {
+        lead: 'Setting the area you actually dispatch to, rather than the outer limit, is one step in',
+        anchor: 'the direct-calls setup',
+        href: `${guide('more-direct-towing-calls')}#appear`,
+      },
+    ],
+    limits: [
+      {
+        lead: 'If the work you want is applied for or sold rather than found, start with',
+        anchor: 'the six places towing work comes from',
+        href: TOWING_JOBS_PATH,
+      },
+    ],
+  },
+  'commercial-towing-accounts': {
+    'who-buys': [
+      {
+        lead: 'For property work, the posting, notice and storage rules and what the contract obliges are in',
+        anchor: 'our guide to private property towing contracts',
+        href: guide('private-property-towing-contracts'),
+      },
+      {
+        lead: 'For the reviews that impound work attracts, see',
+        anchor: 'what to do about impound one-stars',
+        href: `${TOWING_BASE}#impound-reviews`,
+      },
+    ],
+    'what-buyers-check': [
+      {
+        lead: 'When the vehicles are Class 8 and the work is heavy recovery, the buyers and the bar change:',
+        anchor: 'how heavy-duty towing accounts are won',
+        href: guide('heavy-duty-towing-accounts'),
+      },
+    ],
+    'website-role': [
+      {
+        lead: 'The visibility mechanics themselves, from the Business Profile to AI answers, are in',
+        anchor: 'our towing services overview',
+        href: TOWING_BASE,
+      },
+    ],
+  },
+  'heavy-duty-towing-accounts': {
+    'who-buys': [
+      {
+        lead: 'How rotation lists are run, and why there is no national one, is covered in',
+        anchor: 'the rotation section of our guide to where towing work comes from',
+        href: `${TOWING_JOBS_PATH}#rotation`,
+      },
+    ],
+    'dot-programs': [
+      {
+        lead: 'The CHP rotation program, a different thing from a quick-clearance incentive, is covered on',
+        anchor: 'our California towing page',
+        href: `${TOWING_BASE}/california`,
+      },
+    ],
+    'what-buyers-check': [
+      {
+        lead: 'Who signs, certificates of insurance and billing terms work as they do for any account, and live in',
+        anchor: 'our guide to commercial towing accounts',
+        href: guide('commercial-towing-accounts'),
+      },
+    ],
+    'search-and-us': [
+      {
+        lead: 'Corridor pages, and why fleet buyers search by route, are in',
+        anchor: 'the heavy-duty section of our towing services overview',
+        href: `${TOWING_BASE}#heavy-duty`,
+      },
+    ],
+  },
+  'motor-club-towing': {
+    'judging-it': [
+      {
+        lead: 'The other five channels, compared on who sets the rate, are in',
+        anchor: 'our guide to where towing work comes from',
+        href: TOWING_JOBS_PATH,
+      },
+    ],
+    'shifting-the-mix': [
+      {
+        lead: 'Building the side that arrives on your own number is covered in',
+        anchor: 'the step-by-step setup for direct calls',
+        href: guide('more-direct-towing-calls'),
+      },
+    ],
+  },
+  'paid-towing-leads': {
+    'renting-vs-owning': [
+      {
+        lead: 'What building the owned side involves, from the profile to call tracking, is in',
+        anchor: 'our guide to more direct towing calls',
+        href: guide('more-direct-towing-calls'),
+      },
+    ],
+    'not-a-lead-seller': [
+      {
+        lead: 'What we do instead, and how it is measured, is set out in',
+        anchor: 'our towing services overview',
+        href: TOWING_BASE,
+      },
+    ],
+  },
+  'private-property-towing-contracts': {
+    'what-they-want': [
+      {
+        lead: 'The reviews impound work attracts, and how to reply to them, are covered in',
+        anchor: 'the impound section of our towing services overview',
+        href: `${TOWING_BASE}#impound-reviews`,
+      },
+    ],
+    'by-state': [
+      {
+        lead: 'Florida\'s county rate caps for non-consensual towing are on',
+        anchor: 'our Florida towing page',
+        href: `${TOWING_BASE}/florida`,
+      },
+      {
+        lead: 'Washington\'s registered tow truck operator rules are on',
+        anchor: 'our Washington towing page',
+        href: `${TOWING_BASE}/washington`,
+      },
+    ],
+    'how-you-win': [
+      {
+        lead: 'Certificates of insurance, who signs and billing terms are covered in',
+        anchor: 'our guide to winning commercial towing accounts',
+        href: guide('commercial-towing-accounts'),
+      },
+    ],
+  },
+};
+
+export default function TowingJobsChildPage({ child }: { child: TowingJobsChild }) {
+  const siblings = TOWING_JOBS_CLUSTER.filter((c) => c.slug !== child.slug);
+  const go = useGo();
+  const links = CHILD_LINKS[child.slug] ?? {};
 
   return (
     <TowingLayout>
@@ -90,9 +270,7 @@ export default function TowingJobsChildPage({ child }: { child: TowingJobsChild 
               <AuditLink label="Free visibility check" />
             </div>
 
-            <div className="mt-6">
-              <UpdatedStamp date={TOWING_UPDATED} />
-            </div>
+            <PageCredit updated={child.updated} />
           </div>
 
           {/* The shared component. Identical on every page, by design - it
@@ -105,11 +283,19 @@ export default function TowingJobsChildPage({ child }: { child: TowingJobsChild 
 
       <div className="bg-cream px-6 md:px-12 py-14">
         <div className="max-w-4xl mx-auto space-y-8">
-          {child.sections.map((section) => (
-            <SectionBlock key={section.id} section={section} />
-          ))}
+          {child.sections.map((section) => [
+            <SectionBlock key={section.id} section={section} />,
+            <SectionLinks
+              key={`${section.id}-links`}
+              links={links[section.id]}
+              sectionId={section.id}
+              idPrefix={child.slug}
+            />,
+          ])}
 
-          {child.sources && child.sources.length > 0 && <SourceList sources={child.sources} />}
+          {/* Always rendered: with no sources it still carries the methods
+              line and says why the list is empty. */}
+          <SourceList sources={child.sources ?? []} />
         </div>
       </div>
 

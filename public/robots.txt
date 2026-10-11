@@ -19,9 +19,14 @@ Disallow: /admin
 # name, so a named group without it would grant that crawler access to the
 # private admin app which the wildcard group denies.
 #
-# Note Google-Extended governs Gemini model training only. Google AI Overviews
-# are served from the standard Googlebot index, so there is no way to appear in
-# one and not the other.
+# Note Google-Extended governs Gemini Apps grounding and Gemini model training,
+# and per Google "does not impact a site's inclusion in Google Search nor is it
+# used as a ranking signal in Google Search". Google's AI features need a page
+# to be "indexed and eligible to be shown in Google Search with a snippet",
+# which is Googlebot's job. Allowing or blocking Google-Extended therefore
+# changes nothing in Search (both checked 2026-10-12:
+# https://developers.google.com/search/docs/crawling-indexing/google-common-crawlers
+# https://developers.google.com/search/docs/fundamentals/ai-optimization-guide).
 
 # OpenAI - ChatGPT search index, user-triggered fetches, and training
 User-agent: OAI-SearchBot

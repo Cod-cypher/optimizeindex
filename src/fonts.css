@@ -5,6 +5,12 @@
  * These replace the Google Fonts @import that used to sit at the top of
  * index.css, where it forced the browser to download and parse the whole
  * stylesheet before it could even discover the font request.
+ *
+ * The files under /fonts/ are served with a one-year immutable cache, and
+ * their names carry no content hash. A changed font therefore needs a NEW
+ * filename, never new bytes under an old one, or returning visitors keep the
+ * old file for a year. If the display face changes, update the preload href
+ * in index.html to the new filename in the same change.
  */
 @font-face {
   font-family: 'Bricolage Grotesque';

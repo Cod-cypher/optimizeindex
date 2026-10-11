@@ -12,6 +12,10 @@
  * standard hub-and-spoke shape. But the hub has to earn it by being a real
  * page rather than a link dump: hence the metro lists, the per-state framing,
  * and the honest section about the states we deliberately have no page for.
+ *
+ * Coverage, as the owner confirmed it on 2026-10-12: towing operators are
+ * served in every US state, and seven states have a page. Nothing here may
+ * imply the other states are not served, or claim clients in a given state.
  */
 
 import { useNavigate } from 'react-router-dom';
@@ -52,9 +56,10 @@ export default function ProudlyServingPage() {
             </h1>
 
             <p className="font-sans text-lg md:text-xl text-cream/80 leading-relaxed mt-6 max-w-2xl mx-auto">
-              We work with towing and recovery operators on AI search visibility, Google Business
-              Profile and local search, and call attribution. The states below each have a page of
-              their own, covering what actually differs about towing there.
+              We work with towing and recovery operators in every US state, on AI search
+              visibility, Google Business Profile and local search, an AI voice agent that answers
+              calls, and call attribution. The states below each have a page of their own, covering
+              what actually differs about towing there.
             </p>
 
             <div className="flex flex-wrap gap-3 justify-center mt-8">
@@ -135,20 +140,21 @@ export default function ProudlyServingPage() {
           </div>
         </section>
 
-        {/* Saying what we do NOT have a page for. A service-area page implying
-            nationwide coverage it cannot evidence is exactly the kind of claim
-            the rest of this site exists to avoid. */}
+        {/* Saying what we do NOT have a page for. Every state is served; a
+            page exists only where the research found something genuinely
+            different to say, which is a statement about the pages, not about
+            where we work. */}
         <section className="bg-paper border-y-1.5 border-ink px-6 md:px-12 py-14">
           <div className="max-w-3xl mx-auto">
             <h2 className="font-display font-extrabold text-2xl md:text-3xl text-ink tracking-tight">
               Not seeing your state?
             </h2>
             <p className="font-sans text-stone leading-relaxed mt-4">
-              We work with operators outside the states listed above. Those states have pages
-              because we have researched what genuinely differs about towing there — the rate
-              rules, the licensing and truck classification, the freight and weather patterns — and
-              we would rather publish nothing than publish a page with a state name swapped into
-              the same paragraphs.
+              We serve towing operators in every US state, not only the ones listed above. Those
+              states have pages because we have researched what genuinely differs about towing
+              there — the rate rules, the licensing and truck classification, the freight and
+              weather patterns — and we would rather publish nothing than publish a page with a
+              state name swapped into the same paragraphs.
             </p>
             <p className="font-sans text-stone leading-relaxed mt-4">
               If you operate somewhere without a page, the work is the same and the questions worth

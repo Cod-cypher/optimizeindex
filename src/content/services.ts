@@ -24,22 +24,22 @@ export const SERVICES_FAQS: Faq[] = [
   {
     question: 'What is the difference between SEO, AEO and GEO?',
     answer:
-      'SEO is about ranking pages in a list of results, so it concentrates on crawlability, page content, technical health and links. AEO is about being the direct answer rather than a link: featured snippets, voice results and the FAQ-style passages assistants lift when a question has a short answer. GEO is about how generative systems build a longer answer: whether your site is retrievable at all (many assistants do not run JavaScript), whether your claims carry a source they can verify, and whether the entity behind the site is described consistently enough to be named. Most of the work overlaps, which is why we sell them together rather than as three products.',
+      'SEO is about ranking pages in a list of results, so it concentrates on crawlability, page content, technical health and links. AEO is about being the direct answer rather than a link: featured snippets, voice results and the FAQ-style passages assistants lift when a question has a short answer. GEO is about how generative systems build a longer answer: whether your site is retrievable at all (these assistants may not run JavaScript; their crawler documentation does not say they do), whether your claims carry a source they can verify, and whether the entity behind the site is described consistently enough to be named. Most of the work overlaps, which is why we sell them together rather than as three products.',
   },
   {
     question: 'Do you still do traditional SEO?',
     answer:
-      'Yes. Google search and Google Maps still send the bulk of enquiries to a local service business, and a site an AI assistant can read is also a site Google can read. Technical fixes, page structure, local content, reviews and the Google Business Profile are where most engagements start. The AI work is layered on that foundation, not sold instead of it.',
+      'Yes, and for a local service business it is still the core of the work. Technical fixes, page structure, local content, reviews and the Google Business Profile are where most engagements start, because they decide whether you are found on Google search and Google Maps at all. The AI work is layered on that foundation, not sold instead of it.',
   },
   {
     question: 'What does Google Business Profile optimization involve?',
     answer:
-      'Getting the listing complete and accurate first: categories, service area, hours, services, photos and the phone number people will actually tap. Then a steady cadence of reviews and responses, posts and Q&A, and the connections between the profile and the website that let Google confirm they describe the same business. For phone-first trades such as towing, the profile is usually the single most valuable asset the business owns online.',
+      'Getting the listing complete and accurate first: categories, service area, hours, services, photos and the phone number people will actually tap. Then a steady cadence of reviews, responses and posts, a services list, hours and description kept current as the business changes, and the connections between the profile and the website that let Google confirm they describe the same business. For phone-first trades such as towing, the profile is usually the single most valuable asset the business owns online.',
   },
   {
     question: 'Do you only work with towing companies?',
     answer:
-      'Towing and roadside operators are the industry we build our own AI systems for, and most of what we publish is written for them. The search work itself we do for local and B2B service businesses more broadly, and both published case studies are outside towing. If you run a service business that lives on phone calls and local searches, the approach is the same.',
+      'Towing and roadside operators are our current focus, and most of what we publish is written for them. Both published case studies come from earlier work with service businesses outside towing. Within towing, we work with operators in every US state, not only the seven our state pages cover.',
   },
   {
     question: 'Do you guarantee rankings or a number of leads?',
@@ -49,6 +49,6 @@ export const SERVICES_FAQS: Faq[] = [
   {
     question: 'How do the free audit and the free quote differ?',
     answer:
-      'The audit is a 15-point check of an existing website: whether Google can crawl and index it, what its pages say, how fast it loads, and whether AI assistants can read and cite it. It comes back within 24 hours with the findings ranked by impact and a fix for each. The quote is a written proposal for working with us: which services, in what order, on what timeline, and what to expect at 30, 60 and 90 days. Most people start with the audit; you can ask for either without obligation.',
+      'The audit is a 15-point check of an existing website: whether Google can crawl and index it, what its pages say, how fast it loads, and whether AI assistants can read it. It comes back within 24 hours with the findings ranked by impact and a fix for each. The quote is a written proposal for working with us: which services, in what order, on what timeline, and what we would measure and report. It contains no forecast figures. Most people start with the audit; you can ask for either without obligation.',
   },
 ];

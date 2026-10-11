@@ -6,11 +6,27 @@
  * something actually observed on the visitor's site or returned by Google.
  * When we can't measure something the status is "unknown" and we say so —
  * we never fill a gap with an estimate.
+ *
+ * "info" is for something worth reporting that is not a ranking or visibility
+ * requirement — llms.txt, which Google Search ignores, or a training crawler
+ * the site has chosen to block. Like "unknown", it never moves a score.
  */
 
-export type CheckStatus = "pass" | "warn" | "fail" | "unknown";
+export type CheckStatus = "pass" | "warn" | "fail" | "unknown" | "info";
 
 export type CategoryId = "technical" | "content" | "performance" | "geo";
+
+/**
+ * The primary document a check's `why` rests on. Every externally verifiable
+ * claim the audit makes about how Google or an AI crawler behaves carries one,
+ * so a prospect can read the rule for themselves. `checkedAt` is the date the
+ * document was last read against the wording here (YYYY-MM-DD).
+ */
+export interface AuditSource {
+  label: string;
+  url: string;
+  checkedAt: string;
+}
 
 export interface AuditCheck {
   id: string;
@@ -18,11 +34,13 @@ export interface AuditCheck {
   status: CheckStatus;
   /** The observed value, verbatim — "Title is 78 characters". */
   detail: string;
-  /** One line on why it costs them money. */
+  /** One line on why it matters. */
   why: string;
   /** The action that fixes it. */
   fix: string;
   weight: number;
+  /** The primary source behind `why`, shown as a small link in the report. */
+  source?: AuditSource;
 }
 
 export type CategoryState = "ready" | "pending" | "unavailable";
@@ -71,6 +89,10 @@ export interface AuditResult {
   url: string;
   finalUrl: string;
   domain: string;
+  /**
+   * OptimizeIndex's own weighting of the checks below. Not a score Google or
+   * any AI provider publishes, and the report says so beside the number.
+   */
   overall: number;
   /** "preliminary" until the PageSpeed category lands. */
   overallState: "preliminary" | "final";

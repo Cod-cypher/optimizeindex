@@ -21,13 +21,17 @@
  *
  * The rule that keeps them distinct
  * ---------------------------------
- * Import nothing from towing.ts's shared copy factories — GBP_FAQS, aiFaqs(),
- * buyersGuideFor(). They are the largest source of shared text in this vertical
- * and scripts/verify-seo.ts compares every towing page pairwise for 5-gram
+ * Import no prose from towing.ts — GBP_FAQS is pillar-only, buyersGuideFor()
+ * holds no shared prose, and aiFaqs() was removed. Shared copy is the largest
+ * source of shared text in this vertical, and scripts/verify-seo.ts compares every towing page pairwise for 5-gram
  * overlap. Types are fine to import; prose is not.
  *
- * Where a topic already lives on the pillar or on /towing-companies, link to it
- * rather than restating it. The boundary table in CLAUDE.md is the reference.
+ * Where a topic already lives on /towing-jobs or on /towing-companies, link to
+ * it rather than restating it. The boundary table in CLAUDE.md is the
+ * reference. Copy names the destination in plain words ("our guide to where
+ * towing work comes from", "our towing services overview"), never "the
+ * pillar", and the link itself is rendered by TowingJobsChildPage from
+ * CHILD_LINKS, because a content string cannot carry one.
  */
 
 import type { Faq } from '../../types';
@@ -54,6 +58,22 @@ export interface TowingJobsChild {
    * query outright rather than introduce the article.
    */
   lede: string;
+  /**
+   * When the page's content was first committed: ISO 8601 date-time with
+   * offset, from `git log --format=%cI` on the commit that created it.
+   */
+  published: string;
+  /**
+   * Last substantive change to the page, same format. Drives the visible
+   * "Last updated" stamp, Article dateModified and the sitemap <lastmod>.
+   *
+   * Bumped by hand when the copy actually changes, to the date of the commit
+   * that changed it, and never generated from the build date: an automatic
+   * date would claim a fresh review on every deploy, which is exactly the
+   * unearned freshness signal this codebase refuses to fabricate. A typo fix
+   * or a new sibling in this array is not a substantive change to a page.
+   */
+  updated: string;
   sections: TowingSection[];
   faqs: Faq[];
   sources?: SourceRef[];

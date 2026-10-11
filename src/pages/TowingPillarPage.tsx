@@ -7,28 +7,91 @@
  * templated-content drift.
  */
 
-import { useNavigate } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import FaqSection from '../components/FaqSection';
-import {
-  TOWING_PILLAR,
-  TOWING_STATES,
-  TOWING_UPDATED,
-  SERVICE_LABELS,
-  DEMAND_LABELS,
-} from '../content/towing';
+import { TOWING_PILLAR, TOWING_STATES, SERVICE_LABELS, DEMAND_LABELS } from '../content/towing';
 import { PROUDLY_SERVING, TOWING_BASE, TOWING_JOBS_PATH } from '../routes';
 import {
   AuditLink,
   CallLink,
+  PageCredit,
   SectionBlock,
+  SectionLinks,
   SourceList,
   TowingLayout,
-  UpdatedStamp,
+  useGo,
+  type SectionLinkMap,
 } from './towingShared';
 
+const guide = (slug: string) => `${TOWING_JOBS_PATH}/${slug}`;
+
+/**
+ * Pillar section id → the guides that take that section's channel further.
+ *
+ * Between them these reach all seven /towing-jobs guides, each from the section
+ * that already discusses its subject: direct calls to the cash-call playbook
+ * and the motor-club evaluation, the profile to the near-me guide, impound
+ * reviews to property contracts, heavy duty to both account guides, and cost
+ * to bought leads. Placed in the component because section detail[] renders as
+ * plain text and cannot carry a link.
+ *
+ * The heavy-duty line is the one-off bridge this map replaced, kept word for
+ * word and with its original id.
+ */
+const PILLAR_LINKS: SectionLinkMap = {
+  gbp: [
+    {
+      lead: 'Which consumer searches, from "towing near me" to "flatbed towing", a profile can actually win, and when a page of your own earns its place:',
+      anchor: 'how to rank for towing near me searches',
+      href: guide('towing-near-me-searches'),
+    },
+  ],
+  'impound-reviews': [
+    {
+      lead: 'Winning the property in the first place, and the posting and notice statutes behind every tow, is the subject of',
+      anchor: 'our guide to private property towing contracts',
+      href: guide('private-property-towing-contracts'),
+    },
+  ],
+  'direct-calls': [
+    {
+      lead: 'The configuration, review routine and call counting behind a bigger direct share, step by step:',
+      anchor: 'getting more direct towing calls',
+      href: guide('more-direct-towing-calls'),
+    },
+    {
+      lead: 'For the dispatch side of the mix, see',
+      anchor: 'how to judge motor club work',
+      href: guide('motor-club-towing'),
+      tail: ', on truck time rather than job count.',
+    },
+  ],
+  'heavy-duty': [
+    {
+      lead: 'Selling to the fleet dispatcher and the adjuster is its own process.',
+      anchor: 'How heavy-duty towing accounts are won',
+      href: guide('heavy-duty-towing-accounts'),
+      tail: ' covers who buys heavy recovery and the state quick-clearance programs that certify operators for it.',
+      id: 'pillar-heavy-duty-link',
+    },
+    {
+      lead: 'For lighter fleet work, from dealerships and body shops to rental branches, the sale is set out in',
+      anchor: 'our guide to commercial towing accounts',
+      href: guide('commercial-towing-accounts'),
+    },
+  ],
+  cost: [
+    {
+      lead: 'Weighing bought calls against this kind of work? Read',
+      anchor: 'whether paid towing leads are worth buying',
+      href: guide('paid-towing-leads'),
+      tail: ' first; we do not sell them.',
+    },
+  ],
+};
+
 export default function TowingPillarPage() {
-  const navigate = useNavigate();
+  const go = useGo();
 
   return (
     <TowingLayout>
@@ -66,9 +129,7 @@ export default function TowingPillarPage() {
             <AuditLink label="Free visibility check" />
           </div>
 
-          <div className="mt-6">
-            <UpdatedStamp date={TOWING_UPDATED} />
-          </div>
+          <PageCredit updated={TOWING_PILLAR.updated} />
         </div>
       </section>
 
@@ -91,6 +152,21 @@ export default function TowingPillarPage() {
             report it as one. Connecting the two properly needs call tracking with dynamic number
             insertion, which we will set up if the volume justifies it.
           </p>
+          {/* The contextual route to /about from this page; the byline in the
+              hero is the other. */}
+          <p className="font-sans text-cream/60 leading-relaxed mt-4 text-sm">
+            Who stands behind those numbers, and what we will and will not take on for an
+            operator, is set out on{' '}
+            <a
+              href="/about"
+              onClick={go('/about')}
+              id="pillar-about-link"
+              className="font-bold text-cream underline hover:text-lime focus-ring"
+            >
+              the about OptimizeIndex page
+            </a>
+            .
+          </p>
         </div>
       </section>
 
@@ -109,33 +185,13 @@ export default function TowingPillarPage() {
                     : undefined
               }
             />,
-            /* Bridge from the heavy-duty section to the page that covers who
-               buys heavy recovery and how the state quick-clearance programs
-               certify operators for it. Here rather than in the content file
-               because section detail[] renders as plain text and cannot carry
-               a link. Returned as an array so no Fragment import is needed. */
-            section.id === 'heavy-duty' ? (
-              <p
-                key="heavy-duty-bridge"
-                className="font-sans text-stone leading-relaxed border-l-4 border-lime pl-4"
-              >
-                Selling to the fleet dispatcher and the adjuster is its own process.{' '}
-                <a
-                  href="/towing-jobs/heavy-duty-towing-accounts"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    navigate('/towing-jobs/heavy-duty-towing-accounts');
-                    window.scrollTo({ top: 0 });
-                  }}
-                  id="pillar-heavy-duty-link"
-                  className="font-bold text-ink underline hover:text-lime focus-ring"
-                >
-                  How heavy-duty towing accounts are won
-                </a>{' '}
-                covers who buys heavy recovery and the state quick-clearance programs that certify
-                operators for it.
-              </p>
-            ) : null,
+            /* Returned as an array so no Fragment import is needed. */
+            <SectionLinks
+              key={`${section.id}-links`}
+              links={PILLAR_LINKS[section.id]}
+              sectionId={section.id}
+              idPrefix="pillar"
+            />,
           ])}
 
           {/* Bridge into /towing-jobs. The direct-calls section above answers
@@ -147,11 +203,7 @@ export default function TowingPillarPage() {
             Working out which part of your board to grow first?{' '}
             <a
               href={TOWING_JOBS_PATH}
-              onClick={(e) => {
-                e.preventDefault();
-                navigate(TOWING_JOBS_PATH);
-                window.scrollTo({ top: 0 });
-              }}
+              onClick={go(TOWING_JOBS_PATH)}
               id="pillar-towing-jobs-link"
               className="font-bold text-ink underline hover:text-lime focus-ring"
             >
@@ -167,8 +219,9 @@ export default function TowingPillarPage() {
         </div>
       </div>
 
-      {/* State cluster. Internal links are what make these six pages read as one
-          topic rather than six orphans. */}
+      {/* State cluster. Internal links are what make these seven pages read as
+          one topic rather than seven orphans. The copy says we work in every
+          state: these are the states with a page, not the states we serve. */}
       <section className="bg-paper border-y-1.5 border-ink px-6 md:px-12 py-14">
         <div className="max-w-4xl mx-auto">
           <h2 className="font-display font-extrabold text-2xl md:text-3xl text-ink tracking-tight">
@@ -176,20 +229,17 @@ export default function TowingPillarPage() {
           </h2>
           <p className="font-sans text-stone leading-relaxed mt-3">
             Towing economics genuinely differ by state — who sets your rates, where the freight
-            runs, whether winter or storm season drives the peak. These pages cover what changes.
-            See every market on the{' '}
+            runs, whether winter or storm season drives the peak. We work with operators in every
+            state; these seven pages cover what changes in the markets we have written about in
+            depth, and the{' '}
             <a
               href={PROUDLY_SERVING}
-              onClick={(e) => {
-                e.preventDefault();
-                navigate(PROUDLY_SERVING);
-                window.scrollTo({ top: 0 });
-              }}
+              onClick={go(PROUDLY_SERVING)}
               className="font-bold text-ink underline hover:text-lime focus-ring"
             >
               Proudly Serving page
-            </a>
-            .
+            </a>{' '}
+            gathers them with their metros.
           </p>
 
           <ul className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
@@ -199,11 +249,7 @@ export default function TowingPillarPage() {
                 <li key={s.slug}>
                   <a
                     href={href}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      navigate(href);
-                      window.scrollTo({ top: 0 });
-                    }}
+                    onClick={go(href)}
                     id={`towing-state-link-${s.slug}`}
                     aria-label={`Explore towing visibility in ${s.state}`}
                     className="group block border-1.5 border-ink rounded-xl bg-cream p-5 shadow-hard hover:shadow-hard-hover hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all focus-ring"

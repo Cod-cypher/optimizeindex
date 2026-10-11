@@ -80,7 +80,7 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* --- the four pillars --- */}
+        {/* --- the pillars --- */}
         <section className="px-6 md:px-12 py-16 md:py-20">
           <div className="max-w-4xl mx-auto space-y-6">
             {ABOUT_PILLARS.map((block) => (
@@ -214,24 +214,29 @@ export default function AboutPage() {
               named on any agreement, invoice or refund under our 15-day money-back guarantee. We
               would rather you read that here than find it out at signing.
             </p>
+            {/* Scope in the words the owner confirmed on 2026-10-12: towing and
+                roadside operators are the current focus, towing operators are
+                served in every US state, and the case studies are real earlier
+                work outside towing. Same story as ABOUT_INTRO and llms.txt. */}
             <p className="font-sans text-stone text-sm md:text-base leading-relaxed mt-4">
-              Most of our work is with towing and recovery operators.{' '}
+              Towing and roadside operators are our focus, and we serve towing operators in every
+              US state.{' '}
               <a
                 href={TOWING_BASE}
                 onClick={go(TOWING_BASE)}
                 className="text-ink font-bold underline decoration-2 underline-offset-2 hover:text-lime focus-ring rounded-sm"
               >
-                What that looks like in practice
+                Our towing services overview
               </a>{' '}
-              covers the specifics, and the{' '}
+              covers what the work looks like in practice, and the{' '}
               <a
                 href="/case-studies"
                 onClick={go('/case-studies')}
                 className="text-ink font-bold underline decoration-2 underline-offset-2 hover:text-lime focus-ring rounded-sm"
               >
-                case studies
+                case studies from our earlier work
               </a>{' '}
-              name the tool behind every figure so you can check them.
+              name the tool behind every figure.
             </p>
           </div>
         </section>

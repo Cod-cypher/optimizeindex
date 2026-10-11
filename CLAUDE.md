@@ -54,8 +54,15 @@ and crawlers would get nothing.
 
 **The similarity gate fails the build at 85%.** `verify-seo.ts` compares every towing
 page against every other pairwise (5-gram Jaccard); 70% warns, 85% fails. Never import
-the shared copy factories (`GBP_FAQS`, `aiFaqs()`, `buyersGuideFor()`) from
-`src/content/towing.ts` into a new page — that is the single fastest way to trip it.
+`GBP_FAQS` (pillar-only) into a new page, and never reintroduce shared buyer's-guide
+criteria or a shared state FAQ factory in `src/content/towing.ts` — shared prose is the
+single fastest way to trip it. `buyersGuideFor()` only assembles a state's own criteria.
+
+**Every indexable route needs `published` and `updated` dates.** ISO 8601 with offset,
+taken from git history (`git log --format=%cI`), never from the build. They feed the
+sitemap `<lastmod>`, Article dates and the visible "updated" stamp, and the prerender
+fails if an indexable route has none. Bump `updated` by hand in the commit that
+substantively changes a page's copy.
 
 **`SESSION_SECRET` (≥32 chars) is required to boot in production.** The server refuses
 to start rather than issue sessions it cannot verify.
@@ -171,6 +178,14 @@ do" list on `/about` to make room for them. The day one ships, move it out of
 `ABOUT_ROADMAP` deliberately and update `ABOUT_DOES_NOT` and `public/llms.txt` in
 the same change.
 
+**Live today, for every client (owner, 2026-10-12):** an AI voice agent that answers
+the client's calls, qualifies the caller, books the job and hands it to the client's
+own dispatcher, and an AI chat assistant on the client's website. Handing a call to
+the client's dispatcher is not the dispatch roadmap item — that is OptimizeIndex
+running dispatch. Pages still deny running dispatch, automated SMS and selling leads.
+The voice agent never goes on a line a program requires a person to answer, such as
+Georgia's TRIP contact line.
+
 **The legal entity is Idea Brothers LLC**; OptimizeIndex is a trade name. It lives
 in `LEGAL_NAME` (`src/content/about.ts`) and is consumed by the Organization
 schema's `legalName`, the footer's copyright line, and `/about`. One constant, so
@@ -188,8 +203,9 @@ the three cannot drift.
    reusing those axes produces a paraphrase and trips the similarity gate.
 4. **Write content into `src/content/`**, never into the page component. Components are
    layout only; that split is what lets the gate compare pages for templated drift.
-5. **Wire it up:** route in `src/routes.ts`, branch in `src/AppRouter.tsx` (eager
-   import), bullet in `public/llms.txt` (the build fails without it), internal links in
+5. **Wire it up:** route in `src/routes.ts` with `published`/`updated` dates, branch in
+   `src/AppRouter.tsx` (eager import), bullet in `public/llms.txt` (the build fails
+   without it), internal links in
    the pillar's page component — section `detail[]` renders as plain text and cannot
    carry a link.
 6. **Verify:** `npm run lint` → `npm run build` → `npm run verify` (must say ALL PASS),

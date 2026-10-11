@@ -1,13 +1,15 @@
 /**
  * Builds the per-route <head> contents.
  *
- * Used by the prerenderer to bake tags into static HTML, and by App.tsx to
- * keep them correct after client-side navigation. One implementation so the
+ * Used by the prerenderer to bake tags into static HTML, and by useRouteHead()
+ * (src/lib/useRouteHead.ts, called from AppRouter) to keep them correct after
+ * client-side navigation. One implementation so the
  * two can't drift — the previous drift (a static title in index.html and a
  * different one set by JS) made the homepage title visibly change on hydrate.
  */
 
 import {
+  NOT_FOUND_ROUTE,
   SITE_NAME,
   SITE_ORIGIN,
   SITEWIDE_JSONLD,
@@ -50,11 +52,60 @@ export interface HeadTag {
   html: string;
 }
 
+/**
+ * Every selector buildHeadTags() can emit, for any route.
+ *
+ * A route does not always emit all of them: the 404 has no canonical or
+ * og:url, and only noindex routes carry a robots meta. A client-side head sync
+ * that only replaces or appends would leave the previous page's tag behind, so
+ * it should remove any selector in this list that the new route did not emit.
+ */
+export const HEAD_SELECTORS: readonly string[] = [
+  'title',
+  'meta[name="description"]',
+  'link[rel="canonical"]',
+  'meta[property="og:type"]',
+  'meta[property="og:site_name"]',
+  'meta[property="og:title"]',
+  'meta[property="og:description"]',
+  'meta[property="og:url"]',
+  'meta[property="og:image"]',
+  'meta[property="og:image:width"]',
+  'meta[property="og:image:height"]',
+  'meta[property="og:image:alt"]',
+  'meta[property="og:locale"]',
+  'meta[name="twitter:card"]',
+  'meta[name="twitter:title"]',
+  'meta[name="twitter:description"]',
+  'meta[name="twitter:image"]',
+  'meta[name="robots"]',
+  'script[type="application/ld+json"]',
+];
+
+/**
+ * True when the route's own structured data includes an Article node: the
+ * guides under /towing-jobs and the case studies. Those pages are articles, so
+ * og:type says so; everything else is the website.
+ */
+function hasArticleNode(route: RouteMeta): boolean {
+  return (route.jsonLd ?? []).some((node) => {
+    const type = node['@type'];
+    return type === 'Article' || (Array.isArray(type) && type.includes('Article'));
+  });
+}
+
 /** Ordered tags for a route, as both selectors (client) and HTML (prerender). */
 export function buildHeadTags(route: RouteMeta): HeadTag[] {
   const canonical = canonicalFor(route.path);
   const title = escapeAttr(route.title);
   const description = escapeAttr(route.description);
+  const ogType = hasArticleNode(route) ? 'article' : 'website';
+  /*
+    The 404 is not a page anyone should be sent to, so it names no canonical
+    URL and no og:url. It used to point both at /404, a URL that does not
+    exist; a noindex page that declares a canonical is sending two signals.
+  */
+  const isNotFound = route.path === NOT_FOUND_ROUTE.path;
 
   const tags: HeadTag[] = [
     { selector: 'title', html: `<title>${title}</title>` },
@@ -62,11 +113,15 @@ export function buildHeadTags(route: RouteMeta): HeadTag[] {
       selector: 'meta[name="description"]',
       html: `<meta name="description" content="${description}" />`,
     },
-    {
-      selector: 'link[rel="canonical"]',
-      html: `<link rel="canonical" href="${canonical}" />`,
-    },
-    { selector: 'meta[property="og:type"]', html: `<meta property="og:type" content="website" />` },
+    ...(isNotFound
+      ? []
+      : [
+          {
+            selector: 'link[rel="canonical"]',
+            html: `<link rel="canonical" href="${canonical}" />`,
+          },
+        ]),
+    { selector: 'meta[property="og:type"]', html: `<meta property="og:type" content="${ogType}" />` },
     {
       selector: 'meta[property="og:site_name"]',
       html: `<meta property="og:site_name" content="${SITE_NAME}" />`,
@@ -79,7 +134,14 @@ export function buildHeadTags(route: RouteMeta): HeadTag[] {
       selector: 'meta[property="og:description"]',
       html: `<meta property="og:description" content="${description}" />`,
     },
-    { selector: 'meta[property="og:url"]', html: `<meta property="og:url" content="${canonical}" />` },
+    ...(isNotFound
+      ? []
+      : [
+          {
+            selector: 'meta[property="og:url"]',
+            html: `<meta property="og:url" content="${canonical}" />`,
+          },
+        ]),
     {
       selector: 'meta[property="og:image"]',
       html: `<meta property="og:image" content="${OG_IMAGE}" />`,

@@ -115,8 +115,13 @@ export default function ScoreGauge({ score, preliminary = false, size = 168 }: S
           Still checking
         </p>
       )}
+      {/* The overall number is our own weighting of the checks, not a score
+          Google or any AI provider publishes, and it says so where it shows. */}
+      <p className="font-sans text-[12px] text-stone mt-1 max-w-48 text-center leading-snug">
+        OptimizeIndex's own estimate
+      </p>
       <span className="sr-only">
-        Your website scores {score} out of 100. Rated {band.label}.
+        Your website scores {score} out of 100 on OptimizeIndex's own estimate. Rated {band.label}.
         {preliminary ? " We're still timing your site, so this may change." : ''}
       </span>
     </div>

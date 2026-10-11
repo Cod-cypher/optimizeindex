@@ -28,11 +28,12 @@ const SERVICE_LINKS = [
   { label: 'FREE AI AUDIT', href: '/audit' },
 ];
 
+// /audit appears once in the footer, as FREE AI AUDIT under SERVICES. A second
+// "FREE AUDIT" here gave one URL two anchors in the same block.
 const AGENCY_LINKS = [
   { label: 'ABOUT US', href: '/about' },
   { label: 'CASE STUDIES', href: '/case-studies' },
   { label: 'CONTACT US', href: 'mailto:contact@optimizeindex.com', external: true },
-  { label: 'FREE AUDIT', href: '/audit' },
   { label: 'GET FREE QUOTE', href: '/quote' },
 ];
 

@@ -7,8 +7,8 @@
  * split whole pages out, so these plug in there instead.
  *
  * Everything here renders on the server too — scripts/prerender.ts bakes these
- * pages into static HTML, which is the only reason an AI assistant that does
- * not run JavaScript can read them at all.
+ * pages into static HTML, so a crawler that does not run JavaScript (and the
+ * AI crawlers' own documentation does not say they do) still gets the text.
  */
 
 import { useNavigate } from 'react-router-dom';
@@ -18,6 +18,41 @@ import SiteFooter from '../components/SiteFooter';
 import { CONTACT_PHONE, CONTACT_PHONE_DISPLAY } from '../routes';
 import { trackCallClick } from '../lib/analytics';
 import type { SourceRef, TowingSection } from '../content/towing';
+
+/**
+ * Scrolls to an element that may not have rendered yet.
+ *
+ * After a client-side navigation the destination page commits a frame or more
+ * later, and nothing in this app restores scroll position or follows a hash,
+ * so the target is polled for briefly and then given up on quietly.
+ */
+function scrollToId(id: string, framesLeft = 30) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.scrollIntoView();
+    return;
+  }
+  if (framesLeft > 0) requestAnimationFrame(() => scrollToId(id, framesLeft - 1));
+  else window.scrollTo({ top: 0 });
+}
+
+/**
+ * Client-side navigation for in-page links, with the plain href left in place
+ * for crawlers and for anyone opening the link in a new tab.
+ *
+ * A href with a #fragment lands on that section of the destination; anything
+ * else lands at the top, as every towing page always has.
+ */
+export function useGo() {
+  const navigate = useNavigate();
+  return (href: string) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    navigate(href);
+    const hash = href.split('#')[1];
+    if (hash) scrollToId(hash);
+    else window.scrollTo({ top: 0 });
+  };
+}
 
 /**
  * Tap-to-call.
@@ -148,22 +183,124 @@ export function SectionBlock({
 }
 
 /**
- * Primary sources for anything on the page that asserts a rule or requirement.
+ * One contextual hand-off to another page, rendered after the section that
+ * mentions it.
+ *
+ * Lives in the page components rather than the content files because section
+ * detail[] renders as plain text and cannot carry a link. The content names the
+ * destination in words ("our guide to where towing work comes from"); this is
+ * the link that makes that mention clickable, placed straight after it.
+ *
+ * Anchors are written per page and per context, never shared across pages:
+ * scripts/verify-seo.ts compares every towing page pairwise on 5-grams, and a
+ * hand-off line repeated on sixteen pages would be sixteen copies of the same
+ * shingles.
+ */
+export interface SectionLink {
+  /** Text before the link. */
+  lead: string;
+  /** Descriptive anchor that names the destination page. */
+  anchor: string;
+  /** Path, optionally with a #section-id on the destination. */
+  href: string;
+  /** Text after the link. Defaults to a full stop. */
+  tail?: string;
+  /** Overrides the generated element id, to keep an id that already exists. */
+  id?: string;
+}
+
+/** Section id → the hand-offs rendered after that section. */
+export type SectionLinkMap = Record<string, SectionLink[]>;
+
+/** "/towing-jobs/paid-towing-leads" → "paid-towing-leads"; "/towing-companies#cost" → "towing-companies-cost". */
+function linkTarget(href: string): string {
+  const [path, hash] = href.split('#');
+  const last = path.split('/').filter(Boolean).pop() ?? 'home';
+  return hash ? `${last}-${hash}` : last;
+}
+
+/**
+ * Renders the hand-offs for one section, or nothing.
+ *
+ * Returns a fragment rather than a wrapper element so the parent's `space-y-*`
+ * spacing applies to each line exactly as it did to the one-off bridges these
+ * replaced.
+ */
+export function SectionLinks({
+  links,
+  sectionId,
+  idPrefix,
+}: {
+  links?: SectionLink[];
+  sectionId: string;
+  idPrefix: string;
+}) {
+  const go = useGo();
+  if (!links || links.length === 0) return null;
+  return (
+    <>
+      {links.map((link) => (
+        <p
+          key={`${sectionId}-${link.href}`}
+          className="font-sans text-stone leading-relaxed border-l-4 border-lime pl-4"
+        >
+          {link.lead}{' '}
+          <a
+            href={link.href}
+            onClick={go(link.href)}
+            id={link.id ?? `${idPrefix}-${sectionId}-${linkTarget(link.href)}`}
+            className="font-bold text-ink underline hover:text-lime focus-ring"
+          >
+            {link.anchor}
+          </a>
+          {link.tail ?? '.'}
+        </p>
+      ))}
+    </>
+  );
+}
+
+/**
+ * Primary sources for anything on the page that asserts a rule or requirement,
+ * introduced by the one-sentence note on how the page was made.
  *
  * Rendered visibly rather than kept in a comment. The rest of this site already
  * names the tool behind every statistic; a regulatory claim deserves the same
  * treatment, and a reader who wants to check us should not have to ask.
+ *
+ * The intro doubles as the methods line (who checked, and that AI helps draft
+ * and structure the guides). It replaced the old intro rather than adding to
+ * it, because this paragraph appears on fifteen towing pages and every word
+ * added here is a shingle shared by all of them. It promises nothing about
+ * outcomes, deliberately.
+ *
+ * With no sources (a page of operator advice that cites no outside rule), the
+ * same block still discloses the method and says why the list is empty.
  */
 export function SourceList({ sources }: { sources: SourceRef[] }) {
+  if (sources.length === 0) {
+    return (
+      <section className="border-1.5 border-ink rounded-2xl bg-cream p-6 md:p-8">
+        <h2 className="font-display font-extrabold text-xl text-ink tracking-tight">
+          How this page was made
+        </h2>
+        <p className="font-sans text-stone text-sm leading-relaxed mt-2">
+          AI helps us draft and structure our guides. This one is operator advice rather than a
+          summary of published rules or figures, so it lists no outside sources.
+        </p>
+      </section>
+    );
+  }
   return (
     <section className="border-1.5 border-ink rounded-2xl bg-cream p-6 md:p-8">
       <h2 className="font-display font-extrabold text-xl text-ink tracking-tight">
         Sources for the claims on this page
       </h2>
       <p className="font-sans text-stone text-sm leading-relaxed mt-2">
-        Every rule, program requirement and comparative claim above links to the source it came
-        from, with the date we last checked it. Statutes get amended and agency programs change —
-        confirm against the current source before relying on any of this operationally.
+        Primary sources for the rules and figures on this page, each with the date the
+        OptimizeIndex team last checked it. AI helps us draft and structure our guides; the
+        checking is ours. Rules change, so confirm against the current source before relying on
+        any of it.
       </p>
       <ul className="mt-5 space-y-4">
         {sources.map((s) => (
@@ -189,9 +326,18 @@ export function SourceList({ sources }: { sources: SourceRef[] }) {
   );
 }
 
-/** Visible freshness. Undated content is discounted by LLM-backed search. */
+/**
+ * Visible freshness, from the page's own hand-set `updated` field.
+ *
+ * `date` is an ISO 8601 date-time with an offset (2026-09-22T05:45:22+05:00),
+ * taken from git history. Only the first ten characters are used: converting
+ * the full timestamp to UTC would show the previous day for anything committed
+ * shortly after midnight local time, which is a page claiming a date it was
+ * not changed on.
+ */
 export function UpdatedStamp({ date }: { date: string }) {
-  const pretty = new Date(`${date}T00:00:00Z`).toLocaleDateString('en-US', {
+  const day = date.slice(0, 10);
+  const pretty = new Date(`${day}T00:00:00Z`).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -199,8 +345,47 @@ export function UpdatedStamp({ date }: { date: string }) {
   });
   return (
     <p className="font-mono text-[10px] uppercase tracking-widest text-stone">
-      Last updated <time dateTime={date}>{pretty}</time>
+      Last updated <time dateTime={day}>{pretty}</time>
     </p>
+  );
+}
+
+/**
+ * Who the page is by, linking to the page that says who that is.
+ *
+ * A company byline, deliberately: no named person and no persona, because none
+ * has been confirmed. The Article JSON-LD `author` stays the Organization @id
+ * for the same reason. `data-byline` is the hook scripts/verify-seo.ts looks
+ * for. Also rendered on the case-study view in App.tsx, so it carries no
+ * towing-specific wording.
+ */
+export function Byline() {
+  const go = useGo();
+  return (
+    <p data-byline className="font-mono text-[10px] uppercase tracking-widest text-stone">
+      By{' '}
+      <a
+        href="/about"
+        onClick={go('/about')}
+        className="font-bold text-ink underline hover:text-lime focus-ring"
+      >
+        OptimizeIndex
+      </a>
+    </p>
+  );
+}
+
+/**
+ * The byline and the updated stamp, side by side in a page hero.
+ *
+ * One component so the sixteen towing heroes cannot drift apart in layout.
+ */
+export function PageCredit({ updated }: { updated: string }) {
+  return (
+    <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-1">
+      <Byline />
+      <UpdatedStamp date={updated} />
+    </div>
   );
 }
 

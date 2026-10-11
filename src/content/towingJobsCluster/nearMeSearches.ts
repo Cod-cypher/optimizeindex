@@ -40,8 +40,8 @@ const GOOGLE_REPRESENTING: SourceRef = {
   label: 'Google Business Profile Help — Guidelines for representing your business on Google',
   url: 'https://support.google.com/business/answer/3038177?hl=en',
   supports:
-    'A service-area business should hide its address and list the areas it serves; "the boundaries of your profile\'s overall service area shouldn\'t extend farther than about 2 hours of driving time from where your business is based." "Do not create more than one page for each location of your business, either in a single account or multiple accounts."',
-  checkedAt: '2026-09-22',
+    'A business that serves customers at their locations should hide its address, and has one profile for its central office or location "with a designated service area"; the service area "shouldn\'t extend farther than about 2 hours of driving time from where your business is based", though larger service areas may be appropriate for some businesses. "Do not create more than one page for each location of your business, either in a single account or multiple accounts."',
+  checkedAt: '2026-10-12',
 };
 
 const GOOGLE_SPAM_POLICIES: SourceRef = {
@@ -60,6 +60,9 @@ export const nearMeSearches: TowingJobsChild = {
     'Which of "towing near me", "24 hour towing", "flatbed towing" and the other searches a tow operator can win, and when a city or service page earns its URL.',
   lede:
     '"Towing near me" is decided by where the searcher is standing, and no page on your website changes that. Google documents three inputs to a local result — relevance, distance and prominence — and the middle one is fixed the moment the search happens. What you control is whether your business is understood to do the thing being searched for, and how credible it looks in the few seconds it is on screen. This page takes the searches the public actually types, one at a time, and says which of them you can win, with what, and when a page of your own is worth having.',
+  // From git: created in 3ed5277, with no later commit to this file.
+  published: '2026-09-22T05:45:22+05:00',
+  updated: '2026-09-22T05:45:22+05:00',
 
   sections: [
     {
@@ -90,7 +93,7 @@ export const nearMeSearches: TowingJobsChild = {
       id: 'site-structure',
       question: 'What a towing company\'s website actually needs',
       answer:
-        'A page for each service you genuinely run. A page for a place only where trucks genuinely go and something about the work there is different. No cross-product of the two. Most of the sitemaps sold to operators are the cross-product, and Google\'s spam policy describes that shape by name.',
+        'A page for each service you genuinely run. A page for a place only where trucks genuinely go and something about the work there is different. No cross-product of the two: Google\'s spam policy gives pages targeted at specific regions or cities that funnel users to one page as an example of doorway abuse.',
       detail: [
         'Google defines doorway abuse as pages created to rank for specific, similar search queries that lead users to intermediate pages less useful than the destination, and its own examples include pages targeted at specific regions or cities that funnel users to one page, and substantially similar pages that are closer to search results than a clearly defined, browseable hierarchy. A block of text listing the cities and regions a page is trying to rank for is given as an example of keyword stuffing. "Flatbed towing in" followed by twelve suburbs, each pointing at the same phone number, is that shape exactly.',
         'The structure that holds up is small. **Service pages** for the work you do — not the work a template says towing companies do. If you have no flatbed, there is no flatbed page. **Location pages** only where a location means something operationally: a second yard with its own trucks and its own profile, a stretch of interstate you cover that a competitor does not, a response area that differs by time of day. Fleet and commercial buyers tend to think in routes rather than town names, and a page built around the corridor you actually run matches that better than one built around each exit.',
@@ -116,7 +119,7 @@ export const nearMeSearches: TowingJobsChild = {
       answer:
         'The profile is the thing the map result is built from, so the temptation is to have several — one per service, one per town. Google\'s guidelines say not to create more than one profile for each location of a business, and the shortcut puts the profile you already have at risk.',
       detail: [
-        'A service-area business — which is what most towing operators are, since customers do not come to the yard — is asked to hide its address and list the areas it serves, and Google says the overall service area should not extend much beyond about two hours\' driving time from where the business is based. That is the ceiling, not a recommendation; how to set the area you actually dispatch to is in the direct calls guide.',
+        'A service-area business — which is what most towing operators are, since customers do not come to the yard — is asked to hide its address and set a service area, and Google says that area should not extend farther than about two hours\' driving time from where the business is based, while allowing that some businesses may need more. That is an outer limit, not a target; how to set the area you actually dispatch to is in the direct calls guide.',
         'Two listings for one yard — "Smith Towing" and "Smith Flatbed Towing" at the same address — is the profile-level version of the doorway page, and it is the one Google\'s guidelines are most explicit about. Services belong inside one profile, named individually, so that a flatbed or motorcycle search can be matched to you without a second listing to match it to.',
         'If you genuinely operate from two bases with trucks at each, two profiles are correct and two location pages on the site are correct with them. The test is the same as for pages: is there an operation there, or only a phone number?',
       ],
@@ -128,7 +131,7 @@ export const nearMeSearches: TowingJobsChild = {
         'It cannot move your yard. Distance is one of the three inputs Google names and it is the one no configuration, page or agency touches, so for a searcher across the metro you will be outranked by someone nearer, correctly. Nobody can promise a map position, a call count or a figure, and Google says plainly that a better local ranking cannot be requested or paid for.',
       detail: [
         'What the work can do is make sure the searches you are near enough to win are matched to you rather than to a competitor whose profile happens to say what yours implies, and that the customer who sees you has no reason to tap the next one. That is relevance and prominence, the two inputs that are yours to work on.',
-        'What it will not do is create demand in a market where the phone is quiet because there are few breakdowns, or fix a rating that a stranded customer will not look past, or substitute for the channels where the work is applied for or sold rather than found. Where the constraint is one of those, the pillar on where towing work comes from is the better place to start.',
+        'What it will not do is create demand in a market where the phone is quiet because there are few breakdowns, or fix a rating that a stranded customer will not look past, or substitute for the channels where the work is applied for or sold rather than found. Where the constraint is one of those, our guide to where towing work comes from is the better place to start.',
       ],
     },
   ],

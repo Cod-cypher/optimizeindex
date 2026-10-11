@@ -88,7 +88,9 @@ async function main() {
   for (const cat of categories) {
     console.log(`[${cat.label}] ${cat.score}/100`);
     for (const c of cat.checks) {
-      const mark = { pass: 'PASS', warn: 'WARN', fail: 'FAIL', unknown: '----' }[c.status];
+      // 'info' checks (llms.txt, page-type markup, training crawlers) are
+      // reported but never scored, so they cannot move the 100/100 below.
+      const mark = { pass: 'PASS', warn: 'WARN', fail: 'FAIL', unknown: '----', info: 'INFO' }[c.status];
       if (c.status !== 'pass') console.log(`   ${mark}  ${c.label}: ${c.detail}`);
     }
     check(cat.score === 100, `${cat.label} is ${cat.score}/100, expected 100`);

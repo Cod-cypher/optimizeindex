@@ -46,6 +46,9 @@ export const paidLeads: TowingJobsChild = {
     'Shared versus exclusive leads, pay-per-call, how to vet a vendor, and the difference between renting demand each month and owning it. No vendor pricing claims.',
   lede:
     'Buying towing leads means paying a third party for contact with a motorist who needs a tow — sometimes as a form submission passed to several operators at once, sometimes as a live call routed to your phone. It can fill a schedule quickly. What it does not do is build anything you keep, and almost every published comparison of the two is written by someone selling one of them.',
+  // From git: created in 1e4a682, with no later commit to this file.
+  published: '2026-09-03T01:11:19+05:00',
+  updated: '2026-09-03T01:11:19+05:00',
 
   sections: [
     {
@@ -86,7 +89,7 @@ export const paidLeads: TowingJobsChild = {
       id: 'no-pricing',
       question: 'What do towing leads cost?',
       answer:
-        'We are not going to quote a figure, and you should be wary of pages that do. Every price, close rate and revenue comparison that surfaces in search for this topic is published by a company selling leads, selling marketing, or selling an alternative to both.',
+        'We are not going to quote a figure, and you should be wary of pages that do. When we checked the search results for this topic, the prices, close rates and revenue comparisons we found were published by companies selling leads or selling an alternative to them.',
       detail: [
         'This is not caution for its own sake. Lead pricing varies by market, by exclusivity, by call volume and by how a vendor defines a billable lead. A national average, even an accurate one, would not tell you what your county costs — and the ones in circulation are marketing rather than measurement.',
         'What you can do instead is generate your own number in a month. Buy a small, capped volume. Log every lead: was it in your area, was it a real job, did it book, what did it pay. Divide the spend by the jobs that resulted. That figure is worth more than any published benchmark because it is about your market and your answering.',
@@ -135,7 +138,7 @@ export const paidLeads: TowingJobsChild = {
     {
       question: 'How much do towing leads cost?',
       answer:
-        'We will not quote a figure, because every price in circulation for this comes from a company selling leads or an alternative to them, and none of it is independently verifiable. Cost also varies by market and by how a vendor defines a billable lead. Buy a small capped volume, log what each lead became, and calculate your own cost per booked tow.',
+        'We will not quote a figure, because the prices we found in circulation come from companies selling leads or an alternative to them, and none of them is independently verifiable. Cost also varies by market and by how a vendor defines a billable lead. Buy a small capped volume, log what each lead became, and calculate your own cost per booked tow.',
     },
     {
       question: 'Are towing lead companies a scam?',

@@ -224,9 +224,9 @@ export default function TowingJobsLeadForm() {
           Got it. We will take a look.
         </h2>
         <p className="font-sans text-sm text-cream/75 leading-relaxed mt-2">
-          We will review how your business shows up in your market and come back within one
-          business day — including if the honest answer is that search
-          visibility is not your constraint.
+          We will review how your business shows up in your market and come back within 24
+          hours — including if the honest answer is that search visibility is not your
+          constraint.
         </p>
         <button
           type="button"

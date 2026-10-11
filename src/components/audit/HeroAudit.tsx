@@ -485,8 +485,10 @@ export default function HeroAudit({
         <AuditLeadForm result={result} selectedGoal={selectedGoal} onGoalSelect={onGoalSelect} />
 
         <p className="font-sans text-[13px] text-stone leading-relaxed text-center max-w-2xl mx-auto">
-          Everything above was measured on {result.domain} just now, not estimated. Speed comes
-          straight from Google. If we couldn't measure something, we say so rather than guess.
+          Every finding above was observed on {result.domain} just now. Speed comes straight from
+          Google. The scores are OptimizeIndex's own weighting of those findings, not a number
+          Google or any AI provider publishes, and no score here predicts rankings or calls. If we
+          couldn't measure something, we say so rather than guess.
         </p>
       </motion.div>
     );

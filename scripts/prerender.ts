@@ -52,9 +52,14 @@ async function main() {
   for (const route of all) {
     const { html, head } = render(route.path);
 
+    // Function replacers, not strings. A string replacement interprets "$$",
+    // "$&", "$'" and "$`" in the replacement text, so any "$" sequence in the
+    // rendered markup or the JSON-LD (a price, "$$", a dollar figure in copy)
+    // was silently rewritten in every built file. A function's return value is
+    // inserted literally.
     const page = template
-      .replace(HEAD_BLOCK, head.trim())
-      .replace(APP_HTML, html)
+      .replace(HEAD_BLOCK, () => head.trim())
+      .replace(APP_HTML, () => html)
       // Tells src/main.tsx to hydrate rather than mount from scratch.
       .replace('data-prerendered="false"', 'data-prerendered="true"');
 
@@ -122,19 +127,46 @@ async function writeShell(template: string) {
   await fs.writeFile(path.join(DIST, 'app-shell.html'), shell, 'utf-8');
 }
 
+/** ISO 8601 date-time with an explicit offset: 2026-09-22T05:45:22+05:00. */
+const ISO_DATE_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
+
+/**
+ * sitemap.xml, from the same route list as the pages.
+ *
+ * <lastmod> is each route's own `updated` date (RouteMeta.updated, set by hand
+ * from git history in src/routes.ts and the content files). It used to be the
+ * build date on every URL, which told Google that every page changed on
+ * every deploy. Google and Bing use lastmod only when it is consistently
+ * accurate, so a fake one is worse than none — and there is deliberately no
+ * fallback to the build date here: a route with no `updated` fails the build
+ * rather than ship an invented one.
+ *
+ * <priority> is no longer written. Google and Bing both ignore it. The
+ * `priority` field on RouteMeta stays, because it is the indexability filter
+ * here, in scripts/verify-seo.ts and in scripts/indexnow.ts.
+ */
 async function writeSitemap(
-  routes: { path: string; priority?: number; noindex?: boolean }[],
+  routes: { path: string; priority?: number; noindex?: boolean; updated?: string }[],
   origin: string,
 ) {
-  const lastmod = new Date().toISOString().slice(0, 10);
-  const urls = routes
-    .filter((r) => !r.noindex && r.priority != null)
+  const indexable = routes.filter((r) => !r.noindex && r.priority != null);
+
+  const undated = indexable.filter((r) => !r.updated || !ISO_DATE_TIME.test(r.updated));
+  if (undated.length > 0) {
+    throw new Error(
+      `${undated.length} indexable route(s) have no valid \`updated\` date for <lastmod>: ` +
+        `${undated.map((r) => `${r.path} (${r.updated ?? 'missing'})`).join(', ')}. ` +
+        'Set it from git history (git log --format=%cI) in src/routes.ts or the content file. ' +
+        'Never derive it from the build date.',
+    );
+  }
+
+  const urls = indexable
     .map(
       (r) =>
         `  <url>\n` +
         `    <loc>${origin}${r.path}</loc>\n` +
-        `    <lastmod>${lastmod}</lastmod>\n` +
-        `    <priority>${r.priority!.toFixed(1)}</priority>\n` +
+        `    <lastmod>${r.updated}</lastmod>\n` +
         `  </url>`,
     )
     .join('\n');

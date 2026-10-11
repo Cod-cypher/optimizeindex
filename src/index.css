@@ -216,10 +216,13 @@
     background-color: #FFFFFF;
     box-shadow: 0 0 0 3px rgba(201, 243, 29, 0.75);
   }
-  /* Values that are inherently machine-ish read better in mono. */
+  /* Values that are inherently machine-ish read better in mono.
+     16px below 640px, like .field: anything smaller makes iOS Safari zoom in
+     on focus, and this class sits on the hero audit input and the LeadModal
+     fields. The 15px desktop size lives in the min-width: 640px block below. */
   .field-mono {
     font-family: "Space Mono", monospace;
-    font-size: 0.9375rem;
+    font-size: 1rem;
     letter-spacing: -0.01em;
   }
   select.field {

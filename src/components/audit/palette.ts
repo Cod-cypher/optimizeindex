@@ -99,9 +99,16 @@ export function vitalStatus(
  * the amber fill is light, and a white icon on it measured 2.14:1 — under the
  * 3:1 a non-text glyph needs. Ink on amber measures 8.73:1.
  */
+/*
+ * `info` deliberately reuses the neutral step of `unknown` rather than adding
+ * a fourth hue: neither is scored, and a new colour would have to go through
+ * the validator above against all three status colours. The two are told
+ * apart by icon and word, which is the rule anyway.
+ */
 export const CHECK_STATUS = {
   pass: { fill: '#17794A', on: '#FFFFFF', ink: '#0F5533', word: 'Passing' },
   warn: { fill: '#E0A82E', on: '#141210', ink: '#7A5605', word: 'Needs work' },
   fail: { fill: '#A8191F', on: '#FFFFFF', ink: '#8E151A', word: 'Failing' },
   unknown: { fill: '#8A867C', on: '#141210', ink: '#54514A', word: 'Not measured' },
+  info: { fill: '#8A867C', on: '#141210', ink: '#54514A', word: 'For information, not scored' },
 } as const;

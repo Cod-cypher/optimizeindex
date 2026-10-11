@@ -68,7 +68,7 @@ export const SERVICES: Service[] = [
     id: 'geo',
     index: '04',
     title: 'Generative Engine Optimization (GEO)',
-    description: 'Prepare your brand for the future of search by optimizing your online presence so AI-powered platforms and generative search engines can discover, understand, and recommend your business.',
+    description: 'Prepare your brand for the future of search by optimizing your online presence so AI-powered platforms and generative search engines can find, understand and accurately describe your business.',
     isHot: true,
     isDouble: true
   },
@@ -112,7 +112,9 @@ export const SERVICES: Service[] = [
     id: 'web-design',
     index: '11',
     title: 'Custom Web Design & Dev',
-    description: 'Sub-second page load times built with React, Tailwind, and static rendering. Engineered exclusively to maximize lead form interactions and search crawler health.'
+    // No load-time figure: this site has no field Core Web Vitals data to back
+    // one. What it can show is how it is built — view the source of any page.
+    description: 'Websites built with React, Tailwind and static pre-rendering, the same way this site is built: every page arrives as complete HTML that search crawlers can read without running any JavaScript, laid out around the phone number and the enquiry form.'
   }
 ];
 
@@ -239,6 +241,11 @@ The business achieved:
     outcome: 'Scaled organic search volume from 5 to over 250+ highly targeted monthly visitors, transforming inbound B2B pipeline.',
     category: 'B2B SEO + CONTENT STRATEGY',
     dataOrigin: 'verified in Google Analytics 4',
+    // Copied from the study below ("from 5 to 250+ monthly visitors"). The
+    // measurement period is still missing: the owner has not supplied the GA4
+    // date ranges, and "Within months" in the Results section stands until
+    // they do. Do not fill it with an estimate.
+    baseline: 'From 5 to 250+ monthly organic visitors',
     fullContent: `# Case Study: How Jade Title Services Increased Organic Traffic from 5 to 250+ Monthly Visitors and Started Generating Qualified Title Company Leads
 
 ## Client
@@ -375,8 +382,9 @@ we created a long-term marketing asset that continues to generate qualified traf
 * Improved online authority and brand credibility
 * Sustainable lead generation without depending solely on paid advertising or cold outreach`
   },
-  /* Hidden for now (July 2026) — pending client update. Ticker stats and hero
-     card intentionally still reference these results. Uncomment to restore.
+  /* Hidden for now (July 2026) — pending client update. Nothing on the site
+     references these results while hidden: the ticker and the hero cards read
+     only the live studies above. Uncomment to restore.
   {
     id: 'ecoclean-services',
     client: 'EcoClean Services',
@@ -461,7 +469,7 @@ export const PROCESS_STEPS: ProcessStep[] = [
   {
     number: '01',
     title: 'Step 1: AI Research on Your Market',
-    description: 'Before anything is built, our AI models study how customers in your market actually search — on Google, Google Maps and AI assistants — where you appear today, and where the revenue is being missed. That research decides the order of everything that follows.',
+    description: 'Before anything is built, we use AI to study how customers in your market actually search — on Google, Google Maps and AI assistants — where you appear today, and where the revenue is being missed. That research decides the order of everything that follows.',
     isOffer: true
   },
   {
@@ -485,7 +493,7 @@ export const PROCESS_STEPS: ProcessStep[] = [
   {
     number: '05',
     title: 'Step 5: Future-Proof with GEO',
-    description: 'Finally, we prepare your business for the next generation of search. Through Generative Engine Optimization, we ensure AI platforms like ChatGPT, Gemini, and other AI search tools can understand, reference, and recommend your business.',
+    description: 'Finally, we prepare your business for the next generation of search. Through Generative Engine Optimization, we work on what AI platforms like ChatGPT, Gemini and other AI search tools can read and understand about your business. Whether one of them recommends you is its own decision, so we never promise it.',
     isOffer: false
   }
 ];
@@ -509,16 +517,35 @@ export const PROCESS_STEPS: ProcessStep[] = [
  * could not go and check, on a site whose entire pitch is verified attribution.
  * Restore them here if and when that case study is restored.
  *
+ * The two result entries are read from CASE_STUDIES rather than typed here,
+ * so the figure, its baseline, the client and the tool it was verified in have
+ * one source and cannot drift from the study pages. The homepage hero cards
+ * read the same fields.
+ *
  * The non-numeric entries are commitments made elsewhere on the site, not
  * metrics. That is deliberate: padding a results ticker with invented results
  * is the exact failure this list was cleaned up to remove.
  */
+export function verifiedIn(study: CaseStudy): string {
+  return study.dataOrigin.replace(/^verified in\s+/i, '');
+}
+
+function resultTickerItem(id: string): { stat: string; value: string }[] {
+  const study = CASE_STUDIES.find((s) => s.id === id);
+  if (!study) return [];
+  const label = [study.metric, study.baseline, study.client, verifiedIn(study)]
+    .filter(Boolean)
+    .join(' · ');
+  return [{ stat: label, value: study.stat }];
+}
+
 export const TICKER_ITEMS = [
-  { stat: "ORGANIC TRAFFIC · JADE TITLE SERVICES · GA4", value: "+4,900%" },
+  ...resultTickerItem('jade-title-services'),
   { stat: "NO CONTRACTS · CANCEL ANY TIME", value: "0" },
-  { stat: "SEARCH & MAP CLICKS · SUJOOD MATS · SEARCH CONSOLE", value: "+185%" },
+  ...resultTickerItem('sujood-mats'),
   { stat: "DAY MONEY-BACK GUARANTEE", value: "15" },
-  { stat: "HOUR REPLY, EVERY ENQUIRY", value: "24" }
+  // The site's one reply-time promise is "within 24 hours"; this is it.
+  { stat: "HOURS AT MOST FOR A REPLY, EVERY ENQUIRY", value: "24" }
 ];
 
 /**
@@ -538,7 +565,7 @@ export const AUDIT_FAQS: Faq[] = [
   {
     question: "What does the free audit actually check?",
     answer:
-      "Four areas. Technical foundations — whether Google can crawl, index and reach your pages at all. On-page content — titles, headings, structure and whether each page tells search engines what it is for. Speed and Core Web Vitals, measured with Google PageSpeed Insights. And AI search readiness — whether ChatGPT, Perplexity and Google's AI answers can actually read and cite your site.",
+      "Four areas. Technical foundations — whether Google can crawl, index and reach your pages at all. On-page content — titles, headings, structure and whether each page tells search engines what it is for. Speed and Core Web Vitals, measured with Google PageSpeed Insights. And AI search readiness — whether ChatGPT, Perplexity and Google's AI answers can read your site.",
   },
   {
     question: "How long does it take to get the audit back?",
@@ -553,7 +580,7 @@ export const AUDIT_FAQS: Faq[] = [
   {
     question: "Why does AI search readiness matter for my business?",
     answer:
-      "Assistants like ChatGPT and Claude do not run JavaScript, and a growing share of buying research now starts there rather than in a search box. If your content only appears after JavaScript executes, those assistants see a blank page and recommend a competitor instead. It is one of the most common problems we find, and one of the most fixable.",
+      "The crawlers behind assistants like ChatGPT and Claude may not run JavaScript; their crawler documentation does not say they do. If your content only appears after JavaScript executes, those crawlers may find an empty page where your services should be. Serving the content in the page's HTML removes the doubt, and it is one of the most common problems we find, and one of the most fixable.",
   },
   {
     question: "What information do you need from me?",
@@ -566,7 +593,7 @@ export const QUOTE_FAQS: Faq[] = [
   {
     question: "What do I get back?",
     answer:
-      "A written proposal covering scope, timeline and the projected impact on your pipeline — which channels we would work on, in what order, and what you should expect to see at 30, 60 and 90 days. It is built around the goal you tell us about, not a template.",
+      "A written proposal covering scope and timeline — which channels we would work on, in what order, what we would measure, and when we would report back. It contains no forecast figures, because nobody can honestly promise one. It is built around the goal you tell us about, not a template.",
   },
   {
     question: "How much does it cost?",
